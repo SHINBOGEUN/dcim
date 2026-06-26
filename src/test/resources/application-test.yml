@@ -1,0 +1,15 @@
+spring:
+  datasource:
+    url: jdbc:mariadb://${MARIADB_HOST:192.168.10.14}:${MARIADB_PORT:20181}/dcim_new
+    username: ${DB_USER:dcim}
+    password: ${DB_PASS:dcim123}
+    driver-class-name: org.mariadb.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: true
+    properties.hibernate:
+      format_sql: true
+      use_sql_comment: true
+      jdbc.time_zone: UTC
+    open-in-view: false

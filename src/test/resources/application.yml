@@ -1,0 +1,30 @@
+spring:
+  application:
+    name: new-manager-server
+  profiles:
+    active: local
+server:
+  port: 8080
+
+logging:
+  level:
+    root: ${LOG_LEVEL:INFO}
+  file:
+    name: ${LOG_FILE_NAME:./logs/application.log}
+  logback:
+    rollingpolicy:
+      file-name-pattern: ${LOG_FILE_NAME:./logs/application}.%d{yyyy-MM-dd}.%i.log
+      max-file-size: ${LOG_MAX_FILE_SIZE:10MB}
+      max-history: ${LOG_MAX_HISTORY:30}
+      total-size-cap: ${LOG_TOTAL_SIZE:1GB}
+
+app:
+  version: "1.0.0-TEST"
+
+jwt:
+  secret: ${JWT_SECRET:lusR6p5tGwGKEWC2rWRYyCVbOzsVOMxMCtxOtHT+V4SiKE8ODJbomdCOl7cy5qbv7JQVHNRPKnwvxhmo9NYmlg==}
+  access-token-expiration: ${ACCESS_TOKEN_EXPIRATION:3600}
+  refresh-token-expiration: ${REFRESH_TOKEN_EXPIRATION:7200}
+
+security:
+  auth-enabled: true
