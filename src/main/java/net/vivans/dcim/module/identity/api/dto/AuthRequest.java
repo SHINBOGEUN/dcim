@@ -8,7 +8,7 @@ public record AuthRequest(
         @NotEmpty(message = "username must not be null")
         String username,
 
-        @Schema(description = "회원 비밀번호", example = "test123")
+        @Schema(description = "회원 비밀번호", example = "test")
         @NotEmpty(message = "password must not be null")
         String password
 ) {
