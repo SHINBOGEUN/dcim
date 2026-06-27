@@ -9,10 +9,6 @@ public record CodeGroupResponse(
 ) {
 
     public static CodeGroupResponse from(CodeGroup codeGroup) {
-        return new CodeGroupResponse(
-                codeGroup.getId(),
-                codeGroup.getGroupKey(),
-                codeGroup.getGroupName()
-        );
+        return new CodeGroupResponse(codeGroup.getId(), codeGroup.getGroupKey(), codeGroup.getGroupName());
     }
 }

@@ -28,5 +28,4 @@ public class CommonCode extends BaseEntity {
 
     @Column(name = "sort_order")
     private Integer sortOrder;
-
 }
