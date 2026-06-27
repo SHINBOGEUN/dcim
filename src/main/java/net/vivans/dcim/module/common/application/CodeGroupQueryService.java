@@ -26,7 +26,7 @@ public class CodeGroupQueryService {
     }
 
     @Transactional
-    public CodeGroupResponse updateCodeGroup(String id, CodeGroupRequest request) {
+    public CodeGroupResponse updateCodeGroup(Integer id, CodeGroupRequest request) {
         CodeGroup codeGroup = codeGroupRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("CodeGroup not found: " + id));
         boolean existedKey =  codeGroupRepository.existsByGroupKeyAndIdNot(request.groupKey(), codeGroup.getId());

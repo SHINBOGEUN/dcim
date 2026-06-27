@@ -20,8 +20,8 @@ public class CodeGroupJpaRepository implements CodeGroupRepository {
     }
 
     @Override
-    public Optional<CodeGroup> findById(String id) {
-        return springDataRepository.findById(Integer.valueOf(id));
+    public Optional<CodeGroup> findById(Integer id) {
+        return springDataRepository.findById(id);
     }
 
     @Override

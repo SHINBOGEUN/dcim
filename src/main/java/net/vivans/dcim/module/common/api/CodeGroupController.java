@@ -31,7 +31,7 @@ public class CodeGroupController {
     @Operation(summary = "코드 그룹 수정 API")
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<CodeGroupResponse>> updateCodeGroup(
-            @Parameter(description = "코드 그룹 ID") @PathVariable("id") String id,
+            @Parameter(description = "코드 그룹 ID") @PathVariable("id") Integer id,
             @Valid @RequestBody CodeGroupRequest request) {
         return ResponseEntity.ok(ApiResponse.ok(codeGroupQueryService.updateCodeGroup(id, request)));
     }
