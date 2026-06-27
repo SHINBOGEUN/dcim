@@ -22,4 +22,19 @@ public class CodeGroup extends BaseEntity {
     @Column(name = "group_name", nullable = false)
     private String groupName;
 
+    public CodeGroup(String groupKey, String groupName) {
+        this.groupKey = groupKey;
+        this.groupName = groupName;
+    }
+
+    public static CodeGroup creatCodeGroup(String groupKey, String groupName){
+        if (groupKey == null || groupKey.isBlank()){
+            throw new IllegalArgumentException("GroupKey is required");
+        }
+        if (groupName == null || groupName.isBlank()){
+            throw new IllegalArgumentException("GroupName is required");
+        }
+        return new CodeGroup(groupKey, groupName);
+    }
+
 }
