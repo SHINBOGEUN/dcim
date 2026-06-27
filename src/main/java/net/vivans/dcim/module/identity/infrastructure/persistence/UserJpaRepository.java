@@ -11,7 +11,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class UserJpaRepository implements UserRepository {
 
-    private final UserSpringDataRepository springDataRepository;
+    private final UserDataRepository springDataRepository;
 
     @Override
     public Optional<User> findByUsername(String username) {
