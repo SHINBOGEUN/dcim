@@ -12,4 +12,8 @@ public interface CodeGroupRepository {
     CodeGroup save(CodeGroup codeGroup);
 
     Optional<CodeGroup> findById(String id);
+
+    boolean existsByGroupKeyAndIdNot(String groupKey, Integer id);
+
+    boolean existsByGroupNameAndIdNot(String groupName, Integer id);
 }

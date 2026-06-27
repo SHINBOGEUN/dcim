@@ -156,6 +156,23 @@ class CodeGroupControllerIntegrationTest {
     }
 
     @Test
+    void updateCodeGroup_returnDuplicationCodeGroup() throws Exception{
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "Duplication-user", "password123");
+
+        createCodeGroup(accessToken, "DEVICE_TYPE", "장비 유형");
+        Integer id = createCodeGroup(accessToken,"SENSOR_TYPE", "센서 유형");
+        mockMvc.perform(put("/api/manager/code-groups/{id}", id)
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"groupKey": "DEVICE_TYPE", "groupName": "센서 유형"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value("400"))
+                .andExpect(jsonPath("$.error").value("GroupKey already exists"));
+    }
+
+    @Test
     void createCodeGroup_returnWrongUrl() throws Exception{
         String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "TEST", "TEST");
         mockMvc.perform(post("/unKnown/url")

@@ -25,7 +25,18 @@ public class CodeGroupJpaRepository implements CodeGroupRepository {
     }
 
     @Override
+    public boolean existsByGroupKeyAndIdNot(String groupKey, Integer id) {
+        return springDataRepository.existsByGroupKeyAndIdNot(groupKey, id);
+    }
+
+    @Override
+    public boolean existsByGroupNameAndIdNot(String groupName, Integer id) {
+        return springDataRepository.existsByGroupNameAndIdNot(groupName, id);
+    }
+
+    @Override
     public CodeGroup save(CodeGroup codeGroup) {
         return springDataRepository.save(codeGroup);
     }
+
 }

@@ -29,6 +29,13 @@ public class CodeGroupQueryService {
     public CodeGroupResponse updateCodeGroup(String id, CodeGroupRequest request) {
         CodeGroup codeGroup = codeGroupRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("CodeGroup not found: " + id));
+        boolean existedKey =  codeGroupRepository.existsByGroupKeyAndIdNot(request.groupKey(), codeGroup.getId());
+        boolean existedName = codeGroupRepository.existsByGroupNameAndIdNot(request.groupName(), codeGroup.getId());
+        if (existedKey ){
+            throw new IllegalArgumentException("GroupKey already exists");
+        } else if (existedName) {
+            throw new IllegalArgumentException("GroupName already exists");
+        }
         codeGroup.update(request.groupKey(), request.groupName());
         return CodeGroupResponse.from(codeGroupRepository.save(codeGroup));
     }
