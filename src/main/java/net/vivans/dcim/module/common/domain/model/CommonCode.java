@@ -28,4 +28,24 @@ public class CommonCode extends BaseEntity {
 
     @Column(name = "sort_order")
     private Integer sortOrder;
+
+    private CommonCode(CodeGroup codeGroup, String code, String name, Integer sortOrder) {
+        this.codeGroup = codeGroup;
+        this.code = code;
+        this.name = name;
+        this.sortOrder = sortOrder;
+    }
+
+    public static CommonCode createCommonCode(CodeGroup codeGroup, String code, String name, Integer sortOrder) {
+        if (codeGroup == null) {
+            throw new IllegalArgumentException("codeGroup is required");
+        }
+        if (code == null || code.isBlank()) {
+            throw new IllegalArgumentException("code is required");
+        }
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("name is required");
+        }
+        return new CommonCode(codeGroup, code, name, sortOrder);
+    }
 }
