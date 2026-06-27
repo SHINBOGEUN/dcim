@@ -3,6 +3,7 @@ package net.vivans.dcim.shared.exception;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.influxdb.exceptions.UnauthorizedException;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import net.vivans.dcim.shared.api.ApiResponse;
@@ -82,6 +83,13 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Object>> illegalArgumentExceptionHandler(IllegalArgumentException e) {
         log.error("IllegalArgumentException: {}", e, e);
         return ResponseEntity.badRequest().body(ApiResponse.error(400, e.getMessage()));
+    }
+
+    @ExceptionHandler(EntityNotFoundException.class)
+    public ResponseEntity<ApiResponse<Object>> entityNotFoundExceptionHandler(EntityNotFoundException e) {
+        log.warn("EntityNotFoundException: {}", e.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error(404, e.getMessage()));
     }
 
     @ExceptionHandler(NoResourceFoundException.class)

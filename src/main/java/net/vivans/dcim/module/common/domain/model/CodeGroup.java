@@ -36,4 +36,15 @@ public class CodeGroup extends BaseEntity {
         }
         return new CodeGroup(groupKey, groupName);
     }
+
+    public void update(String groupKey, String groupName) {
+        if (groupKey == null || groupKey.isBlank()) {
+            throw new IllegalArgumentException("GroupKey is required");
+        }
+        if (groupName == null || groupName.isBlank()) {
+            throw new IllegalArgumentException("GroupName is required");
+        }
+        this.groupKey = groupKey;
+        this.groupName = groupName;
+    }
 }

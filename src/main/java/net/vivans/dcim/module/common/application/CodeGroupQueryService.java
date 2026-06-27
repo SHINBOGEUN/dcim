@@ -1,5 +1,6 @@
 package net.vivans.dcim.module.common.application;
 
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import net.vivans.dcim.module.common.api.dto.CodeGroupRequest;
 import net.vivans.dcim.module.common.api.dto.CodeGroupResponse;
@@ -22,6 +23,14 @@ public class CodeGroupQueryService {
         CodeGroup group = CodeGroup.creatCodeGroup(request.groupKey(), request.groupName());
         codeGroupRepository.save(group);
         return CodeGroupResponse.from(group);
+    }
+
+    @Transactional
+    public CodeGroupResponse updateCodeGroup(String id, CodeGroupRequest request) {
+        CodeGroup codeGroup = codeGroupRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("CodeGroup not found: " + id));
+        codeGroup.update(request.groupKey(), request.groupName());
+        return CodeGroupResponse.from(codeGroupRepository.save(codeGroup));
     }
 
     public List<CodeGroupResponse> findAll() {

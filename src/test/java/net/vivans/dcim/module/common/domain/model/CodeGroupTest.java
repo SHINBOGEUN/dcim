@@ -28,4 +28,32 @@ public class CodeGroupTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("GroupName is required");
     }
+
+    @Test
+    void update_changesGroupKeyAndName() {
+        CodeGroup codeGroup = CodeGroup.creatCodeGroup("OLD_KEY", "OLD_NAME");
+
+        codeGroup.update("NEW_KEY", "NEW_NAME");
+
+        assertThat(codeGroup.getGroupKey()).isEqualTo("NEW_KEY");
+        assertThat(codeGroup.getGroupName()).isEqualTo("NEW_NAME");
+    }
+
+    @Test
+    void update_throwWhenGroupKeyIsBlank() {
+        CodeGroup codeGroup = CodeGroup.creatCodeGroup("OLD_KEY", "OLD_NAME");
+
+        assertThatThrownBy(() -> codeGroup.update("", "NEW_NAME"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("GroupKey is required");
+    }
+
+    @Test
+    void update_throwWhenGroupNameIsBlank() {
+        CodeGroup codeGroup = CodeGroup.creatCodeGroup("OLD_KEY", "OLD_NAME");
+
+        assertThatThrownBy(() -> codeGroup.update("NEW_KEY", ""))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("GroupName is required");
+    }
 }
