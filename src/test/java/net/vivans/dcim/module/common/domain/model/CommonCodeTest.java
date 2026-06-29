@@ -9,7 +9,7 @@ public class CommonCodeTest {
 
     @Test
     void create_CommonCode(){
-        CodeGroup codeGroup = CodeGroup.creatCodeGroup("DEVICE_TYPE", "장비 유형");
+        CodeGroup codeGroup = CodeGroup.createCodeGroup("DEVICE_TYPE", "장비 유형");
 
         CommonCode code = CommonCode.createCommonCode(codeGroup, "PDU", "PDU", 0);
 
@@ -21,7 +21,7 @@ public class CommonCodeTest {
 
     @Test
     void create_throwsWhenCodeIsBlank(){
-        CodeGroup codeGroup = CodeGroup.creatCodeGroup("DEVICE_TYPE", "장비 유형");
+        CodeGroup codeGroup = CodeGroup.createCodeGroup("DEVICE_TYPE", "장비 유형");
 
         assertThatThrownBy(() -> CommonCode.createCommonCode(codeGroup, "", "PDU", 0))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -30,7 +30,7 @@ public class CommonCodeTest {
 
     @Test
     void create_throwsWhenNameIsBlank(){
-        CodeGroup codeGroup = CodeGroup.creatCodeGroup("DEVICE_TYPE", "장비 유형");
+        CodeGroup codeGroup = CodeGroup.createCodeGroup("DEVICE_TYPE", "장비 유형");
 
         assertThatThrownBy(() -> CommonCode.createCommonCode(codeGroup, "PDU", "", 0))
                 .isInstanceOf(IllegalArgumentException.class)

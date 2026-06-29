@@ -20,7 +20,7 @@ public class CodeGroupQueryService {
 
     @Transactional
     public CodeGroupResponse createCodeGroup(CodeGroupRequest request) {
-        CodeGroup group = CodeGroup.creatCodeGroup(request.groupKey(), request.groupName());
+        CodeGroup group = CodeGroup.createCodeGroup(request.groupKey(), request.groupName());
         codeGroupRepository.save(group);
         return CodeGroupResponse.from(group);
     }
