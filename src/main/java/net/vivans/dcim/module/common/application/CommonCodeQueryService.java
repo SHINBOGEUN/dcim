@@ -12,6 +12,8 @@ import net.vivans.dcim.module.common.domain.repository.CommonCodeRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -35,6 +37,7 @@ public class CommonCodeQueryService {
         return CommonCodeResponse.from(code);
     }
 
+    @Transactional
     public CommonCodeResponse updateCommonCode(Integer id, CommonCodeRequest request) {
         CommonCode code = commonCodeRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("CommonCode not found: " + id));
@@ -52,5 +55,9 @@ public class CommonCodeQueryService {
         code.update(codeGroup, request.code(), request.name(), request.sortOrder());
 
         return CommonCodeResponse.from(commonCodeRepository.save(code));
+    }
+
+    public List<CommonCodeResponse> getCommonCodeList() {
+        return commonCodeRepository.findAll().stream().map(CommonCodeResponse::from).toList();
     }
 }

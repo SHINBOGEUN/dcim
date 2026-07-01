@@ -1,10 +1,12 @@
 package net.vivans.dcim.module.common.infrastructure.persistence;
 
 import lombok.RequiredArgsConstructor;
+import net.vivans.dcim.module.common.api.dto.CommonCodeResponse;
 import net.vivans.dcim.module.common.domain.model.CommonCode;
 import net.vivans.dcim.module.common.domain.repository.CommonCodeRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -36,5 +38,10 @@ public class CommonCodeJpaRepository implements CommonCodeRepository {
     @Override
     public boolean existsByNameAndIdNot(String name, Integer id) {
         return springDataRepository.existsByNameAndIdNot(name, id);
+    }
+
+    @Override
+    public List<CommonCode> findAll() {
+        return springDataRepository.findAll();
     }
 }

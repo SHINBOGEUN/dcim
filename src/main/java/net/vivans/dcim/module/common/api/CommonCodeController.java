@@ -12,6 +12,8 @@ import net.vivans.dcim.shared.api.ApiResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/manager/common-codes")
 @RequiredArgsConstructor
@@ -34,5 +36,9 @@ public class CommonCodeController {
         return ResponseEntity.ok(ApiResponse.ok(commonCodeQueryService.updateCommonCode(id, request)));
     }
 
-
+    @GetMapping
+    @Operation(summary = "공통 코드 조회 API")
+    public ResponseEntity<ApiResponse<List<CommonCodeResponse>>> getCommonCodeList(){
+        return ResponseEntity.ok(ApiResponse.ok(commonCodeQueryService.getCommonCodeList()));
+    }
 }

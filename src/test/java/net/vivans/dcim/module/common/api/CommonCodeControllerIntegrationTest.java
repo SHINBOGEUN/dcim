@@ -11,9 +11,10 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
-import static net.vivans.dcim.support.AuthTestSupport.loginAndGetAccessToken;
 import static net.vivans.dcim.support.AuthTestSupport.bearerToken;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static net.vivans.dcim.support.AuthTestSupport.loginAndGetAccessToken;
+import static org.hamcrest.CoreMatchers.hasItems;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -21,7 +22,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("local")
 @Transactional
-public class CommonCodeControllerIntegrationTest {
+class CommonCodeControllerIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -30,30 +31,93 @@ public class CommonCodeControllerIntegrationTest {
     private ObjectMapper objectMapper;
 
     @Test
-    void create_returnCommonCodeResponse() throws Exception{
+    void create_returnCommonCodeResponse() throws Exception {
         String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "common-code-user", "password123");
 
-        String groupResponse = mockMvc.perform(post("/api/manager/code-groups")
-                .header("Authorization", bearerToken(accessToken))
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""
-                        {"groupKey": "DEVICE_TYPE", "groupName": "장비 유형"}
-                        """))
-                .andExpect(status().isOk())
-                .andReturn().getResponse().getContentAsString();
+        Integer groupId = createCodeGroup(accessToken, "DEVICE_TYPE", "장비 유형");
 
-        Integer groupId = objectMapper.readTree(groupResponse).path("data").path("id").asInt();
         mockMvc.perform(post("/api/manager/common-codes")
-                .header("Authorization", bearerToken(accessToken))
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""
-                        {"groupId" : %d, "code": "pdu", "name": "pdu", "sortOrder": 1}
-                        """.formatted(groupId)))
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"groupId": %d, "code": "pdu", "name": "pdu", "sortOrder": 1}
+                                """.formatted(groupId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value(200))
                 .andExpect(jsonPath("$.data.groupId").value(groupId))
                 .andExpect(jsonPath("$.data.code").value("pdu"))
                 .andExpect(jsonPath("$.data.name").value("pdu"))
                 .andExpect(jsonPath("$.data.sortOrder").value(1));
+    }
+
+    @Test
+    void update_returnCommonCodeResponse() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "update-code-user", "password123");
+
+        Integer groupId = createCodeGroup(accessToken, "DEVICE_TYPE", "장비 유형");
+        Integer codeId = createCommonCode(accessToken, groupId, "pdu", "pdu", 1);
+
+        mockMvc.perform(put("/api/manager/common-codes/{id}", codeId)
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"groupId": %d, "code": "ups", "name": "ups", "sortOrder": 1}
+                                """.formatted(groupId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.data.id").value(codeId))
+                .andExpect(jsonPath("$.data.groupId").value(groupId))
+                .andExpect(jsonPath("$.data.code").value("ups"))
+                .andExpect(jsonPath("$.data.name").value("ups"))
+                .andExpect(jsonPath("$.data.sortOrder").value(1));
+    }
+
+    @Test
+    void get_returnCommonCodeListResponse() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "get-code-user", "password123");
+
+        Integer groupId = createCodeGroup(accessToken, "DEVICE_TYPE", "장비 유형");
+        createCommonCode(accessToken, groupId, "pdu", "pdu", 1);
+        createCommonCode(accessToken, groupId, "ups", "ups", 1);
+
+        mockMvc.perform(get("/api/manager/common-codes")
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.data").isArray())
+                .andExpect(jsonPath("$.data.length()").value(2))
+                .andExpect(jsonPath("$.data[*].groupId").value(hasItems(groupId, groupId)))
+                .andExpect(jsonPath("$.data[*].code").value(hasItems("pdu", "ups")))
+                .andExpect(jsonPath("$.data[*].name").value(hasItems("pdu", "ups")));
+    }
+
+    private Integer createCodeGroup(String accessToken, String groupKey, String groupName) throws Exception {
+        String response = mockMvc.perform(post("/api/manager/code-groups")
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"groupKey": "%s", "groupName": "%s"}
+                                """.formatted(groupKey, groupName)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        return objectMapper.readTree(response).path("data").path("id").asInt();
+    }
+
+    private Integer createCommonCode(String accessToken, Integer groupId, String code, String name, Integer sortOrder) throws Exception {
+        String response = mockMvc.perform(post("/api/manager/common-codes")
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"groupId": %d, "code": "%s", "name": "%s", "sortOrder": %d}
+                                """.formatted(groupId, code, name, sortOrder)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        return objectMapper.readTree(response).path("data").path("id").asInt();
     }
 }
