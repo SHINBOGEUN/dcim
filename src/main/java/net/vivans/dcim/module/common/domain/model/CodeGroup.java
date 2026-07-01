@@ -27,13 +27,21 @@ public class CodeGroup extends BaseEntity {
         this.groupName = groupName;
     }
 
-    public static CodeGroup creatCodeGroup(String groupKey, String groupName){
-        if (groupKey == null || groupKey.isBlank()){
+    private static void validate(String groupKey, String groupName) {
+        if (groupKey == null || groupKey.isBlank()) {
             throw new IllegalArgumentException("GroupKey is required");
         }
-        if (groupName == null || groupName.isBlank()){
+        if (groupName == null || groupName.isBlank()) {
             throw new IllegalArgumentException("GroupName is required");
         }
+    }
+    public static CodeGroup createCodeGroup(String groupKey, String groupName) {
+        validate(groupKey, groupName);
         return new CodeGroup(groupKey, groupName);
+    }
+    public void update(String groupKey, String groupName) {
+        validate(groupKey, groupName);
+        this.groupKey = groupKey;
+        this.groupName = groupName;
     }
 }

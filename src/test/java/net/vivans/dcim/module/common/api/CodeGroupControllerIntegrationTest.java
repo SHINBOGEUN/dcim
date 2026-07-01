@@ -16,6 +16,7 @@ import static net.vivans.dcim.support.AuthTestSupport.loginAndGetAccessToken;
 import static org.hamcrest.Matchers.hasItems;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -65,14 +66,19 @@ class CodeGroupControllerIntegrationTest {
                 .andExpect(jsonPath("$.data[*].groupName").value(hasItems("장비 유형", "센서 유형", "위치 유형")));
     }
 
-    private void createCodeGroup(String accessToken, String groupKey, String groupName) throws Exception {
-        mockMvc.perform(post("/api/manager/code-groups")
+    private Integer createCodeGroup(String accessToken, String groupKey, String groupName) throws Exception {
+        String response = mockMvc.perform(post("/api/manager/code-groups")
                         .header("Authorization", bearerToken(accessToken))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"groupKey": "%s", "groupName": "%s"}
                                 """.formatted(groupKey, groupName)))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        return objectMapper.readTree(response).path("data").path("id").asInt();
     }
 
     @Test
@@ -98,6 +104,72 @@ class CodeGroupControllerIntegrationTest {
                         """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400));
+    }
+
+    @Test
+    void updateCodeGroup_returnUpdatedCodeGroup() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "codegroup-update-user", "password123");
+
+        Integer id = createCodeGroup(accessToken, "OLD_TYPE", "이전 유형");
+
+        mockMvc.perform(put("/api/manager/code-groups/{id}", id)
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"groupKey": "NEW_TYPE", "groupName": "새 유형"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.data.id").value(id))
+                .andExpect(jsonPath("$.data.groupKey").value("NEW_TYPE"))
+                .andExpect(jsonPath("$.data.groupName").value("새 유형"));
+    }
+
+    @Test
+    void updateCodeGroup_returnNotFoundWhenIdDoesNotExist() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "codegroup-update-notfound-user", "password123");
+
+        mockMvc.perform(put("/api/manager/code-groups/{id}", 99999)
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"groupKey": "NEW_TYPE", "groupName": "새 유형"}
+                                """))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404));
+    }
+
+    @Test
+    void updateCodeGroup_returnBadRequestForEmptyRequest() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "codegroup-update-empty-user", "password123");
+
+        Integer id = createCodeGroup(accessToken, "OLD_TYPE", "이전 유형");
+
+        mockMvc.perform(put("/api/manager/code-groups/{id}", id)
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"groupKey": "", "groupName": ""}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
+    }
+
+    @Test
+    void updateCodeGroup_returnDuplicationCodeGroup() throws Exception{
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "Duplication-user", "password123");
+
+        createCodeGroup(accessToken, "DEVICE_TYPE", "장비 유형");
+        Integer id = createCodeGroup(accessToken,"SENSOR_TYPE", "센서 유형");
+        mockMvc.perform(put("/api/manager/code-groups/{id}", id)
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"groupKey": "DEVICE_TYPE", "groupName": "센서 유형"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value("400"))
+                .andExpect(jsonPath("$.error").value("GroupKey already exists"));
     }
 
     @Test

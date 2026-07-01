@@ -4,8 +4,10 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import net.vivans.dcim.shared.persistence.BaseEntity;
 
+@Slf4j
 @Getter
 @Entity
 @Table(name = "common_code")
@@ -28,4 +30,36 @@ public class CommonCode extends BaseEntity {
 
     @Column(name = "sort_order")
     private Integer sortOrder;
+
+    private CommonCode(CodeGroup codeGroup, String code, String name, Integer sortOrder) {
+        this.codeGroup = codeGroup;
+        this.code = code;
+        this.name = name;
+        this.sortOrder = sortOrder;
+    }
+
+    private static void validate(CodeGroup codeGroup, String code, String name){
+        if (codeGroup == null) {
+            throw new IllegalArgumentException("codeGroup is required");
+        }
+        if (code == null || code.isBlank()) {
+            throw new IllegalArgumentException("code is required");
+        }
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("name is required");
+        }
+    }
+
+    public static CommonCode createCommonCode(CodeGroup codeGroup, String code, String name, Integer sortOrder) {
+        validate(codeGroup, code, name);
+        return new CommonCode(codeGroup, code, name, sortOrder);
+    }
+
+    public void update(CodeGroup codeGroup, String code, String name, Integer sortOrder){
+        validate(codeGroup, code, name);
+        this.codeGroup = codeGroup;
+        this.code = code;
+        this.name = name;
+        this.sortOrder = sortOrder;
+    }
 }
