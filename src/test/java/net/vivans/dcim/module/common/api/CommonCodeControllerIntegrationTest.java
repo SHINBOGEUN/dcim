@@ -91,6 +91,53 @@ class CommonCodeControllerIntegrationTest {
                 .andExpect(jsonPath("$.data[*].name").value(hasItems("pdu", "ups")));
     }
 
+    @Test
+    void get_withCodeGroupId_returnFilteredList() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "filter-code-user", "password123");
+
+        Integer deviceGroupId = createCodeGroup(accessToken, "DEVICE_TYPE", "장비 유형");
+        Integer locationGroupId = createCodeGroup(accessToken, "LOCATION_TYPE", "위치 유형");
+        createCommonCode(accessToken, deviceGroupId, "pdu", "pdu", 1);
+        createCommonCode(accessToken, deviceGroupId, "ups", "ups", 2);
+        createCommonCode(accessToken, locationGroupId, "rack", "rack", 1);
+
+        mockMvc.perform(get("/api/manager/common-codes")
+                        .param("codeGroupId", deviceGroupId.toString())
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.data").isArray())
+                .andExpect(jsonPath("$.data.length()").value(2))
+                .andExpect(jsonPath("$.data[*].groupId").value(hasItems(deviceGroupId, deviceGroupId)))
+                .andExpect(jsonPath("$.data[*].code").value(hasItems("pdu", "ups")));
+    }
+
+    @Test
+    void get_withUnknownCodeGroupId_returnNotFound() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "notfound-code-user", "password123");
+
+        mockMvc.perform(get("/api/manager/common-codes")
+                        .param("codeGroupId", "99999")
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404));
+    }
+
+    @Test
+    void get_withCodeGroupId_whenNoCodes_returnEmptyList() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "empty-code-user", "password123");
+
+        Integer groupId = createCodeGroup(accessToken, "DEVICE_TYPE", "장비 유형");
+
+        mockMvc.perform(get("/api/manager/common-codes")
+                        .param("codeGroupId", groupId.toString())
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.data").isArray())
+                .andExpect(jsonPath("$.data.length()").value(0));
+    }
+
     private Integer createCodeGroup(String accessToken, String groupKey, String groupName) throws Exception {
         String response = mockMvc.perform(post("/api/manager/code-groups")
                         .header("Authorization", bearerToken(accessToken))

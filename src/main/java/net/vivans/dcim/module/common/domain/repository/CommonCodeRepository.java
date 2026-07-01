@@ -1,7 +1,6 @@
 package net.vivans.dcim.module.common.domain.repository;
 
 import jakarta.validation.constraints.NotBlank;
-import net.vivans.dcim.module.common.api.dto.CommonCodeResponse;
 import net.vivans.dcim.module.common.domain.model.CommonCode;
 
 import java.util.List;
@@ -20,4 +19,6 @@ public interface CommonCodeRepository {
     boolean existsByNameAndIdNot(@NotBlank(message = "name must not be empty") String name, Integer id);
 
     List<CommonCode> findAll();
+
+    List<CommonCode> findByCodeGroupId(Integer codeGroupId);
 }

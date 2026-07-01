@@ -1,7 +1,6 @@
 package net.vivans.dcim.module.common.infrastructure.persistence;
 
 import lombok.RequiredArgsConstructor;
-import net.vivans.dcim.module.common.api.dto.CommonCodeResponse;
 import net.vivans.dcim.module.common.domain.model.CommonCode;
 import net.vivans.dcim.module.common.domain.repository.CommonCodeRepository;
 import org.springframework.stereotype.Repository;
@@ -43,5 +42,10 @@ public class CommonCodeJpaRepository implements CommonCodeRepository {
     @Override
     public List<CommonCode> findAll() {
         return springDataRepository.findAll();
+    }
+
+    @Override
+    public List<CommonCode> findByCodeGroupId(Integer codeGroupId) {
+        return springDataRepository.findByCodeGroupId(codeGroupId);
     }
 }

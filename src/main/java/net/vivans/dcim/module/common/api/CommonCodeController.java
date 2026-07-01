@@ -38,7 +38,9 @@ public class CommonCodeController {
 
     @GetMapping
     @Operation(summary = "공통 코드 조회 API")
-    public ResponseEntity<ApiResponse<List<CommonCodeResponse>>> getCommonCodeList(){
-        return ResponseEntity.ok(ApiResponse.ok(commonCodeQueryService.getCommonCodeList()));
+    public ResponseEntity<ApiResponse<List<CommonCodeResponse>>> getCommonCodeList(
+            @Parameter(description = "코드 그룹 ID") @RequestParam(required = false) Integer codeGroupId
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(commonCodeQueryService.getCommonCodeList(codeGroupId)));
     }
 }

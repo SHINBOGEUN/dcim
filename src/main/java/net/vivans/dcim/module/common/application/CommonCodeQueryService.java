@@ -57,7 +57,14 @@ public class CommonCodeQueryService {
         return CommonCodeResponse.from(commonCodeRepository.save(code));
     }
 
-    public List<CommonCodeResponse> getCommonCodeList() {
-        return commonCodeRepository.findAll().stream().map(CommonCodeResponse::from).toList();
+    public List<CommonCodeResponse> getCommonCodeList(Integer codeGroupId) {
+        if (codeGroupId == null) {
+            return commonCodeRepository.findAll().stream().map(CommonCodeResponse::from).toList();
+        }
+        codeGroupRepository.findById(codeGroupId)
+                .orElseThrow(() -> new EntityNotFoundException("CodeGroup not found: " + codeGroupId));
+        return commonCodeRepository.findByCodeGroupId(codeGroupId).stream()
+                .map(CommonCodeResponse::from)
+                .toList();
     }
 }
