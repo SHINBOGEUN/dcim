@@ -47,9 +47,7 @@ erDiagram
         int location_type_id FK "common_code.id"
         varchar name "노드 표시명"
         varchar code UK "nullable"
-        int sort_order "형제 정렬"
         int depth "루트=0"
-        tinyint enabled "1=사용"
         timestamp created_dt "생성 시각"
         timestamp updated_dt "수정 시각"
     }
@@ -177,9 +175,7 @@ erDiagram
 | `location_type_id` | INT | N | FK | 위치 유형 (`common_code.id`, **LOCATION_TYPE만 허용**) |
 | `name` | VARCHAR(255) | N | UK* | 노드 표시명 |
 | `code` | VARCHAR(100) | Y | UK | 내부 식별 코드 (연동·API용) |
-| `sort_order` | INT | Y | | 같은 부모 아래 형제 정렬 순서 |
 | `depth` | INT | N | | 트리 깊이 (루트 = 0) |
-| `enabled` | TINYINT(1) | N | | 사용 여부 (`1`=사용, `0`=비사용, 기본값 `1`) |
 | `created_dt` | TIMESTAMP(6) | Y | | 최초 생성 시각 |
 | `updated_dt` | TIMESTAMP(6) | Y | | 최종 수정 시각 |
 
@@ -269,9 +265,7 @@ erDiagram
 | `location_type_id` | `locationType` | `LocationNode` (`@ManyToOne` → `CommonCode`) |
 | `name` | `name` | `LocationNode` |
 | `code` | `code` | `LocationNode` |
-| `sort_order` | `sortOrder` | `LocationNode` |
 | `depth` | `depth` | `LocationNode` |
-| `enabled` | `enabled` | `LocationNode` |
 | `created_dt` | `createdDt` | `BaseEntity` |
 | `updated_dt` | `updatedDt` | `BaseEntity` |
 
@@ -299,4 +293,4 @@ V004 → location_node      (V003 선행)
 | 2026-06-26 | `code_group`, `common_code` 테이블 및 ERD 관계 추가 |
 | 2026-06-26 | `sql/history/V002`, `V003` 추가 |
 | 2026-07-01 | `location_node` 테이블 및 ERD 추가 |
-| 2026-07-01 | `sql/history/V004__create_location_node_table.sql` 추가 |
+| 2026-07-01 | `sql/history/V004__create_location_node_table.sql` 추가 (`sort_order` 없음) |

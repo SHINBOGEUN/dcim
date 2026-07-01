@@ -33,44 +33,35 @@ public class LocationNode extends BaseEntity {
     @Column(unique = true)
     private String code;
 
-    @Column(name = "sort_order")
-    private Integer sortOrder;
-
     @Column(nullable = false)
     private int depth;
 
-    @Column(nullable = false)
-    private boolean enabled = true;
-
     private LocationNode(LocationNode parent, CommonCode locationType, String name,
-                         String code, Integer sortOrder, int depth
+                         String code, int depth
     ) {
         this.parent = parent;
         this.locationType = locationType;
         this.name = name;
         this.code = code;
-        this.sortOrder = sortOrder;
         this.depth = depth;
     }
 
     public static LocationNode createRoot(
             CommonCode locationType,
             String name,
-            String code,
-            Integer sortOrder
+            String code
     ) {
         validateLocationType(locationType);
         validateName(name);
         validateCode(code);
-        return new LocationNode(null, locationType, name, code, sortOrder, 0);
+        return new LocationNode(null, locationType, name, code, 0);
     }
 
     public static LocationNode createChild(
             LocationNode parent,
             CommonCode locationType,
             String name,
-            String code,
-            Integer sortOrder
+            String code
     ) {
         if (parent == null) {
             throw new IllegalArgumentException("parent is required");
@@ -78,15 +69,13 @@ public class LocationNode extends BaseEntity {
         validateLocationType(locationType);
         validateName(name);
         validateCode(code);
-        return new LocationNode(parent, locationType, name, code, sortOrder, parent.depth + 1);
+        return new LocationNode(parent, locationType, name, code, parent.depth + 1);
     }
 
     public void update(
             CommonCode locationType,
             String name,
-            String code,
-            Integer sortOrder,
-            boolean enabled
+            String code
     ) {
         validateLocationType(locationType);
         validateName(name);
@@ -94,8 +83,6 @@ public class LocationNode extends BaseEntity {
         this.locationType = locationType;
         this.name = name;
         this.code = code;
-        this.sortOrder = sortOrder;
-        this.enabled = enabled;
     }
 
     public boolean isRoot() {
