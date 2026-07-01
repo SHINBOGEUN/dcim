@@ -1,6 +1,7 @@
 package net.vivans.dcim.module.common.application;
 
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import net.vivans.dcim.module.common.api.dto.CommonCodeRequest;
 import net.vivans.dcim.module.common.api.dto.CommonCodeResponse;
@@ -32,5 +33,24 @@ public class CommonCodeQueryService {
                 codeGroup, request.code(), request.name(), request.sortOrder());
         commonCodeRepository.save(code);
         return CommonCodeResponse.from(code);
+    }
+
+    public CommonCodeResponse updateCommonCode(Integer id, CommonCodeRequest request) {
+        CommonCode code = commonCodeRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("CommonCode not found: " + id));
+        CodeGroup codeGroup = codeGroupRepository.findById(request.groupId())
+                .orElseThrow(() -> new EntityNotFoundException("CodeGroup not found: " + request.groupId()));
+
+        boolean existsCode = commonCodeRepository.existsByCodeAndIdNot(request.code(), id);
+        boolean existsName = commonCodeRepository.existsByNameAndIdNot(request.name(), id);
+        if (existsCode){
+            throw new IllegalArgumentException("code already exists");
+        }
+        if (existsName) {
+            throw new IllegalArgumentException("name already exists");
+        }
+        code.update(codeGroup, request.code(), request.name(), request.sortOrder());
+
+        return CommonCodeResponse.from(commonCodeRepository.save(code));
     }
 }

@@ -1,6 +1,7 @@
 package net.vivans.dcim.module.common.api;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -9,10 +10,7 @@ import net.vivans.dcim.module.common.api.dto.CommonCodeResponse;
 import net.vivans.dcim.module.common.application.CommonCodeQueryService;
 import net.vivans.dcim.shared.api.ApiResponse;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/manager/common-codes")
@@ -28,4 +26,13 @@ public class CommonCodeController {
             @Valid @RequestBody CommonCodeRequest request) {
         return ResponseEntity.ok(ApiResponse.ok(commonCodeQueryService.createCommonCode(request)));
     }
+
+    @PutMapping("/{id}")
+    @Operation(summary = "공통 코드 수정 API")
+    public ResponseEntity<ApiResponse<CommonCodeResponse>> updateCommonCode (
+            @Parameter(description = "공통 코드 ID") @PathVariable Integer id, @Valid @RequestBody CommonCodeRequest request){
+        return ResponseEntity.ok(ApiResponse.ok(commonCodeQueryService.updateCommonCode(id, request)));
+    }
+
+
 }

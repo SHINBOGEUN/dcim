@@ -53,6 +53,10 @@ class CodeGroupQueryServiceTest {
         given(codeGroupRepository.findById(1)).willReturn(Optional.of(existing));
         given(codeGroupRepository.existsByGroupKeyAndIdNot("MODEL_TYPE", 1)).willReturn(false);
         given(codeGroupRepository.existsByGroupNameAndIdNot("모델 유형", 1)).willReturn(false);
+        /***
+         * willAnswer(...)	고정값이 아니라 직접 계산해서 반환
+         * getArgument(0)	save()에 넣은 첫 번째 인자
+         */
         given(codeGroupRepository.save(any(CodeGroup.class))).willAnswer(invocation -> invocation.getArgument(0));
 
         CodeGroupRequest updateRequest = new CodeGroupRequest("MODEL_TYPE", "모델 유형");

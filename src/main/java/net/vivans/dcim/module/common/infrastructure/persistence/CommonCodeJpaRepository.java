@@ -5,6 +5,8 @@ import net.vivans.dcim.module.common.domain.model.CommonCode;
 import net.vivans.dcim.module.common.domain.repository.CommonCodeRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
+
 @Repository
 @RequiredArgsConstructor
 public class CommonCodeJpaRepository implements CommonCodeRepository {
@@ -17,7 +19,22 @@ public class CommonCodeJpaRepository implements CommonCodeRepository {
     }
 
     @Override
+    public Optional<CommonCode> findById(Integer id){
+        return springDataRepository.findById(id);
+    }
+
+    @Override
     public boolean existsByCodeGroupIdAndCode(Integer groupId, String code) {
         return springDataRepository.existsByCodeGroupIdAndCode(groupId, code);
+    }
+
+    @Override
+    public boolean existsByCodeAndIdNot(String code, Integer id) {
+        return springDataRepository.existsByCodeAndIdNot(code, id);
+    }
+
+    @Override
+    public boolean existsByNameAndIdNot(String name, Integer id) {
+        return springDataRepository.existsByNameAndIdNot(name, id);
     }
 }
