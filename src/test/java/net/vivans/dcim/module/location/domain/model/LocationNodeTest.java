@@ -66,6 +66,64 @@ class LocationNodeTest {
     }
 
     @Test
+    void updateParent_changesParent() {
+        CodeGroup codeGroup = CodeGroup.createCodeGroup("LOCATION_TYPE", "장소 유형");
+        CommonCode containerType = CommonCode.createCommonCode(codeGroup, "CONTAINER", "컨테이너", 1);
+        CommonCode rowType = CommonCode.createCommonCode(codeGroup, "ROW", "열", 2);
+        CommonCode zoneType = CommonCode.createCommonCode(codeGroup, "ZONE", "존", 3);
+
+        LocationNode root = LocationNode.createRoot(ROOT_CODE, containerType, "컨테이너 A");
+        LocationNode zone = LocationNode.createChild("Z9y8X7w6V5", root, zoneType, "Zone 1");
+        LocationNode row = LocationNode.createChild(CHILD_CODE, zone, rowType, "A 열");
+
+        row.updateParent(root);
+
+        assertThat(row.getParent()).isEqualTo(root);
+    }
+
+    @Test
+    void updateParent_promotesToRoot() {
+        CodeGroup codeGroup = CodeGroup.createCodeGroup("LOCATION_TYPE", "장소 유형");
+        CommonCode containerType = CommonCode.createCommonCode(codeGroup, "CONTAINER", "컨테이너", 1);
+        CommonCode rowType = CommonCode.createCommonCode(codeGroup, "ROW", "열", 2);
+
+        LocationNode root = LocationNode.createRoot(ROOT_CODE, containerType, "컨테이너 A");
+        LocationNode row = LocationNode.createChild(CHILD_CODE, root, rowType, "A 열");
+
+        row.updateParent(null);
+
+        assertThat(row.getParent()).isNull();
+        assertThat(row.isRoot()).isTrue();
+    }
+
+    @Test
+    void updateParent_throwsWhenParentIsItself() {
+        CodeGroup codeGroup = CodeGroup.createCodeGroup("LOCATION_TYPE", "장소 유형");
+        CommonCode containerType = CommonCode.createCommonCode(codeGroup, "CONTAINER", "컨테이너", 1);
+        LocationNode root = LocationNode.createRoot(ROOT_CODE, containerType, "컨테이너 A");
+
+        assertThatThrownBy(() -> root.updateParent(root))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("cannot set parent to itself");
+    }
+
+    @Test
+    void updateParent_throwsOnCircularReference() {
+        CodeGroup codeGroup = CodeGroup.createCodeGroup("LOCATION_TYPE", "장소 유형");
+        CommonCode containerType = CommonCode.createCommonCode(codeGroup, "CONTAINER", "컨테이너", 1);
+        CommonCode rowType = CommonCode.createCommonCode(codeGroup, "ROW", "열", 2);
+        CommonCode rackType = CommonCode.createCommonCode(codeGroup, "RACK", "랙", 3);
+
+        LocationNode root = LocationNode.createRoot(ROOT_CODE, containerType, "컨테이너 A");
+        LocationNode row = LocationNode.createChild(CHILD_CODE, root, rowType, "A 열");
+        LocationNode rack = LocationNode.createChild("M4n3B2v1C0", row, rackType, "Rack-01");
+
+        assertThatThrownBy(() -> root.updateParent(rack))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("circular reference is not allowed");
+    }
+
+    @Test
     void createRoot_throwsWhenCodeIsInvalid() {
         CodeGroup codeGroup = CodeGroup.createCodeGroup("LOCATION_TYPE", "장소 유형");
         CommonCode locationType = CommonCode.createCommonCode(codeGroup, "container", "컨테이너", 1);

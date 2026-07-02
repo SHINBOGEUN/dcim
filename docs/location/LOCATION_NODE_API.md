@@ -180,7 +180,7 @@ CONTAINER
 
 ### 3.2 부모 변경 — `PATCH /api/manager/location-node/{code}/parent`
 
-**구현 상태:** ⬜ 미구현
+**구현 상태:** ✅ 구현됨 (유형 순서 검증은 미구현)
 
 ```json
 {
@@ -240,7 +240,7 @@ CONTAINER
 | `POST` | `/api/manager/location-node` | 단건 등록 | ✅ |
 | `POST` | `/api/manager/location-node/bulk` | 일괄 등록 | ⬜ |
 | `PUT` | `/api/manager/location-node/{code}` | 메타 수정 | ✅ |
-| `PATCH` | `/api/manager/location-node/{code}/parent` | 부모 변경 | ⬜ |
+| `PATCH` | `/api/manager/location-node/{code}/parent` | 부모 변경 | ✅ |
 | `GET` | `/api/manager/location-node` | 목록 조회 | ⬜ |
 | `DELETE` | `/api/manager/location-node/{code}` | 리프만 삭제 | ⬜ |
 | `DELETE` | `/api/manager/location-node/{code}/subtree` | 서브트리 전체 삭제 | ⬜ |
@@ -251,9 +251,9 @@ CONTAINER
 
 | 구분 | 내용 |
 |------|------|
-| 도메인 | `createRoot`, `createChild` (10자 Base62 `code` 자동 생성), `update` |
-| DTO | `LocationNodeCreateRequest`, `LocationNodeUpdateRequest` 분리 |
-| 미구현 | 부모 변경, 유형 순서·재부모화, 조회, 삭제, bulk |
+| 도메인 | `createRoot`, `createChild`, `update`, `updateParent` |
+| DTO | `LocationNodeCreateRequest`, `LocationNodeUpdateRequest`, `LocationNodeParentUpdateRequest` |
+| 미구현 | 유형 순서·재부모화(등록), 조회, 삭제, bulk |
 
 ---
 

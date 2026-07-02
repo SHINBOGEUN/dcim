@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import net.vivans.dcim.module.common.domain.model.CommonCode;
 import net.vivans.dcim.module.common.domain.repository.CommonCodeRepository;
 import net.vivans.dcim.module.location.api.dto.LocationNodeCreateRequest;
+import net.vivans.dcim.module.location.api.dto.LocationNodeParentUpdateRequest;
 import net.vivans.dcim.module.location.api.dto.LocationNodeResponse;
 import net.vivans.dcim.module.location.api.dto.LocationNodeUpdateRequest;
 import net.vivans.dcim.module.location.domain.model.LocationNode;
@@ -53,6 +54,26 @@ public class LocationNodeQueryService {
         node.update(locationType, request.name());
 
         return LocationNodeResponse.from(locationNodeRepository.save(node));
+    }
+
+    @Transactional
+    public LocationNodeResponse updateParentLocationNode(String code, LocationNodeParentUpdateRequest request) {
+        LocationNode node = locationNodeRepository.findByCode(code)
+                .orElseThrow(() -> new EntityNotFoundException("LocationNode not found: " + code));
+        LocationNode newParent = resolveParent(request.parentCode());
+
+        validateSiblingName(newParent, node.getName(), node.getCode());
+        node.updateParent(newParent);
+
+        return LocationNodeResponse.from(locationNodeRepository.save(node));
+    }
+
+    private LocationNode resolveParent(String parentCode) {
+        if (parentCode == null || parentCode.isBlank()) {
+            return null;
+        }
+        return locationNodeRepository.findByCode(parentCode)
+                .orElseThrow(() -> new EntityNotFoundException("LocationNode not found: " + parentCode));
     }
 
     private CommonCode findLocationType(Integer locationTypeId) {

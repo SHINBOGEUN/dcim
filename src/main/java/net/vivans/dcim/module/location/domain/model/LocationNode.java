@@ -70,6 +70,26 @@ public class LocationNode extends BaseEntity {
         this.locationType = locationType;
         this.name = name;
     }
+    public void updateParent(LocationNode newParent) {
+        if (newParent != null && newParent.getCode().equals(this.code)) {
+            throw new IllegalArgumentException("cannot set parent to itself");
+        }
+        if (newParent != null && isAncestorOf(newParent)) {
+            throw new IllegalArgumentException("circular reference is not allowed");
+        }
+        this.parent = newParent;
+    }
+
+    private boolean isAncestorOf(LocationNode descendant) {
+        LocationNode current = descendant;
+        while (current != null) {
+            if (current.getCode().equals(this.code)) {
+                return true;
+            }
+            current = current.getParent();
+        }
+        return false;
+    }
 
     public boolean isRoot() {
         return parent == null;
