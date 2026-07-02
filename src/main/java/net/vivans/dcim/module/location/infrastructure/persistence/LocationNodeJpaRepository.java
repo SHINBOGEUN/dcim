@@ -19,8 +19,8 @@ public class LocationNodeJpaRepository implements LocationNodeRepository {
     }
 
     @Override
-    public Optional<LocationNode> findById(Integer id) {
-        return springDataRepository.findById(id);
+    public Optional<LocationNode> findByCode(String code) {
+        return springDataRepository.findById(code);
     }
 
     @Override
@@ -29,7 +29,22 @@ public class LocationNodeJpaRepository implements LocationNodeRepository {
     }
 
     @Override
-    public boolean existsByCodeAndIdNot(String code, Integer id) {
-        return springDataRepository.existsByCodeAndIdNot(code, id);
+    public boolean existsByParentIsNullAndName(String name) {
+        return springDataRepository.existsByParentIsNullAndName(name);
+    }
+
+    @Override
+    public boolean existsByParentAndName(LocationNode parent, String name) {
+        return springDataRepository.existsByParentAndName(parent, name);
+    }
+
+    @Override
+    public boolean existsByParentIsNullAndNameAndCodeNot(String name, String code) {
+        return springDataRepository.existsByParentIsNullAndNameAndCodeNot(name, code);
+    }
+
+    @Override
+    public boolean existsByParentAndNameAndCodeNot(LocationNode parent, String name, String code) {
+        return springDataRepository.existsByParentAndNameAndCodeNot(parent, name, code);
     }
 }

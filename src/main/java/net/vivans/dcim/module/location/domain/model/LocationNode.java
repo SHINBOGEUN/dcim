@@ -16,11 +16,11 @@ public class LocationNode extends BaseEntity {
     private static final String LOCATION_TYPE_GROUP_KEY = "LOCATION_TYPE";
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    @Column(name = "code", length = LocationNodeCodeGenerator.CODE_LENGTH, nullable = false)
+    private String code;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "parent_id")
+    @JoinColumn(name = "parent_code")
     private LocationNode parent;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -30,63 +30,60 @@ public class LocationNode extends BaseEntity {
     @Column(nullable = false)
     private String name;
 
-    @Column(unique = true)
-    private String code;
-
-    @Column(nullable = false)
-    private int depth;
-
-    private LocationNode(LocationNode parent, CommonCode locationType, String name,
-                         String code, int depth
+    private LocationNode(
+            String code,
+            LocationNode parent,
+            CommonCode locationType,
+            String name
     ) {
+        this.code = code;
         this.parent = parent;
         this.locationType = locationType;
         this.name = name;
-        this.code = code;
-        this.depth = depth;
     }
 
-    public static LocationNode createRoot(
-            CommonCode locationType,
-            String name,
-            String code
-    ) {
+    public static LocationNode createRoot(String code, CommonCode locationType, String name) {
+        validateCode(code);
         validateLocationType(locationType);
         validateName(name);
-        validateCode(code);
-        return new LocationNode(null, locationType, name, code, 0);
+        return new LocationNode(code, null, locationType, name);
     }
 
     public static LocationNode createChild(
+            String code,
             LocationNode parent,
             CommonCode locationType,
-            String name,
-            String code
+            String name
     ) {
         if (parent == null) {
             throw new IllegalArgumentException("parent is required");
         }
+        validateCode(code);
         validateLocationType(locationType);
         validateName(name);
-        validateCode(code);
-        return new LocationNode(parent, locationType, name, code, parent.depth + 1);
+        return new LocationNode(code, parent, locationType, name);
     }
 
-    public void update(
-            CommonCode locationType,
-            String name,
-            String code
-    ) {
+    public void update(CommonCode locationType, String name) {
         validateLocationType(locationType);
         validateName(name);
-        validateCode(code);
         this.locationType = locationType;
         this.name = name;
-        this.code = code;
     }
 
     public boolean isRoot() {
         return parent == null;
+    }
+
+    private static void validateCode(String code) {
+        if (code == null || code.length() != LocationNodeCodeGenerator.CODE_LENGTH) {
+            throw new IllegalArgumentException("code is invalid");
+        }
+        for (int i = 0; i < code.length(); i++) {
+            if (LocationNodeCodeGenerator.BASE62_ALPHABET.indexOf(code.charAt(i)) < 0) {
+                throw new IllegalArgumentException("code is invalid");
+            }
+        }
     }
 
     private static void validateLocationType(CommonCode locationType) {
@@ -101,12 +98,6 @@ public class LocationNode extends BaseEntity {
     private static void validateName(String name) {
         if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("name is required");
-        }
-    }
-
-    private static void validateCode(String code) {
-        if (code != null && code.isBlank()) {
-            throw new IllegalArgumentException("code must not be blank");
         }
     }
 }

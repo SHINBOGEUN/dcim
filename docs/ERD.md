@@ -42,19 +42,17 @@ erDiagram
     }
 
     location_node {
-        int id PK "AUTO_INCREMENT"
-        int parent_id FK "nullable, self-ref"
+        varchar code PK "10자 Base62, 서버 자동 생성"
+        varchar parent_code FK "nullable, self-ref"
         int location_type_id FK "common_code.id"
         varchar name "노드 표시명"
-        varchar code UK "nullable"
-        int depth "루트=0"
         timestamp created_dt "생성 시각"
         timestamp updated_dt "수정 시각"
     }
 
     code_group ||--o{ common_code : "group_id"
     common_code ||--o{ location_node : "location_type_id"
-    location_node ||--o{ location_node : "parent_id"
+    location_node ||--o{ location_node : "parent_code"
 ```
 
 | 모듈 | 테이블 | 관계 |
@@ -62,7 +60,7 @@ erDiagram
 | identity | `users` | 독립 |
 | common | `code_group` | 1 |
 | common | `common_code` | N → `code_group` |
-| location | `location_node` | N → `common_code` (LOCATION_TYPE), 자기참조 `parent_id`
+| location | `location_node` | N → `common_code` (LOCATION_TYPE), 자기참조 `parent_code` |
 
 ---
 
@@ -170,21 +168,20 @@ erDiagram
 
 | 컬럼 | 타입 | NULL | 키 | 설명 |
 |------|------|------|-----|------|
-| `id` | INT | N | PK | 위치 노드 ID |
-| `parent_id` | INT | Y | FK | 부모 노드 ID. **루트는 NULL** |
+| `code` | CHAR(10) | N | PK | 노드 식별자 (**10자 Base62**, 서버 자동 생성, 불변) |
+| `parent_code` | CHAR(10) | Y | FK | 부모 노드 code. **루트는 NULL** |
 | `location_type_id` | INT | N | FK | 위치 유형 (`common_code.id`, **LOCATION_TYPE만 허용**) |
-| `name` | VARCHAR(255) | N | UK* | 노드 표시명 |
-| `code` | VARCHAR(100) | Y | UK | 내부 식별 코드 (연동·API용) |
-| `depth` | INT | N | | 트리 깊이 (루트 = 0) |
+| `name` | VARCHAR(255) | N | UK* | 노드 표시명 (사용자 입력) |
 | `created_dt` | TIMESTAMP(6) | Y | | 최초 생성 시각 |
 | `updated_dt` | TIMESTAMP(6) | Y | | 최종 수정 시각 |
 
-\* UK: `(parent_id, name)` 복합 유니크 — 같은 부모 아래 이름 중복 불가
+\* UK: `(parent_code, name)` 복합 유니크 — 같은 부모 아래 이름 중복 불가
 
-**엔티티:** `module/location/domain/model/LocationNode.java` (예정)  
+**엔티티:** `module/location/domain/model/LocationNode.java`  
+**API 설계:** [LOCATION_NODE_API.md](../location/LOCATION_NODE_API.md)  
 **상속:** `BaseEntity`  
 **연관:**
-- `@ManyToOne` → `LocationNode` (`@JoinColumn(name = "parent_id")`) — 자기 참조
+- `@ManyToOne` → `LocationNode` (`@JoinColumn(name = "parent_code")`) — 자기 참조
 - `@ManyToOne` → `CommonCode` (`@JoinColumn(name = "location_type_id")`)
 
 **DDL:** [V004__create_location_node_table.sql](../sql/history/V004__create_location_node_table.sql)
@@ -193,30 +190,39 @@ erDiagram
 
 | FK | 참조 | ON DELETE | ON UPDATE |
 |----|------|-----------|-----------|
-| `fk_location_node_parent_id` | `location_node(id)` | RESTRICT | CASCADE |
+| `fk_location_node_parent_code` | `location_node(code)` | RESTRICT | CASCADE |
 | `fk_location_node_location_type_id` | `common_code(id)` | RESTRICT | CASCADE |
+
+**향후 연동 (devices)**
+
+| 컬럼 | 설명 |
+|------|------|
+| `devices.location_node_code` | 장비가 속한 위치 노드 FK → `location_node(code)` (`CHAR(10)`, CONTAINER/ROW/RACK 등 모든 유형 가능) |
 
 **트리 규칙 (애플리케이션)**
 
 | 구분 | 조건 |
 |------|------|
-| 루트 노드 | `parent_id IS NULL` |
-| 리프 노드 | `parent_id = 이 노드 id` 인 행이 없음 |
+| 루트 노드 | `parent_code IS NULL` |
+| 리프 노드 | `parent_code = 이 노드 code` 인 행이 없음 |
 | 위치 유형 | `location_type_id` → `common_code` 중 `group_key = 'LOCATION_TYPE'`만 허용 (DB FK는 `common_code`만 검증) |
+| `code` | 생성 시 10자 Base62 자동 부여, 변경 불가 |
 | 순환 참조 | 금지 (애플리케이션 검증) |
-| 자식 있는 노드 삭제 | 정책 미정 (현재 FK `ON DELETE RESTRICT`) |
+| 자식 있는 노드 삭제 | 리프만 단건 삭제 / 서브트리 cascade 삭제 API로 분리 ([API 설계](../location/LOCATION_NODE_API.md#5-삭제-api)) |
+| 유형 삽입 시 재구성 | 중간 유형 등록 시 기존 직접 자식 재부모화 ([API 설계](../location/LOCATION_NODE_API.md#자식-등록-시-트리-재구성-핵심-규칙)) |
 
 **예시 데이터**
 
-`LOCATION_TYPE` common_code: `site`, `building`, `floor`, `row`, `rack` …
+`LOCATION_TYPE` common_code: `CONTAINER`, `ZONE`, `ROW`, `RACK` …
 
-| id | parent_id | location_type_id | name | code | depth |
-|----|-----------|------------------|------|------|-------|
-| 1 | NULL | site | 본사 | site-hq | 0 |
-| 2 | 1 | building | A동 | bld-a | 1 |
-| 3 | 2 | floor | 1층 | floor-1 | 2 |
-| 4 | 3 | row | In-Row-01 | row-01 | 3 |
-| 5 | 4 | rack | Rack-01 | rack-01 | 4 |
+| code | parent_code | location_type_id | name |
+|------|-------------|------------------|------|
+| `K7mN2pQx9L` | NULL | 1 | 컨테이너 A |
+| `A1b2C3d4E5` | `K7mN2pQx9L` | 2 | Zone 1 |
+| `Z9y8X7w6V5` | `A1b2C3d4E5` | 3 | A열 |
+| `M4n3B2v1C0` | `Z9y8X7w6V5` | 4 | Rack-01 |
+
+> `location_type_id`는 `common_code.id` (LOCATION_TYPE 그룹)를 가리킵니다.
 
 ---
 
@@ -256,16 +262,14 @@ erDiagram
 | `created_dt` | `createdDt` | `BaseEntity` |
 | `updated_dt` | `updatedDt` | `BaseEntity` |
 
-### location — `LocationNode` (예정)
+### location — `LocationNode`
 
 | DB 컬럼 | Java 필드 | 출처 |
 |---------|-----------|------|
-| `id` | `id` | `LocationNode` |
-| `parent_id` | `parent` | `LocationNode` (`@ManyToOne`, self) |
+| `code` | `code` | `LocationNode` (`@Id`) |
+| `parent_code` | `parent` | `LocationNode` (`@ManyToOne`, self) |
 | `location_type_id` | `locationType` | `LocationNode` (`@ManyToOne` → `CommonCode`) |
 | `name` | `name` | `LocationNode` |
-| `code` | `code` | `LocationNode` |
-| `depth` | `depth` | `LocationNode` |
 | `created_dt` | `createdDt` | `BaseEntity` |
 | `updated_dt` | `updatedDt` | `BaseEntity` |
 
@@ -293,4 +297,5 @@ V004 → location_node      (V003 선행)
 | 2026-06-26 | `code_group`, `common_code` 테이블 및 ERD 관계 추가 |
 | 2026-06-26 | `sql/history/V002`, `V003` 추가 |
 | 2026-07-01 | `location_node` 테이블 및 ERD 추가 |
-| 2026-07-01 | `sql/history/V004__create_location_node_table.sql` 추가 (`sort_order` 없음) |
+| 2026-07-02 | LocationNode API 설계 문서 추가 (`docs/location/LOCATION_NODE_API.md`) |
+| 2026-07-02 | `location_node` 스키마 확정 — `code`(10자 Base62) PK, `parent_code` 자기참조 |

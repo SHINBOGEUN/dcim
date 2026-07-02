@@ -8,9 +8,15 @@ public interface LocationNodeRepository {
 
     LocationNode save(LocationNode node);
 
-    Optional<LocationNode> findById(Integer id);
+    Optional<LocationNode> findByCode(String code);
 
     boolean existsByCode(String code);
 
-    boolean existsByCodeAndIdNot(String code, Integer id);
+    boolean existsByParentIsNullAndName(String name);
+
+    boolean existsByParentAndName(LocationNode parent, String name);
+
+    boolean existsByParentIsNullAndNameAndCodeNot(String name, String code);
+
+    boolean existsByParentAndNameAndCodeNot(LocationNode parent, String name, String code);
 }
