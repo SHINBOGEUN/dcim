@@ -13,4 +13,13 @@ class LocationNodeCodeGeneratorTest {
         assertThat(code).hasSize(LocationNodeCodeGenerator.CODE_LENGTH);
         assertThat(code).matches("[0-9A-Za-z]{10}");
     }
+
+    @Test
+    void generate_createsUniqueCodes() {
+        java.util.Set<String> codes = new java.util.HashSet<>();
+        for (int i = 0; i < 100; i++) {
+            codes.add(LocationNodeCodeGenerator.generate());
+        }
+        assertThat(codes).hasSize(100);
+    }
 }

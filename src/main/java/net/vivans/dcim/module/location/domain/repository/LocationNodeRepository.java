@@ -2,6 +2,7 @@ package net.vivans.dcim.module.location.domain.repository;
 
 import net.vivans.dcim.module.location.domain.model.LocationNode;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface LocationNodeRepository {
@@ -11,6 +12,8 @@ public interface LocationNodeRepository {
     Optional<LocationNode> findByCode(String code);
 
     boolean existsByCode(String code);
+
+    List<LocationNode> findAll();
 
     boolean existsByParentIsNullAndName(String name);
 

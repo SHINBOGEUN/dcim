@@ -175,7 +175,7 @@ erDiagram
 | `created_dt` | TIMESTAMP(6) | Y | | 최초 생성 시각 |
 | `updated_dt` | TIMESTAMP(6) | Y | | 최종 수정 시각 |
 
-\* UK: `(parent_code, name)` 복합 유니크 — 같은 부모 아래 이름 중복 불가
+\* UK: `(parent_code, name)` — 자식 노드 이름 중복 방지. 루트는 애플리케이션에서 검증
 
 **엔티티:** `module/location/domain/model/LocationNode.java`  
 **API 설계:** [LOCATION_NODE_API.md](../location/LOCATION_NODE_API.md)  

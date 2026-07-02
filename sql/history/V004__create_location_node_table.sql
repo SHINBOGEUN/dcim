@@ -14,9 +14,9 @@
 -- 비즈니스 규칙 (애플리케이션에서 검증):
 --   - code: PK, 서버에서 10자 Base62 랜덤 문자열 자동 생성 (불변)
 --   - parent_code IS NULL → 루트 노드
---   - parent_code를 참조하는 자식이 없으면 리프 노드
---   - location_type_id는 common_code 중 LOCATION_TYPE 그룹만 허용
---   - (parent_code, name) 복합 유니크 — 같은 부모 아래 이름 중복 불가
+--   - (parent_code, name) UK — 같은 부모 아래 이름 중복 불가 (자식 노드)
+--   - 루트 name 중복 — 애플리케이션 검증 (existsByParentIsNullAndName)
+--   - location_type_id — LOCATION_TYPE 그룹만 허용
 -- =============================================================================
 
 CREATE TABLE IF NOT EXISTS location_node (

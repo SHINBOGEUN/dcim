@@ -14,6 +14,8 @@ import net.vivans.dcim.shared.api.ApiResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/manager/location-node")
 @RequiredArgsConstructor
@@ -21,6 +23,15 @@ import org.springframework.web.bind.annotation.*;
 public class LocationNodeController {
 
     private final LocationNodeQueryService nodeQueryService;
+
+    @GetMapping
+    @Operation(summary = "위치 노드 트리 조회 API", description = "전체 노드를 조회한 뒤 children에 중첩해 트리로 반환합니다.")
+    public ResponseEntity<ApiResponse<List<LocationNodeResponse>>> getLocationNodes(
+            @Parameter(description = "이름 부분 일치 검색") @RequestParam(required = false) String name,
+            @Parameter(description = "직접 자식만 조회할 부모 code") @RequestParam(required = false) String parentCode,
+            @Parameter(description = "위치 유형 ID") @RequestParam(required = false) Integer locationTypeId) {
+        return ResponseEntity.ok(ApiResponse.ok(nodeQueryService.getLocationNodes(name, parentCode, locationTypeId)));
+    }
 
     @PostMapping
     @Operation(summary = "위치 노드 등록 API", description = "code는 서버에서 10자 Base62 문자열로 자동 생성됩니다.")

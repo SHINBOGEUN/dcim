@@ -124,6 +124,26 @@ class LocationNodeTest {
     }
 
     @Test
+    void createRoot_throwsWhenLocationTypeIsNotLocationTypeGroup() {
+        CodeGroup deviceGroup = CodeGroup.createCodeGroup("DEVICE_TYPE", "장비 유형");
+        CommonCode pdu = CommonCode.createCommonCode(deviceGroup, "pdu", "PDU", 1);
+
+        assertThatThrownBy(() -> LocationNode.createRoot(ROOT_CODE, pdu, "컨테이너 A"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("locationType must belong to LOCATION_TYPE group");
+    }
+
+    @Test
+    void createRoot_throwsWhenNameIsBlank() {
+        CodeGroup codeGroup = CodeGroup.createCodeGroup("LOCATION_TYPE", "장소 유형");
+        CommonCode locationType = CommonCode.createCommonCode(codeGroup, "container", "컨테이너", 1);
+
+        assertThatThrownBy(() -> LocationNode.createRoot(ROOT_CODE, locationType, "  "))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("name is required");
+    }
+
+    @Test
     void createRoot_throwsWhenCodeIsInvalid() {
         CodeGroup codeGroup = CodeGroup.createCodeGroup("LOCATION_TYPE", "장소 유형");
         CommonCode locationType = CommonCode.createCommonCode(codeGroup, "container", "컨테이너", 1);

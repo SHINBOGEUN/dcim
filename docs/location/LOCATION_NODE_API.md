@@ -27,7 +27,7 @@
 
 | 항목 | 규칙 |
 |------|------|
-| `name` | 필수. 같은 부모 아래에서 중복 불가 (`uk_location_node_parent_code_name`) |
+| `name` | 필수. 같은 부모 아래에서 중복 불가 (`uk_location_node_parent_code_name`, 루트는 앱 검증) |
 | `code` | 서버 자동 생성 (10자 Base62, `[0-9A-Za-z]`). 사용자 입력 없음. 변경 불가 |
 | `location_type_id` | 필수. `LOCATION_TYPE` 그룹 소속만 허용 |
 | 순환 참조 | 금지 (자기 자신·자손을 부모로 지정 불가) |
@@ -89,7 +89,8 @@
   "code": "K7mN2pQx9L",
   "parentCode": null,
   "locationTypeId": 1,
-  "name": "컨테이너 A"
+  "name": "컨테이너 A",
+  "children": []
 }
 ```
 
@@ -122,6 +123,7 @@ CONTAINER
 | 위치 유형 없음 | 404 | `CommonCode not found: {locationTypeId}` |
 | LOCATION_TYPE 아님 | 400 | `locationType must belong to LOCATION_TYPE group` |
 | 형제 name 중복 | 400 | `name already exists under parent` |
+| DB UK 위반 (동시 요청 등) | 400 | `name already exists under parent` |
 | 유형 순서 위반 | 400 | `child location type must be deeper than parent` |
 
 ---
@@ -202,15 +204,53 @@ CONTAINER
 
 ## 4. 조회 API
 
-### 4.1 목록 조회 — `GET /api/manager/location-node`
+### 4.1 트리 조회 — `GET /api/manager/location-node`
 
-**구현 상태:** ⬜ 미구현
+**구현 상태:** ✅ 구현됨
+
+전체 노드를 조회한 뒤 **`children`에 중첩된 트리**로 반환합니다. 탐색기(폴더 트리) 형태입니다.
 
 | 파라미터 | 설명 |
 |----------|------|
-| `name` | 이름 부분 일치 검색 |
-| `parentCode` | 특정 부모의 직접 자식만 |
-| `locationTypeId` | 위치 유형 필터 |
+| `name` | 이름 **부분 일치** 검색 (대소문자 무시). 매칭 노드의 **조상·자손 경로**를 포함 |
+| `parentCode` | 해당 노드를 루트로 한 **서브트리** (노드 + 모든 자손). 없는 code면 404 |
+| `locationTypeId` | 위치 유형 필터. 매칭 노드의 **조상·자손 경로**를 포함. 없는 ID면 404 |
+
+파라미터 미지정 시 **전체 포레스트**(루트 노드 배열)를 반환합니다. 각 레벨은 `name` 오름차순입니다.
+
+#### 응답 예시
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "code": "TSTCNTR001",
+      "parentCode": null,
+      "locationTypeId": 1,
+      "name": "테스트 컨테이너 01",
+      "children": [
+        {
+          "code": "TSTZONE001",
+          "parentCode": "TSTCNTR001",
+          "locationTypeId": 2,
+          "name": "테스트 존 01",
+          "children": []
+        }
+      ]
+    }
+  ]
+}
+```
+
+#### 필터 조합
+
+| 조합 | 동작 |
+|------|------|
+| 없음 | 전체 트리 |
+| `parentCode`만 | 해당 노드 + 하위 전체 |
+| `name` / `locationTypeId` | 조건에 맞는 노드 + 경로(조상·자손) |
+| `parentCode` + `name` / `locationTypeId` | 서브트리 안에서 필터. 루트는 항상 포함, 매칭 없으면 `[]` |
 
 ---
 
@@ -241,7 +281,7 @@ CONTAINER
 | `POST` | `/api/manager/location-node/bulk` | 일괄 등록 | ⬜ |
 | `PUT` | `/api/manager/location-node/{code}` | 메타 수정 | ✅ |
 | `PATCH` | `/api/manager/location-node/{code}/parent` | 부모 변경 | ✅ |
-| `GET` | `/api/manager/location-node` | 목록 조회 | ⬜ |
+| `GET` | `/api/manager/location-node` | 트리 조회 | ✅ |
 | `DELETE` | `/api/manager/location-node/{code}` | 리프만 삭제 | ⬜ |
 | `DELETE` | `/api/manager/location-node/{code}/subtree` | 서브트리 전체 삭제 | ⬜ |
 
@@ -253,7 +293,7 @@ CONTAINER
 |------|------|
 | 도메인 | `createRoot`, `createChild`, `update`, `updateParent` |
 | DTO | `LocationNodeCreateRequest`, `LocationNodeUpdateRequest`, `LocationNodeParentUpdateRequest` |
-| 미구현 | 유형 순서·재부모화(등록), 조회, 삭제, bulk |
+| 미구현 | 유형 순서·재부모화(등록), 삭제, bulk |
 
 ---
 
@@ -265,3 +305,4 @@ CONTAINER
 | 2026-07-02 | `depth` 제거, 하위 순차 삭제 API 제거 |
 | 2026-07-02 | `id` 제거, `code` PK·서버 자동 생성, `parentCode` 기준으로 전환 |
 | 2026-07-02 | `code` 형식을 UUID → **10자 Base62** 로 변경 (`LocationNodeCodeGenerator`) |
+| 2026-07-02 | GET 응답을 트리(`children`) 구조로 정리 |

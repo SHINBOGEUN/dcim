@@ -5,6 +5,7 @@ import net.vivans.dcim.module.location.domain.model.LocationNode;
 import net.vivans.dcim.module.location.domain.repository.LocationNodeRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -26,6 +27,11 @@ public class LocationNodeJpaRepository implements LocationNodeRepository {
     @Override
     public boolean existsByCode(String code) {
         return springDataRepository.existsByCode(code);
+    }
+
+    @Override
+    public List<LocationNode> findAll() {
+        return springDataRepository.findAll();
     }
 
     @Override
