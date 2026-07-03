@@ -367,4 +367,36 @@ class LocationNodeQueryServiceTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("name already exists under parent");
     }
+
+    @Test
+    void deleteLocationNode_deletesLeafNode() {
+        when(locationNodeRepository.findByCode("TSTROW0001")).thenReturn(Optional.of(row));
+        when(locationNodeRepository.existsByParent_Code("TSTROW0001")).thenReturn(false);
+
+        locationNodeQueryService.deleteLocationNode("TSTROW0001");
+
+        verify(locationNodeRepository).delete(row);
+    }
+
+    @Test
+    void deleteLocationNode_throwsWhenNodeHasChildren() {
+        when(locationNodeRepository.findByCode("TSTCNTR001")).thenReturn(Optional.of(container));
+        when(locationNodeRepository.existsByParent_Code("TSTCNTR001")).thenReturn(true);
+
+        assertThatThrownBy(() -> locationNodeQueryService.deleteLocationNode("TSTCNTR001"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("cannot delete node with children");
+
+        verify(locationNodeRepository, never()).delete(container);
+    }
+
+    @Test
+    void deleteLocationNodeSubtree_deletesDeepestFirst() {
+        when(locationNodeRepository.existsByCode("TSTCNTR001")).thenReturn(true);
+        when(locationNodeRepository.findAll()).thenReturn(List.of(container, row));
+
+        locationNodeQueryService.deleteLocationNodeSubtree("TSTCNTR001");
+
+        verify(locationNodeRepository).deleteAll(List.of(row, container));
+    }
 }

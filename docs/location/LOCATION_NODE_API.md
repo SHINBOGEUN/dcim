@@ -308,17 +308,18 @@ CONTAINER
 
 ### 5.1 단건 삭제 (리프만) — `DELETE /api/manager/location-node/{code}`
 
-**구현 상태:** ⬜ 미구현
+**구현 상태:** ✅ 구현됨
 
-- 자식 없음 → 삭제 성공
-- 자식 있음 → 400
-- 트리 비우기: 리프부터 `DELETE` 반복
+- 자식 없음 → 삭제 성공, 삭제된 `code` 반환
+- 자식 있음 → 400 (`cannot delete node with children`)
+- 노드 없음 → 404
 
 ### 5.2 서브트리 전체 삭제 — `DELETE /api/manager/location-node/{code}/subtree`
 
-**구현 상태:** ⬜ 미구현
+**구현 상태:** ✅ 구현됨
 
-- 해당 노드 + 모든 자손 cascade 삭제
+- 해당 노드 + 모든 자손 cascade 삭제 (깊은 노드부터 삭제)
+- 노드 없음 → 404
 - 향후 `devices.location_node_code` 참조 시 RESTRICT/409 검토
 
 ---
@@ -332,8 +333,8 @@ CONTAINER
 | `PUT` | `/api/manager/location-node/{code}` | 메타 수정 | ✅ |
 | `PATCH` | `/api/manager/location-node/{code}/parent` | 부모 변경 | ✅ |
 | `GET` | `/api/manager/location-node` | 트리 조회 | ✅ |
-| `DELETE` | `/api/manager/location-node/{code}` | 리프만 삭제 | ⬜ |
-| `DELETE` | `/api/manager/location-node/{code}/subtree` | 서브트리 전체 삭제 | ⬜ |
+| `DELETE` | `/api/manager/location-node/{code}` | 리프만 삭제 | ✅ |
+| `DELETE` | `/api/manager/location-node/{code}/subtree` | 서브트리 전체 삭제 | ✅ |
 
 ---
 
@@ -343,7 +344,7 @@ CONTAINER
 |------|------|
 | 도메인 | `createRoot`, `createChild`, `update`, `updateParent` |
 | DTO | `LocationNodeCreateRequest`, `LocationNodeBulkCreateRequest`, `LocationNodeTreeCreateRequest`, `LocationNodeUpdateRequest`, `LocationNodeParentUpdateRequest` |
-| 미구현 | 유형 순서·재부모화(등록), 삭제 |
+| 미구현 | 유형 순서·재부모화(등록) |
 
 ---
 

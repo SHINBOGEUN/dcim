@@ -25,8 +25,23 @@ public class LocationNodeJpaRepository implements LocationNodeRepository {
     }
 
     @Override
+    public boolean existsByParent_Code(String parentCode) {
+        return springDataRepository.existsByParent_Code(parentCode);
+    }
+
+    @Override
     public boolean existsByCode(String code) {
         return springDataRepository.existsByCode(code);
+    }
+
+    @Override
+    public void delete(LocationNode node) {
+        springDataRepository.delete(node);
+    }
+
+    @Override
+    public void deleteAll(List<LocationNode> nodes) {
+        springDataRepository.deleteAll(nodes);
     }
 
     @Override

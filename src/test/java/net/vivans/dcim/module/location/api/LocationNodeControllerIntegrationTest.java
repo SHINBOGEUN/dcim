@@ -16,6 +16,7 @@ import static net.vivans.dcim.support.AuthTestSupport.bearerToken;
 import static net.vivans.dcim.support.AuthTestSupport.loginAndGetAccessToken;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.nullValue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -163,6 +164,67 @@ class LocationNodeControllerIntegrationTest {
                 .andExpect(jsonPath("$.data[0].children", hasSize(1)))
                 .andExpect(jsonPath("$.data[0].children[0].name").value("A열"))
                 .andExpect(jsonPath("$.data[0].children[0].parentCode").value(rootCode));
+    }
+
+    @Test
+    void deleteLeafNode_removesNode() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "location-delete-user", "password123");
+        Integer groupId = createCodeGroup(accessToken, "LOCATION_TYPE", "위치 유형");
+        Integer containerTypeId = createCommonCode(accessToken, groupId, "CONTAINER", "컨테이너", 1);
+        Integer rowTypeId = createCommonCode(accessToken, groupId, "ROW", "열", 2);
+
+        String rootCode = createLocationNode(accessToken, null, containerTypeId, "컨테이너 A");
+        String rowCode = createLocationNode(accessToken, rootCode, rowTypeId, "A열");
+
+        mockMvc.perform(delete("/api/manager/location-node/{code}", rowCode)
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").value(rowCode));
+
+        mockMvc.perform(get("/api/manager/location-node")
+                        .param("parentCode", rootCode)
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(1)))
+                .andExpect(jsonPath("$.data[0].code").value(rootCode))
+                .andExpect(jsonPath("$.data[0].children", hasSize(0)));
+    }
+
+    @Test
+    void deleteNodeWithChildren_returnsBadRequest() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "location-delete-parent-user", "password123");
+        Integer groupId = createCodeGroup(accessToken, "LOCATION_TYPE", "위치 유형");
+        Integer containerTypeId = createCommonCode(accessToken, groupId, "CONTAINER", "컨테이너", 1);
+        Integer rowTypeId = createCommonCode(accessToken, groupId, "ROW", "열", 2);
+
+        String rootCode = createLocationNode(accessToken, null, containerTypeId, "컨테이너 A");
+        createLocationNode(accessToken, rootCode, rowTypeId, "A열");
+
+        mockMvc.perform(delete("/api/manager/location-node/{code}", rootCode)
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
+    }
+
+    @Test
+    void deleteSubtree_removesNodeAndDescendants() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "location-delete-subtree-user", "password123");
+        Integer groupId = createCodeGroup(accessToken, "LOCATION_TYPE", "위치 유형");
+        Integer containerTypeId = createCommonCode(accessToken, groupId, "CONTAINER", "컨테이너", 1);
+        Integer rowTypeId = createCommonCode(accessToken, groupId, "ROW", "열", 2);
+
+        String rootCode = createLocationNode(accessToken, null, containerTypeId, "컨테이너 A");
+        createLocationNode(accessToken, rootCode, rowTypeId, "A열");
+
+        mockMvc.perform(delete("/api/manager/location-node/{code}/subtree", rootCode)
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").value(rootCode));
+
+        mockMvc.perform(get("/api/manager/location-node")
+                        .param("parentCode", rootCode)
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isNotFound());
     }
 
     @Test

@@ -63,4 +63,20 @@ public class LocationNodeController {
             @Valid @RequestBody LocationNodeParentUpdateRequest request){
         return ResponseEntity.ok(ApiResponse.ok(nodeQueryService.updateParentLocationNode(code, request)));
     }
+
+    @DeleteMapping("/{code}")
+    @Operation(summary = "위치 노드 삭제 API", description = "리프 노드만 삭제합니다. 자식이 있으면 400을 반환합니다.")
+    public ResponseEntity<ApiResponse<String>> deleteLocationNode(
+            @Parameter(description = "위치 노드 code") @PathVariable String code) {
+        nodeQueryService.deleteLocationNode(code);
+        return ResponseEntity.ok(ApiResponse.ok(code, null));
+    }
+
+    @DeleteMapping("/{code}/subtree")
+    @Operation(summary = "위치 노드 서브트리 삭제 API", description = "해당 노드와 모든 자손을 삭제합니다.")
+    public ResponseEntity<ApiResponse<String>> deleteLocationNodeSubtree(
+            @Parameter(description = "위치 노드 code") @PathVariable String code) {
+        nodeQueryService.deleteLocationNodeSubtree(code);
+        return ResponseEntity.ok(ApiResponse.ok(code, null));
+    }
 }

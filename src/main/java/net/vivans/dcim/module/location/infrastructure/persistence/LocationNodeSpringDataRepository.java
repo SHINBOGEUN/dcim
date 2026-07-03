@@ -5,10 +5,13 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface LocationNodeSpringDataRepository extends JpaRepository<LocationNode, String> {
 
     boolean existsByCode(String code);
+
+    boolean existsByParent_Code(String parentCode);
 
     boolean existsByParentIsNullAndName(String name);
 

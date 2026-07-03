@@ -11,9 +11,15 @@ public interface LocationNodeRepository {
 
     Optional<LocationNode> findByCode(String code);
 
+    boolean existsByParent_Code(String parentCode);
+
     boolean existsByCode(String code);
 
     List<LocationNode> findAll();
+
+    void delete(LocationNode node);
+
+    void deleteAll(List<LocationNode> nodes);
 
     boolean existsByParentIsNullAndName(String name);
 

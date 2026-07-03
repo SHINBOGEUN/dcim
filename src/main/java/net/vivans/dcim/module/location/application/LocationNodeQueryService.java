@@ -94,6 +94,27 @@ public class LocationNodeQueryService {
         return LocationNodeResponse.from(locationNodeRepository.save(node));
     }
 
+    @Transactional
+    public void deleteLocationNode(String code) {
+        LocationNode node = locationNodeRepository.findByCode(code)
+                .orElseThrow(() -> new EntityNotFoundException("LocationNode not found: " + code));
+        if (locationNodeRepository.existsByParent_Code(code)) {
+            throw new IllegalArgumentException("cannot delete node with children");
+        }
+        locationNodeRepository.delete(node);
+    }
+
+    @Transactional
+    public void deleteLocationNodeSubtree(String code) {
+        if (!locationNodeRepository.existsByCode(code)) {
+            throw new EntityNotFoundException("LocationNode not found: " + code);
+        }
+
+        List<LocationNode> subtree = filterSubtree(code, locationNodeRepository.findAll());
+        List<LocationNode> deleteOrder = sortByDepthDescending(subtree);
+        locationNodeRepository.deleteAll(deleteOrder);
+    }
+
     public List<LocationNodeResponse> getLocationNodes(String name, String parentCode, Integer locationTypeId) {
         String normalizedName = blankToNull(name);
         String normalizedParentCode = blankToNull(parentCode);
@@ -260,6 +281,26 @@ public class LocationNodeQueryService {
             subtreeCodes.add(child.getCode());
             collectDescendants(child.getCode(), childrenByParentCode, subtreeCodes);
         }
+    }
+
+    private List<LocationNode> sortByDepthDescending(List<LocationNode> nodes) {
+        Map<String, String> parentByCode = buildParentByCode(nodes);
+        List<LocationNode> sorted = new ArrayList<>(nodes);
+        sorted.sort((a, b) -> Integer.compare(
+                computeDepth(b, parentByCode),
+                computeDepth(a, parentByCode)
+        ));
+        return sorted;
+    }
+
+    private int computeDepth(LocationNode node, Map<String, String> parentByCode) {
+        int depth = 0;
+        String parentCode = parentByCode.get(node.getCode());
+        while (parentCode != null) {
+            depth++;
+            parentCode = parentByCode.get(parentCode);
+        }
+        return depth;
     }
 
     private LocationNode resolveParent(String parentCode) {
