@@ -171,7 +171,7 @@ public class LocationNodeQueryService {
             addDescendants(node.getCode(), childrenByParentCode, keepCodes, scopedCodes);
         }
 
-        if (parentCode != null) {
+        if (parentCode != null && !keepCodes.isEmpty()) {
             keepCodes.add(parentCode);
         }
 
