@@ -59,6 +59,47 @@ class LocationNodeControllerIntegrationTest {
     }
 
     @Test
+    void createIntermediateType_reparentsExistingChildren() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "location-reparent-user", "password123");
+        Integer groupId = createCodeGroup(accessToken, "LOCATION_TYPE", "위치 유형");
+        Integer containerTypeId = createCommonCode(accessToken, groupId, "CONTAINER", "컨테이너", 1);
+        Integer zoneTypeId = createCommonCode(accessToken, groupId, "ZONE", "존", 2);
+        Integer rowTypeId = createCommonCode(accessToken, groupId, "ROW", "열", 3);
+
+        String rootCode = createLocationNode(accessToken, null, containerTypeId, "컨테이너 A");
+        String rowCode = createLocationNode(accessToken, rootCode, rowTypeId, "A열");
+        String zoneCode = createLocationNode(accessToken, rootCode, zoneTypeId, "존 1");
+
+        mockMvc.perform(get("/api/manager/location-node")
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].code").value(rootCode))
+                .andExpect(jsonPath("$.data[0].children", hasSize(1)))
+                .andExpect(jsonPath("$.data[0].children[0].code").value(zoneCode))
+                .andExpect(jsonPath("$.data[0].children[0].children", hasSize(1)))
+                .andExpect(jsonPath("$.data[0].children[0].children[0].code").value(rowCode))
+                .andExpect(jsonPath("$.data[0].children[0].children[0].parentCode").value(zoneCode));
+    }
+
+    @Test
+    void create_invalidLocationTypeOrder_returnsBadRequest() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "location-type-order-user", "password123");
+        Integer groupId = createCodeGroup(accessToken, "LOCATION_TYPE", "위치 유형");
+        Integer containerTypeId = createCommonCode(accessToken, groupId, "CONTAINER", "컨테이너", 1);
+
+        String rootCode = createLocationNode(accessToken, null, containerTypeId, "컨테이너 A");
+
+        mockMvc.perform(post("/api/manager/location-node")
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"parentCode": "%s", "locationTypeId": %d, "name": "잘못된 자식"}
+                                """.formatted(rootCode, containerTypeId)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
+    }
+
+    @Test
     void update_updatesNameAndLocationType() throws Exception {
         String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "location-update-user", "password123");
         Integer groupId = createCodeGroup(accessToken, "LOCATION_TYPE", "위치 유형");

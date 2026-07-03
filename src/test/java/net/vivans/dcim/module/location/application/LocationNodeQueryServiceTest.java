@@ -28,6 +28,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -36,14 +37,17 @@ import static org.mockito.Mockito.when;
 class LocationNodeQueryServiceTest {
 
     private static final CommonCode CONTAINER_TYPE;
+    private static final CommonCode ZONE_TYPE;
     private static final CommonCode ROW_TYPE;
     private static final CommonCode DEVICE_TYPE;
 
     static {
         CodeGroup locationGroup = CodeGroup.createCodeGroup("LOCATION_TYPE", "장소 유형");
         CONTAINER_TYPE = CommonCode.createCommonCode(locationGroup, "CONTAINER", "컨테이너", 1);
+        ZONE_TYPE = CommonCode.createCommonCode(locationGroup, "ZONE", "존", 2);
         ROW_TYPE = CommonCode.createCommonCode(locationGroup, "ROW", "열", 3);
         ReflectionTestUtils.setField(CONTAINER_TYPE, "id", 1);
+        ReflectionTestUtils.setField(ZONE_TYPE, "id", 2);
         ReflectionTestUtils.setField(ROW_TYPE, "id", 3);
 
         CodeGroup deviceGroup = CodeGroup.createCodeGroup("DEVICE_TYPE", "장비 유형");
@@ -67,6 +71,7 @@ class LocationNodeQueryServiceTest {
     void setUp() {
         container = LocationNode.createRoot("TSTCNTR001", CONTAINER_TYPE, "컨테이너 A");
         row = LocationNode.createChild("TSTROW0001", container, ROW_TYPE, "A열");
+        lenient().when(locationNodeRepository.findByParent_Code(anyString())).thenReturn(List.of());
     }
 
     @Test
@@ -400,5 +405,73 @@ class LocationNodeQueryServiceTest {
         locationNodeQueryService.deleteLocationNodeSubtree("TSTCNTR001");
 
         verify(locationNodeRepository).deleteAll(List.of(row, container));
+    }
+
+    @Test
+    void createLocationNode_child_throwsWhenLocationTypeOrderInvalid() {
+        when(commonCodeRepository.findById(1)).thenReturn(Optional.of(CONTAINER_TYPE));
+        when(locationNodeRepository.findByCode("TSTCNTR001")).thenReturn(Optional.of(container));
+
+        assertThatThrownBy(() -> locationNodeQueryService.createLocationNode(
+                new LocationNodeCreateRequest("TSTCNTR001", 1, "중복 컨테이너")
+        ))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("child location type must be deeper than parent");
+
+        verify(locationNodeRepository, never()).save(any());
+    }
+
+    @Test
+    void createLocationNode_child_reparentsExistingChildrenWhenIntermediateTypeInserted() {
+        when(commonCodeRepository.findById(2)).thenReturn(Optional.of(ZONE_TYPE));
+        when(locationNodeRepository.findByCode("TSTCNTR001")).thenReturn(Optional.of(container));
+        when(locationNodeRepository.existsByParentAndName(container, "존 1")).thenReturn(false);
+        when(locationNodeRepository.existsByCode(anyString())).thenReturn(false);
+        when(locationNodeRepository.findByParent_Code("TSTCNTR001")).thenReturn(List.of(row));
+        when(locationNodeRepository.save(any(LocationNode.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        LocationNodeResponse response = locationNodeQueryService.createLocationNode(
+                new LocationNodeCreateRequest("TSTCNTR001", 2, "존 1")
+        );
+
+        assertThat(response.name()).isEqualTo("존 1");
+        assertThat(response.locationTypeId()).isEqualTo(2);
+        assertThat(row.getParent().getCode()).isEqualTo(response.code());
+        verify(locationNodeRepository).save(row);
+    }
+
+    @Test
+    void updateLocationNode_throwsWhenNewTypeBreaksChildOrder() {
+        when(locationNodeRepository.findByCode("TSTCNTR001")).thenReturn(Optional.of(container));
+        when(commonCodeRepository.findById(3)).thenReturn(Optional.of(ROW_TYPE));
+        when(locationNodeRepository.findByParent_Code("TSTCNTR001")).thenReturn(List.of(row));
+        when(locationNodeRepository.existsByParentIsNullAndNameAndCodeNot("컨테이너 B", "TSTCNTR001"))
+                .thenReturn(false);
+
+        assertThatThrownBy(() -> locationNodeQueryService.updateLocationNode(
+                "TSTCNTR001",
+                new LocationNodeUpdateRequest(3, "컨테이너 B")
+        ))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("child location type must be deeper than parent");
+
+        verify(locationNodeRepository, never()).save(container);
+    }
+
+    @Test
+    void updateParentLocationNode_throwsWhenParentTypeOrderInvalid() {
+        LocationNode zone = LocationNode.createChild("TSTZONE001", container, ZONE_TYPE, "존 1");
+
+        when(locationNodeRepository.findByCode("TSTZONE001")).thenReturn(Optional.of(zone));
+        when(locationNodeRepository.findByCode("TSTROW0001")).thenReturn(Optional.of(row));
+
+        assertThatThrownBy(() -> locationNodeQueryService.updateParentLocationNode(
+                "TSTZONE001",
+                new LocationNodeParentUpdateRequest("TSTROW0001")
+        ))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("child location type must be deeper than parent");
+
+        verify(locationNodeRepository, never()).save(zone);
     }
 }
