@@ -356,6 +356,8 @@ class LocationNodeQueryServiceTest {
 
     @Test
     void createBatchLocationNodes_throwsWhenDuplicateSiblingNameInRequest() {
+        when(locationNodeRepository.findByCode("TSTCNTR001")).thenReturn(Optional.of(container));
+
         LocationNodeTreeCreateRequest first = new LocationNodeTreeCreateRequest(3, "A열", List.of());
         LocationNodeTreeCreateRequest second = new LocationNodeTreeCreateRequest(3, "A열", List.of());
         LocationNodeBulkCreateRequest bulkRequest = new LocationNodeBulkCreateRequest(
