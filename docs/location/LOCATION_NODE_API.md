@@ -43,7 +43,7 @@
 
 ### 1.3 위치 유형(LOCATION_TYPE) 순서
 
-`common_code.sort_order`(또는 동등한 유형 순서 정의)로 **유형 간 계층 순서**를 판단합니다. (**예정**)
+`common_code.sort_order`로 **유형 간 계층 순서**를 판단합니다. (**구현됨**)
 
 예시:
 
@@ -62,7 +62,7 @@
 
 ### 2.1 단건 등록 — `POST /api/manager/location-node`
 
-**구현 상태:** ✅ 구현됨 (유형 순서 검증·트리 재구성은 미구현)
+**구현 상태:** ✅ 구현됨
 
 #### 요청
 
@@ -94,7 +94,9 @@
 }
 ```
 
-#### 자식 등록 시 트리 재구성 (핵심 규칙, 예정)
+#### 자식 등록 시 트리 재구성 (핵심 규칙)
+
+**구현 상태:** ✅ 구현됨
 
 등록 전:
 
@@ -232,7 +234,7 @@ CONTAINER
 
 ### 3.2 부모 변경 — `PATCH /api/manager/location-node/{code}/parent`
 
-**구현 상태:** ✅ 구현됨 (유형 순서 검증은 미구현)
+**구현 상태:** ✅ 구현됨
 
 ```json
 {
@@ -344,7 +346,7 @@ CONTAINER
 |------|------|
 | 도메인 | `createRoot`, `createChild`, `update`, `updateParent` |
 | DTO | `LocationNodeCreateRequest`, `LocationNodeBulkCreateRequest`, `LocationNodeTreeCreateRequest`, `LocationNodeUpdateRequest`, `LocationNodeParentUpdateRequest` |
-| 미구현 | 유형 순서·재부모화(등록) |
+| 미구현 | 일괄 수정 (필요 여부 미확정) |
 
 ---
 

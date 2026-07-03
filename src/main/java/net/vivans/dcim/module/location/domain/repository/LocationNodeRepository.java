@@ -17,6 +17,8 @@ public interface LocationNodeRepository {
 
     List<LocationNode> findAll();
 
+    List<LocationNode> findByParent_Code(String parentCode);
+
     void delete(LocationNode node);
 
     void deleteAll(List<LocationNode> nodes);

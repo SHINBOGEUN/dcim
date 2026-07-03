@@ -50,6 +50,11 @@ public class LocationNodeJpaRepository implements LocationNodeRepository {
     }
 
     @Override
+    public List<LocationNode> findByParent_Code(String parentCode) {
+        return springDataRepository.findByParent_Code(parentCode);
+    }
+
+    @Override
     public boolean existsByParentIsNullAndName(String name) {
         return springDataRepository.existsByParentIsNullAndName(name);
     }

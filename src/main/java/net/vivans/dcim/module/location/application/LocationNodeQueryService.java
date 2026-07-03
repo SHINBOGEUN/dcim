@@ -29,6 +29,7 @@ import java.util.Set;
 public class LocationNodeQueryService {
 
     private static final int MAX_CODE_GENERATION_ATTEMPTS = 5;
+    private static final String CHILD_DEEPER_THAN_PARENT_MESSAGE = "child location type must be deeper than parent";
 
     private final LocationNodeRepository locationNodeRepository;
     private final CommonCodeRepository commonCodeRepository;
@@ -46,7 +47,11 @@ public class LocationNodeQueryService {
                     .orElseThrow(() -> new EntityNotFoundException(
                             "LocationNode not found: " + request.parentCode()));
             validateSiblingName(parent, request.name(), null);
+            validateLocationTypeDepth(parent, locationType);
             node = LocationNode.createChild(generateUniqueCode(), parent, locationType, request.name());
+            node = locationNodeRepository.save(node);
+            reconstructTreeAfterInsert(parent, node);
+            return LocationNodeResponse.from(node);
         }
 
         return LocationNodeResponse.from(locationNodeRepository.save(node));
@@ -60,6 +65,7 @@ public class LocationNodeQueryService {
         validateBatchSiblingNames(request.nodes());
         for (LocationNodeTreeCreateRequest nodeRequest : request.nodes()) {
             validateSiblingName(attachParent, nodeRequest.name(), null);
+            validateLocationTypeDepth(attachParent, findLocationType(nodeRequest.locationTypeId()));
         }
 
         List<LocationNodeResponse> result = new ArrayList<>();
@@ -76,6 +82,8 @@ public class LocationNodeQueryService {
         CommonCode locationType = findLocationType(request.locationTypeId());
 
         validateSiblingName(node.getParent(), request.name(), node.getCode());
+        validateLocationTypeDepth(node.getParent(), locationType);
+        validateLocationTypeAgainstChildren(node, locationType);
 
         node.update(locationType, request.name());
 
@@ -88,6 +96,7 @@ public class LocationNodeQueryService {
                 .orElseThrow(() -> new EntityNotFoundException("LocationNode not found: " + code));
         LocationNode newParent = resolveParent(request.parentCode());
 
+        validateLocationTypeDepth(newParent, node.getLocationType());
         validateSiblingName(newParent, node.getName(), node.getCode());
         node.updateParent(newParent);
 
@@ -338,6 +347,7 @@ public class LocationNodeQueryService {
     ) {
         validateSiblingName(parent, request.name(), null);
         CommonCode locationType = findLocationType(request.locationTypeId());
+        validateLocationTypeDepth(parent, locationType);
 
         LocationNode node;
         if (parent == null) {
@@ -346,6 +356,9 @@ public class LocationNodeQueryService {
             node = LocationNode.createChild(generateUniqueCode(batchCodes), parent, locationType, request.name());
         }
         node = locationNodeRepository.save(node);
+        if (parent != null) {
+            reconstructTreeAfterInsert(parent, node);
+        }
 
         List<LocationNodeTreeCreateRequest> children = request.children();
         if (children == null || children.isEmpty()) {
@@ -367,6 +380,49 @@ public class LocationNodeQueryService {
                 throw new IllegalArgumentException("name already exists under parent");
             }
         }
+    }
+
+    private void validateLocationTypeDepth(LocationNode parent, CommonCode childType) {
+        if (parent == null) {
+            return;
+        }
+        int parentOrder = requireSortOrder(parent.getLocationType());
+        int childOrder = requireSortOrder(childType);
+        if (childOrder <= parentOrder) {
+            throw new IllegalArgumentException(CHILD_DEEPER_THAN_PARENT_MESSAGE);
+        }
+    }
+
+    private void validateLocationTypeAgainstChildren(LocationNode node, CommonCode newType) {
+        int nodeOrder = requireSortOrder(newType);
+        for (LocationNode child : locationNodeRepository.findByParent_Code(node.getCode())) {
+            int childOrder = requireSortOrder(child.getLocationType());
+            if (childOrder <= nodeOrder) {
+                throw new IllegalArgumentException(CHILD_DEEPER_THAN_PARENT_MESSAGE);
+            }
+        }
+    }
+
+    private void reconstructTreeAfterInsert(LocationNode parent, LocationNode newNode) {
+        int newNodeOrder = requireSortOrder(newNode.getLocationType());
+        for (LocationNode sibling : locationNodeRepository.findByParent_Code(parent.getCode())) {
+            if (sibling.getCode().equals(newNode.getCode())) {
+                continue;
+            }
+            int siblingOrder = requireSortOrder(sibling.getLocationType());
+            if (siblingOrder > newNodeOrder) {
+                sibling.updateParent(newNode);
+                locationNodeRepository.save(sibling);
+            }
+        }
+    }
+
+    private int requireSortOrder(CommonCode locationType) {
+        Integer sortOrder = locationType.getSortOrder();
+        if (sortOrder == null) {
+            throw new IllegalArgumentException("location type sort order is required");
+        }
+        return sortOrder;
     }
 
     private void validateSiblingName(LocationNode parent, String name, String excludeCode) {

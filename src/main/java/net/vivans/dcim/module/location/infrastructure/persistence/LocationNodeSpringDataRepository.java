@@ -21,6 +21,8 @@ public interface LocationNodeSpringDataRepository extends JpaRepository<Location
 
     boolean existsByParentAndNameAndCodeNot(LocationNode parent, String name, String code);
 
+    List<LocationNode> findByParent_Code(String parentCode);
+
     @EntityGraph(attributePaths = {"parent", "locationType"})
     List<LocationNode> findAll();
 }
