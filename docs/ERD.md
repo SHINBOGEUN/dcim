@@ -284,7 +284,24 @@ V001 → users
 V002 → code_group
 V003 → common_code        (V002 선행)
 V004 → location_node      (V003 선행)
+V005 → device_model, device_model_protocol (V003 선행) — [설계](devicemodel/DEVICE_MODEL_API.md)
 ```
+
+---
+
+## 예정 스키마 — device_model (devicemodel 모듈)
+
+> 상세: [DEVICE_MODEL_API.md](devicemodel/DEVICE_MODEL_API.md)  
+> **구현 상태:** ⬜ 설계 완료, 스켈레톤 코드 추가
+
+| 테이블 | 설명 |
+|--------|------|
+| `device_model` | 장비 제품 모델 (제조사, 이름, 설명) |
+| `device_model_protocol` | 모델별 지원 프로토콜 1:N (`PROTOCOL_TYPE` common_code) |
+
+**엔티티:** `module/devicemodel/domain/model/DeviceModel.java`, `DeviceModelProtocol.java`
+
+`devices` (향후) → `device_model.id` FK로 모델 메타 참조.
 
 ---
 
@@ -299,3 +316,5 @@ V004 → location_node      (V003 선행)
 | 2026-07-01 | `location_node` 테이블 및 ERD 추가 |
 | 2026-07-02 | LocationNode API 설계 문서 추가 (`docs/location/LOCATION_NODE_API.md`) |
 | 2026-07-02 | `location_node` 스키마 확정 — `code`(10자 Base62) PK, `parent_code` 자기참조 |
+| 2026-07-03 | `device_model` / `device_model_protocol` 설계 문서 추가 (`docs/devicemodel/DEVICE_MODEL_API.md`) |
+| 2026-07-03 | 모듈명 `devicemodel`, 엔티티 `DeviceModel` 확정 — `module/devicemodel` 스켈레톤 추가 |
