@@ -10,6 +10,7 @@ import net.vivans.dcim.shared.api.ApiResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -90,6 +91,13 @@ public class GlobalExceptionHandler {
         log.warn("EntityNotFoundException: {}", e.getMessage());
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(ApiResponse.error(404, e.getMessage()));
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiResponse<Object>> dataIntegrityViolationExceptionHandler(DataIntegrityViolationException e) {
+        log.warn("DataIntegrityViolationException: {}", e.getMessage());
+        return ResponseEntity.badRequest()
+                .body(ApiResponse.error(400, "name already exists under parent"));
     }
 
     @ExceptionHandler(NoResourceFoundException.class)
