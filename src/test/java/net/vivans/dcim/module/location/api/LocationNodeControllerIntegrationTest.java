@@ -120,6 +120,52 @@ class LocationNodeControllerIntegrationTest {
     }
 
     @Test
+    void bulkCreate_registersTreeWithChildren() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "location-bulk-user", "password123");
+        Integer groupId = createCodeGroup(accessToken, "LOCATION_TYPE", "위치 유형");
+        Integer containerTypeId = createCommonCode(accessToken, groupId, "CONTAINER", "컨테이너", 1);
+        Integer rowTypeId = createCommonCode(accessToken, groupId, "ROW", "열", 2);
+
+        String response = mockMvc.perform(post("/api/manager/location-node/bulk")
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "parentCode": null,
+                                  "nodes": [
+                                    {
+                                      "locationTypeId": %d,
+                                      "name": "컨테이너 A",
+                                      "children": [
+                                        {
+                                          "locationTypeId": %d,
+                                          "name": "A열",
+                                          "children": []
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                                """.formatted(containerTypeId, rowTypeId)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        JsonNode root = objectMapper.readTree(response).path("data").get(0);
+        String rootCode = root.path("code").asText();
+
+        mockMvc.perform(get("/api/manager/location-node")
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].code").value(rootCode))
+                .andExpect(jsonPath("$.data[0].name").value("컨테이너 A"))
+                .andExpect(jsonPath("$.data[0].children", hasSize(1)))
+                .andExpect(jsonPath("$.data[0].children[0].name").value("A열"))
+                .andExpect(jsonPath("$.data[0].children[0].parentCode").value(rootCode));
+    }
+
+    @Test
     void get_withUnknownParentCode_returnsNotFound() throws Exception {
         String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "location-notfound-user", "password123");
 

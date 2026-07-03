@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import net.vivans.dcim.module.location.api.dto.LocationNodeBulkCreateRequest;
 import net.vivans.dcim.module.location.api.dto.LocationNodeCreateRequest;
 import net.vivans.dcim.module.location.api.dto.LocationNodeParentUpdateRequest;
 import net.vivans.dcim.module.location.api.dto.LocationNodeResponse;
@@ -38,6 +39,13 @@ public class LocationNodeController {
     public ResponseEntity<ApiResponse<LocationNodeResponse>> createLocationNode(
             @Valid @RequestBody LocationNodeCreateRequest request) {
         return ResponseEntity.ok(ApiResponse.ok(nodeQueryService.createLocationNode(request)));
+    }
+
+    @PostMapping("/bulk")
+    @Operation(summary = "위치 노드 일괄 등록 API", description = "트리 구조 요청을 받아 부모부터 자식까지 순서대로 등록합니다.")
+    public ResponseEntity<ApiResponse<List<LocationNodeResponse>>> createBatchLocationNodes(
+            @Valid @RequestBody LocationNodeBulkCreateRequest request) {
+        return ResponseEntity.ok(ApiResponse.ok(nodeQueryService.createBatchLocationNodes(request)));
     }
 
     @PutMapping("/{code}")

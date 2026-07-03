@@ -4,9 +4,11 @@ import jakarta.persistence.EntityNotFoundException;
 import net.vivans.dcim.module.common.domain.model.CodeGroup;
 import net.vivans.dcim.module.common.domain.model.CommonCode;
 import net.vivans.dcim.module.common.domain.repository.CommonCodeRepository;
+import net.vivans.dcim.module.location.api.dto.LocationNodeBulkCreateRequest;
 import net.vivans.dcim.module.location.api.dto.LocationNodeCreateRequest;
 import net.vivans.dcim.module.location.api.dto.LocationNodeParentUpdateRequest;
 import net.vivans.dcim.module.location.api.dto.LocationNodeResponse;
+import net.vivans.dcim.module.location.api.dto.LocationNodeTreeCreateRequest;
 import net.vivans.dcim.module.location.api.dto.LocationNodeUpdateRequest;
 import net.vivans.dcim.module.location.domain.model.LocationNode;
 import net.vivans.dcim.module.location.domain.model.LocationNodeCodeGenerator;
@@ -305,5 +307,64 @@ class LocationNodeQueryServiceTest {
         assertThat(result).hasSize(1);
         assertThat(result.get(0).code()).isEqualTo("TSTCNTR001");
         assertThat(result.get(0).children().get(0).code()).isEqualTo("TSTROW0001");
+    }
+
+    @Test
+    void createBatchLocationNodes_registersTreeDepthFirst() {
+        when(commonCodeRepository.findById(1)).thenReturn(Optional.of(CONTAINER_TYPE));
+        when(commonCodeRepository.findById(3)).thenReturn(Optional.of(ROW_TYPE));
+        when(locationNodeRepository.existsByParentIsNullAndName("컨테이너 A")).thenReturn(false);
+        when(locationNodeRepository.existsByCode(anyString())).thenReturn(false);
+        when(locationNodeRepository.save(any(LocationNode.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        LocationNodeTreeCreateRequest rowRequest = new LocationNodeTreeCreateRequest(3, "A열", List.of());
+        LocationNodeTreeCreateRequest containerRequest = new LocationNodeTreeCreateRequest(
+                1, "컨테이너 A", List.of(rowRequest)
+        );
+        LocationNodeBulkCreateRequest bulkRequest = new LocationNodeBulkCreateRequest(null, List.of(containerRequest));
+
+        List<LocationNodeResponse> result = locationNodeQueryService.createBatchLocationNodes(bulkRequest);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).name()).isEqualTo("컨테이너 A");
+        assertThat(result.get(0).parentCode()).isNull();
+        assertThat(result.get(0).children()).hasSize(1);
+        assertThat(result.get(0).children().get(0).name()).isEqualTo("A열");
+        assertThat(result.get(0).children().get(0).parentCode()).isEqualTo(result.get(0).code());
+    }
+
+    @Test
+    void createBatchLocationNodes_underExistingParent() {
+        when(locationNodeRepository.findByCode("TSTCNTR001")).thenReturn(Optional.of(container));
+        when(commonCodeRepository.findById(3)).thenReturn(Optional.of(ROW_TYPE));
+        when(locationNodeRepository.existsByParentAndName(container, "A열")).thenReturn(false);
+        when(locationNodeRepository.existsByCode(anyString())).thenReturn(false);
+        when(locationNodeRepository.save(any(LocationNode.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        LocationNodeTreeCreateRequest rowRequest = new LocationNodeTreeCreateRequest(3, "A열", List.of());
+        LocationNodeBulkCreateRequest bulkRequest = new LocationNodeBulkCreateRequest(
+                "TSTCNTR001",
+                List.of(rowRequest)
+        );
+
+        List<LocationNodeResponse> result = locationNodeQueryService.createBatchLocationNodes(bulkRequest);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).parentCode()).isEqualTo("TSTCNTR001");
+        assertThat(result.get(0).name()).isEqualTo("A열");
+    }
+
+    @Test
+    void createBatchLocationNodes_throwsWhenDuplicateSiblingNameInRequest() {
+        LocationNodeTreeCreateRequest first = new LocationNodeTreeCreateRequest(3, "A열", List.of());
+        LocationNodeTreeCreateRequest second = new LocationNodeTreeCreateRequest(3, "A열", List.of());
+        LocationNodeBulkCreateRequest bulkRequest = new LocationNodeBulkCreateRequest(
+                "TSTCNTR001",
+                List.of(first, second)
+        );
+
+        assertThatThrownBy(() -> locationNodeQueryService.createBatchLocationNodes(bulkRequest))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("name already exists under parent");
     }
 }

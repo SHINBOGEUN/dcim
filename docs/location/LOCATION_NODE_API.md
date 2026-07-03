@@ -130,27 +130,77 @@ CONTAINER
 
 ### 2.2 일괄 등록 — `POST /api/manager/location-node/bulk`
 
-**구현 상태:** ⬜ 미구현
+**구현 상태:** ✅ 구현됨
+
+트리 구조로 요청하면 **부모 → 자식** 순으로 등록합니다. 단일 트랜잭션으로 처리됩니다.
+
+#### 요청
 
 ```json
 {
+  "parentCode": null,
   "nodes": [
     {
-      "parentCode": null,
       "locationTypeId": 1,
-      "name": "컨테이너 A"
-    },
-    {
-      "parentCode": "K7mN2pQx9L",
-      "locationTypeId": 2,
-      "name": "ZONE 1"
+      "name": "컨테이너 A",
+      "children": [
+        {
+          "locationTypeId": 2,
+          "name": "ZONE 1",
+          "children": [
+            {
+              "locationTypeId": 3,
+              "name": "A열",
+              "children": []
+            }
+          ]
+        }
+      ]
     }
   ]
 }
 ```
 
-- 단일 트랜잭션, 배열 순서대로 처리
-- 앞서 등록된 노드의 응답 `code`를 다음 노드의 `parentCode`로 사용
+| 필드 | 필수 | 설명 |
+|------|------|------|
+| `parentCode` | X | 기존 노드 아래에 붙일 부모 `code`. `null`이면 `nodes`가 루트로 등록 |
+| `nodes` | O | 등록할 트리 목록 (포레스트 가능) |
+| `nodes[].locationTypeId` | O | 위치 유형 ID |
+| `nodes[].name` | O | 노드 이름 |
+| `nodes[].children` | X | 하위 노드 (재귀) |
+
+#### 응답
+
+등록된 트리와 동일한 구조로 `code`가 채워져 반환됩니다.
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "code": "K7mN2pQx9L",
+      "parentCode": null,
+      "locationTypeId": 1,
+      "name": "컨테이너 A",
+      "children": [
+        {
+          "code": "A1b2C3d4E5",
+          "parentCode": "K7mN2pQx9L",
+          "locationTypeId": 2,
+          "name": "ZONE 1",
+          "children": []
+        }
+      ]
+    }
+  ]
+}
+```
+
+#### 규칙
+
+- 같은 부모 아래 `name` 중복 불가 (요청 내·DB 모두 검증)
+- 중간 노드 등록 실패 시 **전체 롤백**
+- `parentCode`가 있으면 `nodes`의 각 항목이 해당 부모의 **직접 자식**으로 등록
 
 ---
 
@@ -278,7 +328,7 @@ CONTAINER
 | Method | Path | 설명 | 상태 |
 |--------|------|------|------|
 | `POST` | `/api/manager/location-node` | 단건 등록 | ✅ |
-| `POST` | `/api/manager/location-node/bulk` | 일괄 등록 | ⬜ |
+| `POST` | `/api/manager/location-node/bulk` | 트리 일괄 등록 | ✅ |
 | `PUT` | `/api/manager/location-node/{code}` | 메타 수정 | ✅ |
 | `PATCH` | `/api/manager/location-node/{code}/parent` | 부모 변경 | ✅ |
 | `GET` | `/api/manager/location-node` | 트리 조회 | ✅ |
@@ -292,8 +342,8 @@ CONTAINER
 | 구분 | 내용 |
 |------|------|
 | 도메인 | `createRoot`, `createChild`, `update`, `updateParent` |
-| DTO | `LocationNodeCreateRequest`, `LocationNodeUpdateRequest`, `LocationNodeParentUpdateRequest` |
-| 미구현 | 유형 순서·재부모화(등록), 삭제, bulk |
+| DTO | `LocationNodeCreateRequest`, `LocationNodeBulkCreateRequest`, `LocationNodeTreeCreateRequest`, `LocationNodeUpdateRequest`, `LocationNodeParentUpdateRequest` |
+| 미구현 | 유형 순서·재부모화(등록), 삭제 |
 
 ---
 

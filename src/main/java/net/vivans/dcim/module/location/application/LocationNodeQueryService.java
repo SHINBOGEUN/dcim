@@ -4,9 +4,11 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import net.vivans.dcim.module.common.domain.model.CommonCode;
 import net.vivans.dcim.module.common.domain.repository.CommonCodeRepository;
+import net.vivans.dcim.module.location.api.dto.LocationNodeBulkCreateRequest;
 import net.vivans.dcim.module.location.api.dto.LocationNodeCreateRequest;
 import net.vivans.dcim.module.location.api.dto.LocationNodeParentUpdateRequest;
 import net.vivans.dcim.module.location.api.dto.LocationNodeResponse;
+import net.vivans.dcim.module.location.api.dto.LocationNodeTreeCreateRequest;
 import net.vivans.dcim.module.location.api.dto.LocationNodeUpdateRequest;
 import net.vivans.dcim.module.location.domain.model.LocationNode;
 import net.vivans.dcim.module.location.domain.model.LocationNodeCodeGenerator;
@@ -48,6 +50,23 @@ public class LocationNodeQueryService {
         }
 
         return LocationNodeResponse.from(locationNodeRepository.save(node));
+    }
+
+    @Transactional
+    public List<LocationNodeResponse> createBatchLocationNodes(LocationNodeBulkCreateRequest request) {
+        LocationNode attachParent = resolveParent(blankToNull(request.parentCode()));
+        Set<String> batchCodes = new HashSet<>();
+
+        validateBatchSiblingNames(request.nodes());
+        for (LocationNodeTreeCreateRequest nodeRequest : request.nodes()) {
+            validateSiblingName(attachParent, nodeRequest.name(), null);
+        }
+
+        List<LocationNodeResponse> result = new ArrayList<>();
+        for (LocationNodeTreeCreateRequest nodeRequest : request.nodes()) {
+            result.add(createTreeNode(attachParent, nodeRequest, batchCodes));
+        }
+        return result;
     }
 
     @Transactional
@@ -257,13 +276,56 @@ public class LocationNodeQueryService {
     }
 
     private String generateUniqueCode() {
+        return generateUniqueCode(new HashSet<>());
+    }
+
+    private String generateUniqueCode(Set<String> batchCodes) {
         for (int attempt = 0; attempt < MAX_CODE_GENERATION_ATTEMPTS; attempt++) {
             String code = LocationNodeCodeGenerator.generate();
-            if (!locationNodeRepository.existsByCode(code)) {
+            if (!locationNodeRepository.existsByCode(code) && !batchCodes.contains(code)) {
+                batchCodes.add(code);
                 return code;
             }
         }
         throw new IllegalStateException("failed to generate unique location node code");
+    }
+
+    private LocationNodeResponse createTreeNode(
+            LocationNode parent,
+            LocationNodeTreeCreateRequest request,
+            Set<String> batchCodes
+    ) {
+        validateSiblingName(parent, request.name(), null);
+        CommonCode locationType = findLocationType(request.locationTypeId());
+
+        LocationNode node;
+        if (parent == null) {
+            node = LocationNode.createRoot(generateUniqueCode(batchCodes), locationType, request.name());
+        } else {
+            node = LocationNode.createChild(generateUniqueCode(batchCodes), parent, locationType, request.name());
+        }
+        node = locationNodeRepository.save(node);
+
+        List<LocationNodeTreeCreateRequest> children = request.children();
+        if (children == null || children.isEmpty()) {
+            return LocationNodeResponse.from(node);
+        }
+
+        validateBatchSiblingNames(children);
+        List<LocationNodeResponse> childResponses = new ArrayList<>();
+        for (LocationNodeTreeCreateRequest childRequest : children) {
+            childResponses.add(createTreeNode(node, childRequest, batchCodes));
+        }
+        return LocationNodeResponse.of(node, childResponses);
+    }
+
+    private void validateBatchSiblingNames(List<LocationNodeTreeCreateRequest> nodes) {
+        Set<String> names = new HashSet<>();
+        for (LocationNodeTreeCreateRequest node : nodes) {
+            if (!names.add(node.name())) {
+                throw new IllegalArgumentException("name already exists under parent");
+            }
+        }
     }
 
     private void validateSiblingName(LocationNode parent, String name, String excludeCode) {
