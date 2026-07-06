@@ -61,6 +61,8 @@ erDiagram
 | common | `code_group` | 1 |
 | common | `common_code` | N → `code_group` |
 | location | `location_node` | N → `common_code` (LOCATION_TYPE), 자기참조 `parent_code` |
+| devicemodel | `device_model` | 장비 SKU 카탈로그 |
+| devicemodel | `device_model_protocol` | 모델 ↔ PROTOCOL_TYPE N:M |
 
 ---
 
@@ -226,6 +228,89 @@ erDiagram
 
 ---
 
+### `device_model` — 장비 제품 모델 (devicemodel 모듈)
+
+**구현 상태:** ✅ 구현 완료
+
+| 컬럼 | 타입 | NULL | 키 | 설명 |
+|------|------|------|-----|------|
+| `id` | INT | N | PK | 모델 ID (AUTO_INCREMENT) |
+| `name` | VARCHAR(255) | N | UK | 모델/제품명 |
+| `manufacturer` | VARCHAR(255) | N | UK | 제조사 |
+| `description` | VARCHAR(1000) | Y | | 설명 |
+| `created_dt` | TIMESTAMP(6) | Y | | 최초 생성 시각 |
+| `updated_dt` | TIMESTAMP(6) | Y | | 최종 수정 시각 |
+
+\* UK: `(name, manufacturer)`
+
+**엔티티:** `module/devicemodel/domain/model/DeviceModel.java`  
+**API 설계:** [DEVICE_MODEL_API.md](devicemodel/DEVICE_MODEL_API.md)  
+**상속:** `BaseEntity`  
+**연관:** `@OneToMany` → `DeviceModelProtocol` (`mappedBy = "deviceModel"`, cascade ALL)
+
+**DDL:** [V005__create_device_model_tables.sql](../sql/history/V005__create_device_model_tables.sql)
+
+**범위**
+
+| 참조 주체 | model FK |
+|-----------|----------|
+| `devices` (향후) | ✅ |
+| `assets` (향후, 장비류) | ✅ 검토 |
+| `location_node` | ❌ |
+
+---
+
+### `device_model_protocol` — 모델별 프로토콜 (devicemodel 모듈)
+
+**구현 상태:** ✅ 구현 완료
+
+| 컬럼 | 타입 | NULL | 키 | 설명 |
+|------|------|------|-----|------|
+| `id` | INT | N | PK | 연결 ID |
+| `model_id` | INT | N | FK | `device_model.id` |
+| `protocol_type_id` | INT | N | FK | `common_code.id` (**PROTOCOL_TYPE**만) |
+| `is_default` | TINYINT(1) | N | | 기본 프로토콜 (모델당 최대 1) |
+| `config` | JSON | Y | | 프로토콜 설정 (V1 미사용) |
+| `sort_order` | INT | Y | | UI 정렬 |
+| `created_dt` | TIMESTAMP(6) | Y | | |
+| `updated_dt` | TIMESTAMP(6) | Y | | |
+
+| 제약 | 규칙 |
+|------|------|
+| UK | `(model_id, protocol_type_id)` |
+
+**엔티티:** `module/devicemodel/domain/model/DeviceModelProtocol.java`  
+**연관:**
+- `@ManyToOne` → `DeviceModel` (`model_id`)
+- `@ManyToOne` → `CommonCode` (`protocol_type_id`)
+
+**FK 제약**
+
+| FK | 참조 | ON DELETE | ON UPDATE |
+|----|------|-----------|-----------|
+| `fk_device_model_protocol_model_id` | `device_model(id)` | RESTRICT | CASCADE |
+| `fk_device_model_protocol_protocol_type_id` | `common_code(id)` | RESTRICT | CASCADE |
+
+**관계 (N:M)**
+
+```
+device_model ←—— device_model_protocol ——→ common_code (PROTOCOL_TYPE)
+```
+
+**PROTOCOL_TYPE 시드 (V005)**
+
+V005에서 `code_group` + `common_code` 모두 INSERT (없을 때만).
+
+| group_key | code | name | sort_order |
+|-----------|------|------|------------|
+| PROTOCOL_TYPE | snmp | SNMP | 1 |
+| PROTOCOL_TYPE | modbus | Modbus | 2 |
+| PROTOCOL_TYPE | mqtt | MQTT | 3 |
+
+> ERD §code_group 예시(id=4 등)는 문서용. 실제 id는 DB마다 다름.
+
+---
+
 ## 컬럼 ↔ 엔티티 매핑
 
 ### identity — `User`
@@ -273,6 +358,32 @@ erDiagram
 | `created_dt` | `createdDt` | `BaseEntity` |
 | `updated_dt` | `updatedDt` | `BaseEntity` |
 
+### devicemodel — `DeviceModel` (예정)
+
+| DB 컬럼 | Java 필드 | 출처 |
+|---------|-----------|------|
+| `id` | `id` | `DeviceModel` |
+| `name` | `name` | `DeviceModel` |
+| `manufacturer` | `manufacturer` | `DeviceModel` |
+| `description` | `description` | `DeviceModel` |
+| `created_dt` | `createdDt` | `BaseEntity` |
+| `updated_dt` | `updatedDt` | `BaseEntity` |
+
+### devicemodel — `DeviceModelProtocol` (예정)
+
+| DB 컬럼 | Java 필드 | 출처 |
+|---------|-----------|------|
+| `id` | `id` | `DeviceModelProtocol` |
+| `model_id` | `deviceModel` | `DeviceModelProtocol` (`@ManyToOne`) |
+| `protocol_type_id` | `protocolType` | `DeviceModelProtocol` (`@ManyToOne` → `CommonCode`) |
+| `is_default` | `default` 또는 `isDefault`* | `DeviceModelProtocol` |
+| `config` | `config` | `DeviceModelProtocol` |
+| `sort_order` | `sortOrder` | `DeviceModelProtocol` |
+| `created_dt` | `createdDt` | `BaseEntity` |
+| `updated_dt` | `updatedDt` | `BaseEntity` |
+
+\* `is_default` boolean 필드명은 구현 시 `defaultProtocol` 등으로 확정
+
 Spring Boot 기본 naming strategy 기준으로 camelCase → snake_case 변환됩니다.
 
 ---
@@ -284,24 +395,10 @@ V001 → users
 V002 → code_group
 V003 → common_code        (V002 선행)
 V004 → location_node      (V003 선행)
-V005 → device_model, device_model_protocol (V003 선행) — [설계](devicemodel/DEVICE_MODEL_API.md)
+V005 → device_model, device_model_protocol + PROTOCOL_TYPE 시드 (V003 선행)
+       — [설계](devicemodel/DEVICE_MODEL_API.md)
+       — [DDL](../sql/history/V005__create_device_model_tables.sql)
 ```
-
----
-
-## 예정 스키마 — device_model (devicemodel 모듈)
-
-> 상세: [DEVICE_MODEL_API.md](devicemodel/DEVICE_MODEL_API.md)  
-> **구현 상태:** ⬜ 설계 완료, 스켈레톤 코드 추가
-
-| 테이블 | 설명 |
-|--------|------|
-| `device_model` | 장비 제품 모델 (제조사, 이름, 설명) |
-| `device_model_protocol` | 모델별 지원 프로토콜 1:N (`PROTOCOL_TYPE` common_code) |
-
-**엔티티:** `module/devicemodel/domain/model/DeviceModel.java`, `DeviceModelProtocol.java`
-
-`devices` (향후) → `device_model.id` FK로 모델 메타 참조.
 
 ---
 
@@ -318,3 +415,4 @@ V005 → device_model, device_model_protocol (V003 선행) — [설계](devicemo
 | 2026-07-02 | `location_node` 스키마 확정 — `code`(10자 Base62) PK, `parent_code` 자기참조 |
 | 2026-07-03 | `device_model` / `device_model_protocol` 설계 문서 추가 (`docs/devicemodel/DEVICE_MODEL_API.md`) |
 | 2026-07-03 | 모듈명 `devicemodel`, 엔티티 `DeviceModel` 확정 — `module/devicemodel` 스켈레톤 추가 |
+| 2026-07-06 | DeviceModel API·ERD·V005 DDL 초안 상세화 (N:M, V1 스키마, 구현 순서) |
