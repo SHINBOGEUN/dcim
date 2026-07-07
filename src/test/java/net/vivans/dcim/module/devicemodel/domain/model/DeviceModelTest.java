@@ -27,9 +27,26 @@ class DeviceModelTest {
     }
 
     @Test
+    void create_withoutManufacturer_throws() {
+        assertThatThrownBy(() -> DeviceModel.create("LHT65N-PIR", " ", null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("manufacturer is required");
+    }
+
+    @Test
+    void update_withoutManufacturer_throws() {
+        DeviceModel model = DeviceModel.create("LHT65N-PIR", "Dragino", null);
+
+        assertThatThrownBy(() -> model.update("LHT65N-PIR", " ", "updated"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("manufacturer is required");
+    }
+
+    @Test
     void replaceProtocols_replacesExistingProtocols() {
         DeviceModel model = DeviceModel.create("LHT65N-PIR", "Dragino", null);
         CommonCode mqtt = protocolType("mqtt", "MQTT");
+        CommonCode modbus = protocolType("modbus", "Modbus");
 
         model.replaceProtocols(java.util.List.of(
                 DeviceModelProtocol.of(model, mqtt)
@@ -37,6 +54,33 @@ class DeviceModelTest {
 
         assertThat(model.getProtocols()).hasSize(1);
         assertThat(model.getSortedProtocols().get(0).getProtocolType().getCode()).isEqualTo("mqtt");
+
+        model.replaceProtocols(java.util.List.of(
+                DeviceModelProtocol.of(model, modbus)
+        ));
+
+        assertThat(model.getProtocols()).hasSize(1);
+        assertThat(model.getSortedProtocols().get(0).getProtocolType().getCode()).isEqualTo("modbus");
+    }
+
+    @Test
+    void deviceModelProtocol_withoutProtocolType_throws() {
+        DeviceModel model = DeviceModel.create("LHT65N-PIR", "Dragino", null);
+
+        assertThatThrownBy(() -> DeviceModelProtocol.of(model, null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("protocolType is required");
+    }
+
+    @Test
+    void deviceModelProtocol_withWrongGroup_throws() {
+        DeviceModel model = DeviceModel.create("LHT65N-PIR", "Dragino", null);
+        CodeGroup group = CodeGroup.createCodeGroup("LOCATION_TYPE", "Location Type");
+        CommonCode rack = CommonCode.createCommonCode(group, "rack", "Rack", 1);
+
+        assertThatThrownBy(() -> DeviceModelProtocol.of(model, rack))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("protocolType must belong to PROTOCOL_TYPE group");
     }
 
     private CommonCode protocolType(String code, String name) {
