@@ -17,7 +17,7 @@
 --
 -- 비즈니스 규칙 (애플리케이션에서 검증):
 --   - (name, manufacturer) UK — 동일 제조사·제품명 중복 불가
---   - protocols 1개 이상, is_default 정확히 1개 (모델당)
+--   - protocols 1개 이상
 --   - protocol_type_id — PROTOCOL_TYPE 그룹만 허용
 --   - (model_id, protocol_type_id) UK — 모델 내 동일 프로토콜 중복 불가
 -- =============================================================================
@@ -40,9 +40,6 @@ CREATE TABLE IF NOT EXISTS device_model_protocol (
     id                 INT          NOT NULL AUTO_INCREMENT COMMENT '모델-프로토콜 연결 ID',
     model_id           INT          NOT NULL                COMMENT 'device_model.id (FK)',
     protocol_type_id   INT          NOT NULL                COMMENT 'common_code.id (PROTOCOL_TYPE만)',
-    is_default         TINYINT(1)   NOT NULL DEFAULT 0      COMMENT '기본 프로토콜 (모델당 최대 1)',
-    config             JSON         NULL                    COMMENT '프로토콜별 설정 (V1 미사용)',
-    sort_order         INT          NULL                    COMMENT 'UI 정렬 순서',
     created_dt         TIMESTAMP(6) NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '생성 시각',
     updated_dt         TIMESTAMP(6) NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정 시각',
     PRIMARY KEY (id),

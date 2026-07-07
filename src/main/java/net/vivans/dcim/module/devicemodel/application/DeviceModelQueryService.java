@@ -92,19 +92,17 @@ public class DeviceModelQueryService {
      */
     private void replaceProtocolsFromRequest(DeviceModel deviceModel, List<DeviceModelProtocolRequest> protocolRequests) {
         validateProtocolRequests(protocolRequests);
-        List<Boolean> defaultFlags = resolveDefaultFlags(protocolRequests);
 
         List<DeviceModelProtocol> protocols = new ArrayList<>();
-        for (int i = 0; i < protocolRequests.size(); i++) {
-            DeviceModelProtocolRequest request = protocolRequests.get(i);
+        for (DeviceModelProtocolRequest request : protocolRequests) {
             CommonCode protocolType = findProtocolType(request.protocolTypeId());
-            int sortOrder = request.sortOrder() != null ? request.sortOrder() : i + 1;
-            protocols.add(DeviceModelProtocol.of(
-                    deviceModel,
-                    protocolType,
-                    defaultFlags.get(i),
-                    sortOrder
-            ));
+            protocols.add(DeviceModelProtocol.of(deviceModel, protocolType));
+        }
+
+        // 수정 시 동일 protocol_type_id가 남아 있으면 INSERT가 DELETE보다 먼저 실행되어 UK 위반 가능
+        if (deviceModel.getId() != null && !deviceModel.getProtocols().isEmpty()) {
+            deviceModel.replaceProtocols(List.of());
+            deviceModelRepository.flush();
         }
         deviceModel.replaceProtocols(protocols);
     }
@@ -120,28 +118,6 @@ public class DeviceModelQueryService {
                 throw new IllegalArgumentException("duplicate protocol type in request");
             }
         }
-    }
-
-    private List<Boolean> resolveDefaultFlags(List<DeviceModelProtocolRequest> protocolRequests) {
-        if (protocolRequests.size() == 1) {
-            return List.of(true);
-        }
-
-        int defaultCount = 0;
-        for (DeviceModelProtocolRequest request : protocolRequests) {
-            if (Boolean.TRUE.equals(request.isDefault())) {
-                defaultCount++;
-            }
-        }
-        if (defaultCount != 1) {
-            throw new IllegalArgumentException("exactly one default protocol required");
-        }
-
-        List<Boolean> defaultFlags = new ArrayList<>();
-        for (DeviceModelProtocolRequest request : protocolRequests) {
-            defaultFlags.add(Boolean.TRUE.equals(request.isDefault()));
-        }
-        return defaultFlags;
     }
 
     private CommonCode findProtocolType(Integer protocolTypeId) {

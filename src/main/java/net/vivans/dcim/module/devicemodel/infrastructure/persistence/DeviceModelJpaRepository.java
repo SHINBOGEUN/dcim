@@ -20,6 +20,11 @@ public class DeviceModelJpaRepository implements DeviceModelRepository {
     }
 
     @Override
+    public void flush() {
+        springDataRepository.flush();
+    }
+
+    @Override
     public Optional<DeviceModel> findById(Integer id) {
         return springDataRepository.findById(id);
     }

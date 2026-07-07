@@ -72,20 +72,6 @@ public class DeviceModel extends BaseEntity {
     public List<DeviceModelProtocol> getSortedProtocols() {
         List<DeviceModelProtocol> sorted = new ArrayList<>(protocols);
         sorted.sort((left, right) -> {
-            Integer leftOrder = left.getSortOrder();
-            Integer rightOrder = right.getSortOrder();
-            if (leftOrder == null && rightOrder != null) {
-                return 1;
-            }
-            if (leftOrder != null && rightOrder == null) {
-                return -1;
-            }
-            if (leftOrder != null) {
-                int orderCompare = leftOrder.compareTo(rightOrder);
-                if (orderCompare != 0) {
-                    return orderCompare;
-                }
-            }
             Integer leftId = left.getId();
             Integer rightId = right.getId();
             if (leftId == null && rightId == null) {

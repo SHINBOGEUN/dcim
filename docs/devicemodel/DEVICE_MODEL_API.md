@@ -13,10 +13,11 @@
 | 개념 | 설명 |
 |------|------|
 | **DeviceModel** | 제조사·제품명 등 **장비 SKU/제품군** 메타데이터 |
-| **DeviceModelProtocol** | 모델 ↔ `PROTOCOL_TYPE` common_code **N:M** 연결 (`is_default`, `sort_order`) |
+| **DeviceModelProtocol** | 모델 ↔ `PROTOCOL_TYPE` common_code **N:M** 조인 (`model_id`, `protocol_type_id`) |
 | **Device** (향후) | 실제 장비 인스턴스. `model_id` FK로 모델 참조 |
 
-프로토콜 타입(SNMP, MQTT …)은 `common_code`(`PROTOCOL_TYPE`)에 존재하며, 모델과의 연결은 `device_model_protocol`로 표현합니다.
+프로토콜 타입(SNMP, MQTT …)은 `common_code`(`PROTOCOL_TYPE`)에 존재하며, 모델과의 연결은 `device_model_protocol` 조인 테이블로 표현합니다.  
+프로토콜 연결은 **DeviceModel 등록·수정 API**의 `protocols[]`로만 관리합니다 (별도 Protocol API 없음).
 
 ### 1.1 공통 제약
 
@@ -27,9 +28,9 @@
 | `description` | 선택 |
 | `protocols` | 등록·수정 시 **1개 이상** 필수 |
 | `protocolTypeId` | `PROTOCOL_TYPE` common_code만 허용 |
-| `isDefault` | 모델당 **정확히 1개** `true` (프로토콜 1개면 생략 시 서버가 `true`) |
+| `(model_id, protocol_type_id)` | UK — 동일 모델에 같은 프로토콜 타입 중복 불가 |
 | 수정 시 protocols | **전체 교체** (부분 수정 없음) |
-| 모델 삭제 | `devices.model_id` 참조 중이면 409 |
+| 모델 삭제 | `devices.model_id` 참조 중이면 409 (향후) |
 
 ---
 
@@ -47,8 +48,8 @@
   "manufacturer": "Dragino",
   "description": "동작 감지 센서",
   "protocols": [
-    { "protocolTypeId": 7, "isDefault": true, "sortOrder": 1 },
-    { "protocolTypeId": 8, "isDefault": false, "sortOrder": 2 }
+    { "protocolTypeId": 7 },
+    { "protocolTypeId": 8 }
   ]
 }
 ```
@@ -60,8 +61,6 @@
 | `description` | X | 설명 |
 | `protocols` | O | 1개 이상 |
 | `protocols[].protocolTypeId` | O | `PROTOCOL_TYPE` common_code ID |
-| `protocols[].isDefault` | X | 기본 프로토콜. 복수일 때 정확히 1개 `true` |
-| `protocols[].sortOrder` | X | 정렬. 미입력 시 배열 순서(1부터) |
 
 #### 응답 — `201 Created`
 
@@ -78,17 +77,13 @@
         "id": 10,
         "protocolTypeId": 7,
         "protocolCode": "mqtt",
-        "protocolName": "MQTT",
-        "isDefault": true,
-        "sortOrder": 1
+        "protocolName": "MQTT"
       },
       {
         "id": 11,
         "protocolTypeId": 8,
         "protocolCode": "modbus",
-        "protocolName": "Modbus",
-        "isDefault": false,
-        "sortOrder": 2
+        "protocolName": "Modbus"
       }
     ]
   }
@@ -104,8 +99,6 @@
 | protocolTypeId 없음 | 404 | `CommonCode not found: {id}` |
 | PROTOCOL_TYPE 아님 | 400 | `protocolType must belong to PROTOCOL_TYPE group` |
 | protocols 내 type 중복 | 400 | `duplicate protocol type in request` |
-| isDefault 0개(복수 protocol) | 400 | `exactly one default protocol required` |
-| isDefault 2개 이상 | 400 | `exactly one default protocol required` |
 | protocols 빈 배열 | 400 | `at least one protocol required` |
 
 ---
@@ -142,7 +135,7 @@
 
 **구현 상태:** ✅ 구현됨
 
-전체 모델 + `protocols[]` 중첩 반환. `protocols`는 `sortOrder` → `id` 오름차순.
+전체 모델 + `protocols[]` 중첩 반환. `protocols`는 `id` 오름차순.
 
 | 파라미터 | 설명 |
 |----------|------|
@@ -167,9 +160,7 @@
           "id": 10,
           "protocolTypeId": 7,
           "protocolCode": "mqtt",
-          "protocolName": "MQTT",
-          "isDefault": true,
-          "sortOrder": 1
+          "protocolName": "MQTT"
         }
       ]
     }
@@ -208,3 +199,25 @@
 | `POST` | `/api/manager/device-models` | 등록 | ✅ |
 | `PUT` | `/api/manager/device-models/{id}` | 수정 (protocols 전체 교체) | ✅ |
 | `DELETE` | `/api/manager/device-models/{id}` | 삭제 | ✅ |
+
+---
+
+## 7. 구현 현황
+
+| 구분 | 내용 |
+|------|------|
+| 도메인 | `DeviceModel.create/update`, `replaceProtocols`, `getSortedProtocols` |
+| Application | `DeviceModelQueryService` — CRUD + protocols 전체 교체 |
+| API | `DeviceModelController` — 5 endpoints |
+| 미구현 | devices 참조 시 삭제 409 |
+
+---
+
+## 8. 갱신 이력
+
+| 날짜 | 변경 |
+|------|------|
+| 2026-07-03 | 최초 작성 |
+| 2026-07-06 | V005 DDL·N:M protocols 상세화 |
+| 2026-07-07 | `is_default`, `sort_order`, `config` 제거 — 조인 테이블 최소화 |
+| 2026-07-07 | DEVICE_MODEL_PROTOCOL_API.md 삭제 (별도 Protocol API 없음) |

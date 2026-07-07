@@ -32,7 +32,7 @@ class DeviceModelTest {
         CommonCode mqtt = protocolType("mqtt", "MQTT");
 
         model.replaceProtocols(java.util.List.of(
-                DeviceModelProtocol.of(model, mqtt, true, 1)
+                DeviceModelProtocol.of(model, mqtt)
         ));
 
         assertThat(model.getProtocols()).hasSize(1);

@@ -48,7 +48,7 @@ class DeviceModelControllerIntegrationTest {
                                   "manufacturer": "Dragino",
                                   "description": "동작 감지 센서",
                                   "protocols": [
-                                    { "protocolTypeId": %d, "isDefault": true, "sortOrder": 1 }
+                                    { "protocolTypeId": %d }
                                   ]
                                 }
                                 """.formatted(mqttId)))
@@ -95,6 +95,50 @@ class DeviceModelControllerIntegrationTest {
     }
 
     @Test
+    void updateDeviceModel_keepsExistingProtocolAndAddsNewOne() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "device-model-keep-protocol-user", "password123");
+        Integer groupId = createCodeGroup(accessToken, "PROTOCOL_TYPE", "Protocol Type");
+        Integer mqttId = createCommonCode(accessToken, groupId, "mqtt", "MQTT", 1);
+        Integer modbusId = createCommonCode(accessToken, groupId, "modbus", "Modbus", 2);
+
+        String createResponse = mockMvc.perform(post("/api/manager/device-models")
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "LHT65N-PIR",
+                                  "manufacturer": "Dragino",
+                                  "protocols": [
+                                    { "protocolTypeId": %d }
+                                  ]
+                                }
+                                """.formatted(mqttId)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        int modelId = objectMapper.readTree(createResponse).path("data").path("id").asInt();
+
+        mockMvc.perform(put("/api/manager/device-models/{id}", modelId)
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "LHT65N-PIR",
+                                  "manufacturer": "Dragino",
+                                  "description": "동작 감지 센서",
+                                  "protocols": [
+                                    { "protocolTypeId": %d },
+                                    { "protocolTypeId": %d }
+                                  ]
+                                }
+                                """.formatted(modbusId, mqttId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.protocols", hasSize(2)));
+    }
+
+    @Test
     void updateDeviceModel_replacesProtocols() throws Exception {
         String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "device-model-update-user", "password123");
         Integer groupId = createCodeGroup(accessToken, "PROTOCOL_TYPE", "Protocol Type");
@@ -109,7 +153,7 @@ class DeviceModelControllerIntegrationTest {
                                   "name": "LHT65N-PIR",
                                   "manufacturer": "Dragino",
                                   "protocols": [
-                                    { "protocolTypeId": %d, "isDefault": true }
+                                    { "protocolTypeId": %d }
                                   ]
                                 }
                                 """.formatted(mqttId)))
@@ -129,16 +173,14 @@ class DeviceModelControllerIntegrationTest {
                                   "manufacturer": "Dragino",
                                   "description": "updated",
                                   "protocols": [
-                                    { "protocolTypeId": %d, "isDefault": false, "sortOrder": 2 },
-                                    { "protocolTypeId": %d, "isDefault": true, "sortOrder": 1 }
+                                    { "protocolTypeId": %d },
+                                    { "protocolTypeId": %d }
                                   ]
                                 }
                                 """.formatted(modbusId, mqttId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.description").value("updated"))
-                .andExpect(jsonPath("$.data.protocols", hasSize(2)))
-                .andExpect(jsonPath("$.data.protocols[0].protocolCode").value("mqtt"))
-                .andExpect(jsonPath("$.data.protocols[0].isDefault").value(true));
+                .andExpect(jsonPath("$.data.protocols", hasSize(2)));
     }
 
     @Test
@@ -155,7 +197,7 @@ class DeviceModelControllerIntegrationTest {
                                   "name": "LHT65N-PIR",
                                   "manufacturer": "Dragino",
                                   "protocols": [
-                                    { "protocolTypeId": %d, "isDefault": true }
+                                    { "protocolTypeId": %d }
                                   ]
                                 }
                                 """.formatted(mqttId)))

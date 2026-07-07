@@ -6,9 +6,7 @@ public record DeviceModelProtocolResponse(
         Integer id,
         Integer protocolTypeId,
         String protocolCode,
-        String protocolName,
-        boolean isDefault,
-        Integer sortOrder
+        String protocolName
 ) {
 
     public static DeviceModelProtocolResponse from(DeviceModelProtocol protocol) {
@@ -16,9 +14,7 @@ public record DeviceModelProtocolResponse(
                 protocol.getId(),
                 protocol.getProtocolType().getId(),
                 protocol.getProtocolType().getCode(),
-                protocol.getProtocolType().getName(),
-                protocol.isDefault(),
-                protocol.getSortOrder()
+                protocol.getProtocolType().getName()
         );
     }
 }

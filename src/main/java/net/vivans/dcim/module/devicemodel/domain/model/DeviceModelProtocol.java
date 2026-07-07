@@ -1,6 +1,5 @@
 package net.vivans.dcim.module.devicemodel.domain.model;
 
-import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -35,32 +34,14 @@ public class DeviceModelProtocol extends BaseEntity {
     @JoinColumn(name = "protocol_type_id", nullable = false)
     private CommonCode protocolType;
 
-    @Column(name = "is_default", nullable = false)
-    private boolean isDefault;
-
-    @Column(name = "sort_order")
-    private Integer sortOrder;
-
-    private DeviceModelProtocol(
-            DeviceModel deviceModel,
-            CommonCode protocolType,
-            boolean isDefault,
-            Integer sortOrder
-    ) {
+    private DeviceModelProtocol(DeviceModel deviceModel, CommonCode protocolType) {
         this.deviceModel = deviceModel;
         this.protocolType = protocolType;
-        this.isDefault = isDefault;
-        this.sortOrder = sortOrder;
     }
 
-    public static DeviceModelProtocol of(
-            DeviceModel deviceModel,
-            CommonCode protocolType,
-            boolean isDefault,
-            Integer sortOrder
-    ) {
+    public static DeviceModelProtocol of(DeviceModel deviceModel, CommonCode protocolType) {
         validateProtocolType(protocolType);
-        return new DeviceModelProtocol(deviceModel, protocolType, isDefault, sortOrder);
+        return new DeviceModelProtocol(deviceModel, protocolType);
     }
 
     private static void validateProtocolType(CommonCode protocolType) {

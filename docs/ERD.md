@@ -50,9 +50,28 @@ erDiagram
         timestamp updated_dt "수정 시각"
     }
 
+    device_model {
+        int id PK "AUTO_INCREMENT"
+        varchar name UK "모델/제품명"
+        varchar manufacturer UK "제조사"
+        varchar description "설명 (nullable)"
+        timestamp created_dt "생성 시각"
+        timestamp updated_dt "수정 시각"
+    }
+
+    device_model_protocol {
+        int id PK "AUTO_INCREMENT"
+        int model_id FK "device_model.id"
+        int protocol_type_id FK "common_code.id (PROTOCOL_TYPE)"
+        timestamp created_dt "생성 시각"
+        timestamp updated_dt "수정 시각"
+    }
+
     code_group ||--o{ common_code : "group_id"
     common_code ||--o{ location_node : "location_type_id"
     location_node ||--o{ location_node : "parent_code"
+    device_model ||--o{ device_model_protocol : "model_id"
+    common_code ||--o{ device_model_protocol : "protocol_type_id"
 ```
 
 | 모듈 | 테이블 | 관계 |
@@ -61,8 +80,9 @@ erDiagram
 | common | `code_group` | 1 |
 | common | `common_code` | N → `code_group` |
 | location | `location_node` | N → `common_code` (LOCATION_TYPE), 자기참조 `parent_code` |
-| devicemodel | `device_model` | 장비 SKU 카탈로그 |
-| devicemodel | `device_model_protocol` | 모델 ↔ PROTOCOL_TYPE N:M |
+| devicemodel | `device_model` | 장비 SKU 카탈로그 (UK: name+manufacturer) |
+| devicemodel | `device_model_protocol` | 모델 ↔ PROTOCOL_TYPE N:M (UK: model_id+protocol_type_id) |
+| device | `devices` | ⏳ 스켈레톤만 (DDL·API 미구현) |
 
 ---
 
@@ -269,9 +289,6 @@ erDiagram
 | `id` | INT | N | PK | 연결 ID |
 | `model_id` | INT | N | FK | `device_model.id` |
 | `protocol_type_id` | INT | N | FK | `common_code.id` (**PROTOCOL_TYPE**만) |
-| `is_default` | TINYINT(1) | N | | 기본 프로토콜 (모델당 최대 1) |
-| `config` | JSON | Y | | 프로토콜 설정 (V1 미사용) |
-| `sort_order` | INT | Y | | UI 정렬 |
 | `created_dt` | TIMESTAMP(6) | Y | | |
 | `updated_dt` | TIMESTAMP(6) | Y | | |
 
@@ -358,7 +375,7 @@ V005에서 `code_group` + `common_code` 모두 INSERT (없을 때만).
 | `created_dt` | `createdDt` | `BaseEntity` |
 | `updated_dt` | `updatedDt` | `BaseEntity` |
 
-### devicemodel — `DeviceModel` (예정)
+### devicemodel — `DeviceModel`
 
 | DB 컬럼 | Java 필드 | 출처 |
 |---------|-----------|------|
@@ -369,20 +386,15 @@ V005에서 `code_group` + `common_code` 모두 INSERT (없을 때만).
 | `created_dt` | `createdDt` | `BaseEntity` |
 | `updated_dt` | `updatedDt` | `BaseEntity` |
 
-### devicemodel — `DeviceModelProtocol` (예정)
+### devicemodel — `DeviceModelProtocol`
 
 | DB 컬럼 | Java 필드 | 출처 |
 |---------|-----------|------|
 | `id` | `id` | `DeviceModelProtocol` |
 | `model_id` | `deviceModel` | `DeviceModelProtocol` (`@ManyToOne`) |
 | `protocol_type_id` | `protocolType` | `DeviceModelProtocol` (`@ManyToOne` → `CommonCode`) |
-| `is_default` | `default` 또는 `isDefault`* | `DeviceModelProtocol` |
-| `config` | `config` | `DeviceModelProtocol` |
-| `sort_order` | `sortOrder` | `DeviceModelProtocol` |
 | `created_dt` | `createdDt` | `BaseEntity` |
 | `updated_dt` | `updatedDt` | `BaseEntity` |
-
-\* `is_default` boolean 필드명은 구현 시 `defaultProtocol` 등으로 확정
 
 Spring Boot 기본 naming strategy 기준으로 camelCase → snake_case 변환됩니다.
 
@@ -398,6 +410,7 @@ V004 → location_node      (V003 선행)
 V005 → device_model, device_model_protocol + PROTOCOL_TYPE 시드 (V003 선행)
        — [설계](devicemodel/DEVICE_MODEL_API.md)
        — [DDL](../sql/history/V005__create_device_model_tables.sql)
+V006 → devices (예정, device 모듈)
 ```
 
 ---
@@ -416,3 +429,5 @@ V005 → device_model, device_model_protocol + PROTOCOL_TYPE 시드 (V003 선행
 | 2026-07-03 | `device_model` / `device_model_protocol` 설계 문서 추가 (`docs/devicemodel/DEVICE_MODEL_API.md`) |
 | 2026-07-03 | 모듈명 `devicemodel`, 엔티티 `DeviceModel` 확정 — `module/devicemodel` 스켈레톤 추가 |
 | 2026-07-06 | DeviceModel API·ERD·V005 DDL 초안 상세화 (N:M, V1 스키마, 구현 순서) |
+| 2026-07-07 | `device_model_protocol`에서 `is_default`, `sort_order`, `config` 제거 (V005 최종 스키마 반영) |
+| 2026-07-07 | 전체 관계도(mermaid)에 `device_model`, `device_model_protocol` 추가 |

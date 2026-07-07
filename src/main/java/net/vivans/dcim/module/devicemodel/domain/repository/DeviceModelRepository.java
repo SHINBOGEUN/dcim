@@ -9,6 +9,8 @@ public interface DeviceModelRepository {
 
     DeviceModel save(DeviceModel deviceModel);
 
+    void flush();
+
     Optional<DeviceModel> findById(Integer id);
 
     List<DeviceModel> findAll(String name, String manufacturer);
