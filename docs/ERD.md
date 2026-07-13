@@ -67,11 +67,24 @@ erDiagram
         timestamp updated_dt "수정 시각"
     }
 
+    device_model_snmp_point {
+        int id PK "AUTO_INCREMENT"
+        int model_protocol_id FK "device_model_protocol.id"
+        varchar name UK "식별자·표시명"
+        varchar oid "OID 또는 템플릿"
+        tinyint requires_instance "boolean, 기본 0"
+        varchar unit "단위 nullable"
+        tinyint enabled "boolean, 기본 1"
+        timestamp created_dt "생성 시각"
+        timestamp updated_dt "수정 시각"
+    }
+
     code_group ||--o{ common_code : "group_id"
     common_code ||--o{ location_node : "location_type_id"
     location_node ||--o{ location_node : "parent_code"
     device_model ||--o{ device_model_protocol : "model_id"
     common_code ||--o{ device_model_protocol : "protocol_type_id"
+    device_model_protocol ||--o{ device_model_snmp_point : "model_protocol_id"
 ```
 
 | 모듈 | 테이블 | 관계 |
@@ -82,6 +95,7 @@ erDiagram
 | location | `location_node` | N → `common_code` (LOCATION_TYPE), 자기참조 `parent_code` |
 | devicemodel | `device_model` | 장비 SKU 카탈로그 (UK: name+manufacturer) |
 | devicemodel | `device_model_protocol` | 모델 ↔ PROTOCOL_TYPE N:M (UK: model_id+protocol_type_id) |
+| devicemodel | `device_model_snmp_point` | ⏳ SNMP point (UK: model_protocol_id+name) |
 | device | `devices` | ⏳ 스켈레톤만 (DDL·API 미구현) |
 
 ---
@@ -328,6 +342,63 @@ V005에서 `code_group` + `common_code` 모두 INSERT (없을 때만).
 
 ---
 
+### `device_model_snmp_point` — 모델별 SNMP 수집 point (devicemodel 모듈)
+
+**구현 상태:** ⏳ 미구현
+
+| 컬럼 | 타입 | NULL | 키 | 기본값 | 설명 |
+|------|------|------|-----|--------|------|
+| `id` | INT | N | PK | AUTO_INCREMENT | point ID |
+| `model_protocol_id` | INT | N | FK | | `device_model_protocol.id` (SNMP만) |
+| `name` | VARCHAR(255) | N | UK* | | 식별자·표시명 (`V`, `전압`, `PRI-FLOW`) |
+| `oid` | VARCHAR(512) | N | | | OID 또는 `{instanceId}` 템플릿 |
+| `requires_instance` | TINYINT(1) | N | | `0` | OID `{instanceId}` 치환 필요 여부 (boolean) |
+| `unit` | VARCHAR(50) | Y | | | 단위 |
+| `enabled` | TINYINT(1) | N | | `1` | 사용 여부 (boolean) |
+| `created_dt` | TIMESTAMP(6) | Y | | | |
+| `updated_dt` | TIMESTAMP(6) | Y | | | |
+
+\* UK: `(model_protocol_id, name)` — 같은 SNMP protocol 연결 안에서만 name 유일. **모델 간 `V` 중복은 허용**
+
+**엔티티:** `DeviceModelSnmpPoint` (예정)  
+**API 설계:** [DEVICE_MODEL_SNMP_POINT_API.md](devicemodel/DEVICE_MODEL_SNMP_POINT_API.md)  
+**DDL:** [V006__create_device_model_snmp_point.sql](../sql/history/V006__create_device_model_snmp_point.sql)
+
+**FK 제약**
+
+| FK | 참조 | ON DELETE | ON UPDATE |
+|----|------|-----------|-----------|
+| `fk_device_model_snmp_point_model_protocol_id` | `device_model_protocol(id)` | CASCADE | CASCADE |
+
+**관계**
+
+```
+device_model <- device_model_protocol -> common_code (snmp)
+                        |
+                        +-- device_model_snmp_point
+```
+
+---
+
+## boolean 컬럼 규칙 (프로젝트 공통)
+
+플래그성 컬럼은 **`boolean` (`true` / `false`)** 을 사용합니다.  
+**`device_model_snmp_point`가 최초** 적용 대상이며, 이후 Modbus/MQTT point·device 설정 등에도 동일 규칙을 적용합니다.
+
+| 계층 | 규칙 | 예시 |
+|------|------|------|
+| DB | `TINYINT(1) NOT NULL DEFAULT 0` (또는 `1`) | `requires_instance`, `enabled` |
+| Java | `boolean` + `@Column(nullable = false)` | `requiresInstance`, `enabled` |
+| API JSON | `true` / `false` | `requiresInstance`, `enabled` |
+
+| 컬럼 (DB) | API 필드 | 기본값 | 의미 |
+|-----------|----------|--------|------|
+| `requires_instance` | `requiresInstance` | `false` | OID 그대로 사용 (치환 불필요). **instanceId 값을 저장하지 않음** |
+| `requires_instance` | `requiresInstance` | `true` | OID의 `{instanceId}`를 장비 `instanceId`로 치환 |
+| `enabled` | `enabled` | `true` | 수집·스크립트 생성 대상 |
+
+---
+
 ## 컬럼 ↔ 엔티티 매핑
 
 ### identity — `User`
@@ -396,38 +467,18 @@ V005에서 `code_group` + `common_code` 모두 INSERT (없을 때만).
 | `created_dt` | `createdDt` | `BaseEntity` |
 | `updated_dt` | `updatedDt` | `BaseEntity` |
 
+### devicemodel — `DeviceModelSnmpPoint` (예정)
+
+| DB 컬럼 | Java 필드 | 출처 |
+|---------|-----------|------|
+| `id` | `id` | `DeviceModelSnmpPoint` |
+| `model_protocol_id` | `modelProtocol` | `DeviceModelSnmpPoint` (`@ManyToOne`) |
+| `name` | `name` | `DeviceModelSnmpPoint` |
+| `oid` | `oid` | `DeviceModelSnmpPoint` |
+| `requires_instance` | `requiresInstance` | `DeviceModelSnmpPoint` (`boolean`) |
+| `unit` | `unit` | `DeviceModelSnmpPoint` |
+| `enabled` | `enabled` | `DeviceModelSnmpPoint` (`boolean`) |
+| `created_dt` | `createdDt` | `BaseEntity` |
+| `updated_dt` | `updatedDt` | `BaseEntity` |
+
 Spring Boot 기본 naming strategy 기준으로 camelCase → snake_case 변환됩니다.
-
----
-
-## DDL 적용 순서
-
-```
-V001 → users
-V002 → code_group
-V003 → common_code        (V002 선행)
-V004 → location_node      (V003 선행)
-V005 → device_model, device_model_protocol + PROTOCOL_TYPE 시드 (V003 선행)
-       — [설계](devicemodel/DEVICE_MODEL_API.md)
-       — [DDL](../sql/history/V005__create_device_model_tables.sql)
-V006 → devices (예정, device 모듈)
-```
-
----
-
-## 갱신 이력
-
-| 날짜 | 변경 |
-|------|------|
-| 2026-06-26 | `users` 테이블 최초 등록 |
-| 2026-06-26 | `sql/history/V001__create_users_table.sql` 추가 |
-| 2026-06-26 | `code_group`, `common_code` 테이블 및 ERD 관계 추가 |
-| 2026-06-26 | `sql/history/V002`, `V003` 추가 |
-| 2026-07-01 | `location_node` 테이블 및 ERD 추가 |
-| 2026-07-02 | LocationNode API 설계 문서 추가 (`docs/location/LOCATION_NODE_API.md`) |
-| 2026-07-02 | `location_node` 스키마 확정 — `code`(10자 Base62) PK, `parent_code` 자기참조 |
-| 2026-07-03 | `device_model` / `device_model_protocol` 설계 문서 추가 (`docs/devicemodel/DEVICE_MODEL_API.md`) |
-| 2026-07-03 | 모듈명 `devicemodel`, 엔티티 `DeviceModel` 확정 — `module/devicemodel` 스켈레톤 추가 |
-| 2026-07-06 | DeviceModel API·ERD·V005 DDL 초안 상세화 (N:M, V1 스키마, 구현 순서) |
-| 2026-07-07 | `device_model_protocol`에서 `is_default`, `sort_order`, `config` 제거 (V005 최종 스키마 반영) |
-| 2026-07-07 | 전체 관계도(mermaid)에 `device_model`, `device_model_protocol` 추가 |
