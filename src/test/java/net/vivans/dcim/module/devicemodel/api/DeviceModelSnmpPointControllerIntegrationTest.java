@@ -13,6 +13,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import static net.vivans.dcim.support.AuthTestSupport.bearerToken;
 import static net.vivans.dcim.support.AuthTestSupport.loginAndGetAccessToken;
+import static org.hamcrest.Matchers.hasSize;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -74,6 +76,64 @@ class DeviceModelSnmpPointControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.protocolId").value(protocolId))
                 .andExpect(jsonPath("$.data.requiresInstance").value(true))
                 .andExpect(jsonPath("$.data.unit").value("L/min"));
+    }
+
+    @Test
+    void getSnmpPoints_returnsListOrderedById() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "snmp-point-list-user", "password123");
+        Integer groupId = createCodeGroup(accessToken, "PROTOCOL_TYPE", "Protocol Type");
+        Integer snmpId = createCommonCode(accessToken, groupId, "snmp", "SNMP", 1);
+
+        String modelResponse = mockMvc.perform(post("/api/manager/device-models")
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "CDU-LIST",
+                                  "manufacturer": "Vivans",
+                                  "protocols": [
+                                    { "protocolTypeId": %d }
+                                  ]
+                                }
+                                """.formatted(snmpId)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        int modelId = objectMapper.readTree(modelResponse).path("data").path("id").asInt();
+        int protocolId = objectMapper.readTree(modelResponse).path("data").path("protocols").get(0).path("id").asInt();
+
+        mockMvc.perform(post("/api/manager/device-models/{modelId}/protocols/{protocolId}/snmp-points", modelId, protocolId)
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "PRI-FLOW",
+                                  "oid": "1.3.6.1.4.1.12345.10.1.0",
+                                  "enabled": false
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/manager/device-models/{modelId}/protocols/{protocolId}/snmp-points", modelId, protocolId)
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "SEC-FLOW",
+                                  "oid": "1.3.6.1.4.1.12345.10.2.0"
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/manager/device-models/{modelId}/protocols/{protocolId}/snmp-points", modelId, protocolId)
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(2)))
+                .andExpect(jsonPath("$.data[0].name").value("PRI-FLOW"))
+                .andExpect(jsonPath("$.data[0].enabled").value(false))
+                .andExpect(jsonPath("$.data[1].name").value("SEC-FLOW"));
     }
 
     @Test

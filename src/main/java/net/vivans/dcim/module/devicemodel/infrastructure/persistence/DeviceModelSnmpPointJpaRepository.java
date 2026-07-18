@@ -5,6 +5,7 @@ import net.vivans.dcim.module.devicemodel.domain.model.DeviceModelSnmpPoint;
 import net.vivans.dcim.module.devicemodel.domain.repository.DeviceModelSnmpPointRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -21,6 +22,11 @@ public class DeviceModelSnmpPointJpaRepository implements DeviceModelSnmpPointRe
     @Override
     public Optional<DeviceModelSnmpPoint> findByIdAndModelProtocolId(Integer id, Integer modelProtocolId) {
         return springDataRepository.findByIdAndModelProtocolId(id, modelProtocolId);
+    }
+
+    @Override
+    public List<DeviceModelSnmpPoint> findAllByModelProtocolIdOrderByIdAsc(Integer modelProtocolId) {
+        return springDataRepository.findAllByModelProtocolIdOrderByIdAsc(modelProtocolId);
     }
 
     @Override

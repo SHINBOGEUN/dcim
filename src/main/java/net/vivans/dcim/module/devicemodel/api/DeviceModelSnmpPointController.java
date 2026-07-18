@@ -10,12 +10,15 @@ import net.vivans.dcim.module.devicemodel.api.dto.DeviceModelSnmpPointResponse;
 import net.vivans.dcim.module.devicemodel.application.DeviceModelSnmpPointQueryService;
 import net.vivans.dcim.shared.api.ApiResponse;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -24,6 +27,16 @@ import org.springframework.web.bind.annotation.RestController;
 public class DeviceModelSnmpPointController {
 
     private final DeviceModelSnmpPointQueryService deviceModelSnmpPointQueryService;
+
+    @GetMapping
+    @Operation(summary = "SNMP 수집 POINT 목록 조회 API", description = "해당 모델·프로토콜의 point를 id 오름차순으로 반환합니다.")
+    public ResponseEntity<ApiResponse<List<DeviceModelSnmpPointResponse>>> getDeviceModelSnmpPoints(
+            @Parameter(description = "장비 모델 ID") @PathVariable Integer modelId,
+            @Parameter(description = "모델 프로토콜 ID (SNMP)") @PathVariable Integer protocolId
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(
+                deviceModelSnmpPointQueryService.getDeviceModelSnmpPoints(modelId, protocolId)));
+    }
 
     @PostMapping
     @Operation(summary = "SNMP 수집 POINT 등록 API")

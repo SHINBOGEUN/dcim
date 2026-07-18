@@ -12,6 +12,9 @@ import net.vivans.dcim.module.devicemodel.domain.repository.DeviceModelSnmpPoint
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -19,6 +22,19 @@ public class DeviceModelSnmpPointQueryService {
 
     private final DeviceModelRepository deviceModelRepository;
     private final DeviceModelSnmpPointRepository deviceModelSnmpPointRepository;
+
+    public List<DeviceModelSnmpPointResponse> getDeviceModelSnmpPoints(Integer modelId, Integer protocolId) {
+        findSnmpProtocol(modelId, protocolId);
+
+        List<DeviceModelSnmpPoint> points =
+                deviceModelSnmpPointRepository.findAllByModelProtocolIdOrderByIdAsc(protocolId);
+
+        List<DeviceModelSnmpPointResponse> responses = new ArrayList<>();
+        for (DeviceModelSnmpPoint point : points) {
+            responses.add(DeviceModelSnmpPointResponse.from(point));
+        }
+        return responses;
+    }
 
     @Transactional
     public DeviceModelSnmpPointResponse createDeviceModelSnmpPoint(
