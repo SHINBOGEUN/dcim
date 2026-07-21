@@ -1,0 +1,129 @@
+package net.vivans.dcim.module.devicemodel.domain.model;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import net.vivans.dcim.shared.persistence.BaseEntity;
+
+@Entity
+@Table(name = "device_model_snmp_point")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class DeviceModelSnmpPoint extends BaseEntity {
+
+    static final String INSTANCE_ID_PLACEHOLDER = "{instanceId}";
+    private static final String SNMP_PROTOCOL_CODE = "snmp";
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "model_protocol_id", nullable = false)
+    private DeviceModelProtocol modelProtocol;
+
+    @Column(nullable = false)
+    private String name;
+
+    @Column(nullable = false, length = 512)
+    private String oid;
+
+    @Column(name = "requires_instance", nullable = false)
+    private boolean requiresInstance;
+
+    @Column(length = 50)
+    private String unit;
+
+    @Column(nullable = false)
+    private boolean enabled;
+
+    private DeviceModelSnmpPoint(
+            DeviceModelProtocol modelProtocol,
+            String name,
+            String oid,
+            boolean requiresInstance,
+            String unit,
+            boolean enabled
+    ) {
+        validateModelProtocol(modelProtocol);
+        validateName(name);
+        validateOid(oid, requiresInstance);
+        this.modelProtocol = modelProtocol;
+        this.name = name;
+        this.oid = oid;
+        this.requiresInstance = requiresInstance;
+        this.unit = unit;
+        this.enabled = enabled;
+    }
+
+    public static DeviceModelSnmpPoint create(
+            DeviceModelProtocol modelProtocol,
+            String name,
+            String oid,
+            boolean requiresInstance,
+            String unit,
+            boolean enabled
+    ) {
+        return new DeviceModelSnmpPoint(modelProtocol, name, oid, requiresInstance, unit, enabled);
+    }
+
+    public void update(String name, String oid, boolean requiresInstance, String unit, boolean enabled) {
+        validateName(name);
+        validateOid(oid, requiresInstance);
+        this.name = name;
+        this.oid = oid;
+        this.requiresInstance = requiresInstance;
+        this.unit = unit;
+        this.enabled = enabled;
+    }
+
+    private static void validateModelProtocol(DeviceModelProtocol modelProtocol) {
+        if (modelProtocol == null) {
+            throw new IllegalArgumentException("modelProtocol is required");
+        }
+        if (!SNMP_PROTOCOL_CODE.equals(modelProtocol.getProtocolType().getCode())) {
+            throw new IllegalArgumentException("protocol must be snmp");
+        }
+    }
+
+    private static void validateName(String name) {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("name is required");
+        }
+    }
+
+    private static void validateOid(String oid, boolean requiresInstance) {
+        if (oid == null || oid.isBlank()) {
+            throw new IllegalArgumentException("oid is required");
+        }
+        boolean hasPlaceholder = oid.contains(INSTANCE_ID_PLACEHOLDER);
+        if (requiresInstance && !hasPlaceholder) {
+            throw new IllegalArgumentException("oid must contain {instanceId}");
+        }
+        if (!requiresInstance && hasPlaceholder) {
+            throw new IllegalArgumentException("oid must not contain {instanceId}");
+        }
+        validateOidFormat(oid);
+    }
+
+    private static void validateOidFormat(String oid) {
+        String normalized = oid.replace(INSTANCE_ID_PLACEHOLDER, "0");
+        if (!normalized.matches("^[0-9.]+$")) {
+            throw new IllegalArgumentException("invalid oid format");
+        }
+        for (String segment : normalized.split("\\.")) {
+            if (segment.isEmpty()) {
+                throw new IllegalArgumentException("invalid oid format");
+            }
+        }
+    }
+}

@@ -1,0 +1,381 @@
+package net.vivans.dcim.module.devicemodel.api;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import net.vivans.dcim.bootstrap.ManagerServerApplication;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
+
+import static net.vivans.dcim.support.AuthTestSupport.bearerToken;
+import static net.vivans.dcim.support.AuthTestSupport.loginAndGetAccessToken;
+import static org.hamcrest.Matchers.hasSize;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+@SpringBootTest(classes = ManagerServerApplication.class)
+@AutoConfigureMockMvc
+@ActiveProfiles("local")
+@Transactional
+class DeviceModelControllerIntegrationTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @Test
+    void createAndGetDeviceModel_returnsProtocols() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "device-model-user", "password123");
+        Integer groupId = createCodeGroup(accessToken, "PROTOCOL_TYPE", "Protocol Type");
+        Integer mqttId = createCommonCode(accessToken, groupId, "mqtt", "MQTT", 1);
+
+        mockMvc.perform(post("/api/manager/device-models")
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "LHT65N-PIR",
+                                  "manufacturer": "Dragino",
+                                  "description": "동작 감지 센서",
+                                  "protocols": [
+                                    { "protocolTypeId": %d }
+                                  ]
+                                }
+                                """.formatted(mqttId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.name").value("LHT65N-PIR"))
+                .andExpect(jsonPath("$.data.protocols", hasSize(1)))
+                .andExpect(jsonPath("$.data.protocols[0].protocolCode").value("mqtt"));
+
+        mockMvc.perform(get("/api/manager/device-models")
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(1)))
+                .andExpect(jsonPath("$.data[0].manufacturer").value("Dragino"));
+    }
+
+    @Test
+    void createDuplicateModel_returnsBadRequest() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "device-model-dup-user", "password123");
+        Integer groupId = createCodeGroup(accessToken, "PROTOCOL_TYPE", "Protocol Type");
+        Integer mqttId = createCommonCode(accessToken, groupId, "mqtt", "MQTT", 1);
+
+        String body = """
+                {
+                  "name": "LHT65N-PIR",
+                  "manufacturer": "Dragino",
+                  "protocols": [
+                    { "protocolTypeId": %d }
+                  ]
+                }
+                """.formatted(mqttId);
+
+        mockMvc.perform(post("/api/manager/device-models")
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/manager/device-models")
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("device model already exists"));
+    }
+
+    @Test
+    void createDeviceModel_withEmptyProtocols_returnsBadRequest() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "device-model-empty-protocol-user", "password123");
+
+        mockMvc.perform(post("/api/manager/device-models")
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "LHT65N-PIR",
+                                  "manufacturer": "Dragino",
+                                  "protocols": []
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Invalid value for parameter 'protocols'"));
+    }
+
+    @Test
+    void createDeviceModel_withDuplicateProtocolType_returnsBadRequest() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "device-model-duplicate-protocol-user", "password123");
+        Integer groupId = createCodeGroup(accessToken, "PROTOCOL_TYPE", "Protocol Type");
+        Integer mqttId = createCommonCode(accessToken, groupId, "mqtt", "MQTT", 1);
+
+        mockMvc.perform(post("/api/manager/device-models")
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "LHT65N-PIR",
+                                  "manufacturer": "Dragino",
+                                  "protocols": [
+                                    { "protocolTypeId": %d },
+                                    { "protocolTypeId": %d }
+                                  ]
+                                }
+                                """.formatted(mqttId, mqttId)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("duplicate protocol type in request"));
+    }
+
+    @Test
+    void createDeviceModel_withNonProtocolTypeCommonCode_returnsBadRequest() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "device-model-wrong-group-user", "password123");
+        Integer groupId = createCodeGroup(accessToken, "LOCATION_TYPE", "Location Type");
+        Integer rackId = createCommonCode(accessToken, groupId, "rack", "Rack", 1);
+
+        mockMvc.perform(post("/api/manager/device-models")
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "LHT65N-PIR",
+                                  "manufacturer": "Dragino",
+                                  "protocols": [
+                                    { "protocolTypeId": %d }
+                                  ]
+                                }
+                                """.formatted(rackId)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("protocolType must belong to PROTOCOL_TYPE group"));
+    }
+
+    @Test
+    void createDeviceModel_withNullProtocolTypeId_returnsBadRequest() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "device-model-null-protocol-user", "password123");
+
+        mockMvc.perform(post("/api/manager/device-models")
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "LHT65N-PIR",
+                                  "manufacturer": "Dragino",
+                                  "protocols": [
+                                    { "protocolTypeId": null }
+                                  ]
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Invalid value for parameter 'protocols[0].protocolTypeId'"));
+    }
+
+    @Test
+    void updateDeviceModel_keepsExistingProtocolAndAddsNewOne() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "device-model-keep-protocol-user", "password123");
+        Integer groupId = createCodeGroup(accessToken, "PROTOCOL_TYPE", "Protocol Type");
+        Integer mqttId = createCommonCode(accessToken, groupId, "mqtt", "MQTT", 1);
+        Integer modbusId = createCommonCode(accessToken, groupId, "modbus", "Modbus", 2);
+
+        String createResponse = mockMvc.perform(post("/api/manager/device-models")
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "LHT65N-PIR",
+                                  "manufacturer": "Dragino",
+                                  "protocols": [
+                                    { "protocolTypeId": %d }
+                                  ]
+                                }
+                                """.formatted(mqttId)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        int modelId = objectMapper.readTree(createResponse).path("data").path("id").asInt();
+
+        mockMvc.perform(put("/api/manager/device-models/{id}", modelId)
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "LHT65N-PIR",
+                                  "manufacturer": "Dragino",
+                                  "description": "동작 감지 센서",
+                                  "protocols": [
+                                    { "protocolTypeId": %d },
+                                    { "protocolTypeId": %d }
+                                  ]
+                                }
+                                """.formatted(modbusId, mqttId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.protocols", hasSize(2)));
+    }
+
+    @Test
+    void updateDeviceModel_replacesProtocols() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "device-model-update-user", "password123");
+        Integer groupId = createCodeGroup(accessToken, "PROTOCOL_TYPE", "Protocol Type");
+        Integer mqttId = createCommonCode(accessToken, groupId, "mqtt", "MQTT", 1);
+        Integer modbusId = createCommonCode(accessToken, groupId, "modbus", "Modbus", 2);
+
+        String createResponse = mockMvc.perform(post("/api/manager/device-models")
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "LHT65N-PIR",
+                                  "manufacturer": "Dragino",
+                                  "protocols": [
+                                    { "protocolTypeId": %d }
+                                  ]
+                                }
+                                """.formatted(mqttId)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        int modelId = objectMapper.readTree(createResponse).path("data").path("id").asInt();
+
+        mockMvc.perform(put("/api/manager/device-models/{id}", modelId)
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "LHT65N-PIR",
+                                  "manufacturer": "Dragino",
+                                  "description": "updated",
+                                  "protocols": [
+                                    { "protocolTypeId": %d },
+                                    { "protocolTypeId": %d }
+                                  ]
+                                }
+                                """.formatted(modbusId, mqttId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.description").value("updated"))
+                .andExpect(jsonPath("$.data.protocols", hasSize(2)));
+    }
+
+    @Test
+    void getDeviceModel_whenNotFound_returnsNotFound() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "device-model-not-found-user", "password123");
+
+        mockMvc.perform(get("/api/manager/device-models/{id}", 999999)
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("DeviceModel not found: 999999"));
+    }
+
+    @Test
+    void updateDeviceModel_whenNotFound_returnsNotFound() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "device-model-update-not-found-user", "password123");
+        Integer groupId = createCodeGroup(accessToken, "PROTOCOL_TYPE", "Protocol Type");
+        Integer mqttId = createCommonCode(accessToken, groupId, "mqtt", "MQTT", 1);
+
+        mockMvc.perform(put("/api/manager/device-models/{id}", 999999)
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "LHT65N-PIR",
+                                  "manufacturer": "Dragino",
+                                  "protocols": [
+                                    { "protocolTypeId": %d }
+                                  ]
+                                }
+                                """.formatted(mqttId)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("DeviceModel not found: 999999"));
+    }
+
+    @Test
+    void deleteDeviceModel_removesModel() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "device-model-delete-user", "password123");
+        Integer groupId = createCodeGroup(accessToken, "PROTOCOL_TYPE", "Protocol Type");
+        Integer mqttId = createCommonCode(accessToken, groupId, "mqtt", "MQTT", 1);
+
+        String createResponse = mockMvc.perform(post("/api/manager/device-models")
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "LHT65N-PIR",
+                                  "manufacturer": "Dragino",
+                                  "protocols": [
+                                    { "protocolTypeId": %d }
+                                  ]
+                                }
+                                """.formatted(mqttId)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        int modelId = objectMapper.readTree(createResponse).path("data").path("id").asInt();
+
+        mockMvc.perform(delete("/api/manager/device-models/{id}", modelId)
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").value(modelId));
+
+        mockMvc.perform(get("/api/manager/device-models/{id}", modelId)
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void deleteDeviceModel_whenNotFound_returnsNotFound() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "device-model-delete-not-found-user", "password123");
+
+        mockMvc.perform(delete("/api/manager/device-models/{id}", 999999)
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("DeviceModel not found: 999999"));
+    }
+
+    private Integer createCodeGroup(String accessToken, String groupKey, String groupName) throws Exception {
+        String response = mockMvc.perform(post("/api/manager/code-groups")
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"groupKey": "%s", "groupName": "%s"}
+                                """.formatted(groupKey, groupName)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        return objectMapper.readTree(response).path("data").path("id").asInt();
+    }
+
+    private Integer createCommonCode(
+            String accessToken,
+            Integer groupId,
+            String code,
+            String name,
+            Integer sortOrder
+    ) throws Exception {
+        String response = mockMvc.perform(post("/api/manager/common-codes")
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"groupId": %d, "code": "%s", "name": "%s", "sortOrder": %d}
+                                """.formatted(groupId, code, name, sortOrder)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        return objectMapper.readTree(response).path("data").path("id").asInt();
+    }
+}

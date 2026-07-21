@@ -50,9 +50,41 @@ erDiagram
         timestamp updated_dt "수정 시각"
     }
 
+    device_model {
+        int id PK "AUTO_INCREMENT"
+        varchar name UK "모델/제품명"
+        varchar manufacturer UK "제조사"
+        varchar description "설명 (nullable)"
+        timestamp created_dt "생성 시각"
+        timestamp updated_dt "수정 시각"
+    }
+
+    device_model_protocol {
+        int id PK "AUTO_INCREMENT"
+        int model_id FK "device_model.id"
+        int protocol_type_id FK "common_code.id (PROTOCOL_TYPE)"
+        timestamp created_dt "생성 시각"
+        timestamp updated_dt "수정 시각"
+    }
+
+    device_model_snmp_point {
+        int id PK "AUTO_INCREMENT"
+        int model_protocol_id FK "device_model_protocol.id"
+        varchar name UK "식별자·표시명"
+        varchar oid "OID 또는 템플릿"
+        tinyint requires_instance "boolean, 기본 0"
+        varchar unit "단위 nullable"
+        tinyint enabled "boolean, 기본 1"
+        timestamp created_dt "생성 시각"
+        timestamp updated_dt "수정 시각"
+    }
+
     code_group ||--o{ common_code : "group_id"
     common_code ||--o{ location_node : "location_type_id"
     location_node ||--o{ location_node : "parent_code"
+    device_model ||--o{ device_model_protocol : "model_id"
+    common_code ||--o{ device_model_protocol : "protocol_type_id"
+    device_model_protocol ||--o{ device_model_snmp_point : "model_protocol_id"
 ```
 
 | 모듈 | 테이블 | 관계 |
@@ -61,6 +93,10 @@ erDiagram
 | common | `code_group` | 1 |
 | common | `common_code` | N → `code_group` |
 | location | `location_node` | N → `common_code` (LOCATION_TYPE), 자기참조 `parent_code` |
+| devicemodel | `device_model` | 장비 SKU 카탈로그 (UK: name+manufacturer) |
+| devicemodel | `device_model_protocol` | 모델 ↔ PROTOCOL_TYPE N:M (UK: model_id+protocol_type_id) |
+| devicemodel | `device_model_snmp_point` | ✅ SNMP point (UK: model_protocol_id+name) |
+| device | `devices` | ⏳ 스켈레톤만 (DDL·API 미구현) |
 
 ---
 
@@ -226,6 +262,189 @@ erDiagram
 
 ---
 
+### `device_model` — 장비 제품 모델 (devicemodel 모듈)
+
+**구현 상태:** ✅ 구현 완료
+
+| 컬럼 | 타입 | NULL | 키 | 설명 |
+|------|------|------|-----|------|
+| `id` | INT | N | PK | 모델 ID (AUTO_INCREMENT) |
+| `name` | VARCHAR(255) | N | UK | 모델/제품명 |
+| `manufacturer` | VARCHAR(255) | N | UK | 제조사 |
+| `description` | VARCHAR(1000) | Y | | 설명 |
+| `created_dt` | TIMESTAMP(6) | Y | | 최초 생성 시각 |
+| `updated_dt` | TIMESTAMP(6) | Y | | 최종 수정 시각 |
+
+\* UK: `(name, manufacturer)`
+
+**엔티티:** `module/devicemodel/domain/model/DeviceModel.java`  
+**API 설계:** [DEVICE_MODEL_API.md](devicemodel/DEVICE_MODEL_API.md)  
+**상속:** `BaseEntity`  
+**연관:** `@OneToMany` → `DeviceModelProtocol` (`mappedBy = "deviceModel"`, cascade ALL)
+
+**DDL:** [V005__create_device_model_tables.sql](../sql/history/V005__create_device_model_tables.sql)
+
+**범위**
+
+| 참조 주체 | model FK |
+|-----------|----------|
+| `devices` (향후) | ✅ |
+| `assets` (향후, 장비류) | ✅ 검토 |
+| `location_node` | ❌ |
+
+---
+
+### `device_model_protocol` — 모델별 프로토콜 (devicemodel 모듈)
+
+**구현 상태:** ✅ 구현 완료
+
+| 컬럼 | 타입 | NULL | 키 | 설명 |
+|------|------|------|-----|------|
+| `id` | INT | N | PK | 연결 ID |
+| `model_id` | INT | N | FK | `device_model.id` |
+| `protocol_type_id` | INT | N | FK | `common_code.id` (**PROTOCOL_TYPE**만) |
+| `created_dt` | TIMESTAMP(6) | Y | | |
+| `updated_dt` | TIMESTAMP(6) | Y | | |
+
+| 제약 | 규칙 |
+|------|------|
+| UK | `(model_id, protocol_type_id)` |
+
+**엔티티:** `module/devicemodel/domain/model/DeviceModelProtocol.java`  
+**연관:**
+- `@ManyToOne` → `DeviceModel` (`model_id`)
+- `@ManyToOne` → `CommonCode` (`protocol_type_id`)
+
+**FK 제약**
+
+| FK | 참조 | ON DELETE | ON UPDATE |
+|----|------|-----------|-----------|
+| `fk_device_model_protocol_model_id` | `device_model(id)` | RESTRICT | CASCADE |
+| `fk_device_model_protocol_protocol_type_id` | `common_code(id)` | RESTRICT | CASCADE |
+
+**관계 (N:M)**
+
+```
+device_model ←—— device_model_protocol ——→ common_code (PROTOCOL_TYPE)
+```
+
+**PROTOCOL_TYPE 시드 (V005)**
+
+V005에서 `code_group` + `common_code` 모두 INSERT (없을 때만).
+
+| group_key | code | name | sort_order |
+|-----------|------|------|------------|
+| PROTOCOL_TYPE | snmp | SNMP | 1 |
+| PROTOCOL_TYPE | modbus | Modbus | 2 |
+| PROTOCOL_TYPE | mqtt | MQTT | 3 |
+
+> ERD §code_group 예시(id=4 등)는 문서용. 실제 id는 DB마다 다름.
+
+---
+
+### `device_model_snmp_point` — 모델별 SNMP 수집 point (devicemodel 모듈)
+
+**구현 상태:** ✅ 구현 완료
+
+| 컬럼 | 타입 | NULL | 키 | 기본값 | 설명 |
+|------|------|------|-----|--------|------|
+| `id` | INT | N | PK | AUTO_INCREMENT | point ID |
+| `model_protocol_id` | INT | N | FK | | `device_model_protocol.id` (SNMP만) |
+| `name` | VARCHAR(255) | N | UK* | | 식별자·표시명 (`V`, `전압`, `PRI-FLOW`) |
+| `oid` | VARCHAR(512) | N | | | OID 또는 `{instanceId}` 템플릿 |
+| `requires_instance` | TINYINT(1) | N | | `0` | OID `{instanceId}` 치환 필요 여부 (boolean) |
+| `unit` | VARCHAR(50) | Y | | | 단위 (`V`, `A`, `L/min`) |
+| `enabled` | TINYINT(1) | N | | `1` | 사용 여부 (boolean) |
+| `created_dt` | TIMESTAMP(6) | Y | | | |
+| `updated_dt` | TIMESTAMP(6) | Y | | | |
+
+\* UK: `(model_protocol_id, name)` — 같은 SNMP protocol 연결 안에서만 name 유일. **모델 간 `V` 중복은 허용**
+
+**엔티티:** `module/devicemodel/domain/model/DeviceModelSnmpPoint.java`  
+**API 설계:** [DEVICE_MODEL_SNMP_POINT_API.md](devicemodel/DEVICE_MODEL_SNMP_POINT_API.md)  
+**상속:** `BaseEntity`  
+**연관:** `@ManyToOne` → `DeviceModelProtocol` (`model_protocol_id`, LAZY)
+
+**DDL:** [V006__create_device_model_snmp_point.sql](../sql/history/V006__create_device_model_snmp_point.sql)
+
+**FK 제약**
+
+| FK | 참조 | ON DELETE | ON UPDATE |
+|----|------|-----------|-----------|
+| `fk_device_model_snmp_point_model_protocol_id` | `device_model_protocol(id)` | CASCADE | CASCADE |
+
+**관계도 (devicemodel — SNMP point)**
+
+```mermaid
+erDiagram
+    device_model {
+        int id PK
+        varchar name UK
+        varchar manufacturer UK
+        varchar description
+    }
+
+    device_model_protocol {
+        int id PK
+        int model_id FK
+        int protocol_type_id FK
+    }
+
+    common_code {
+        int id PK
+        int group_id FK
+        varchar code "snmp, modbus, mqtt"
+        varchar name
+    }
+
+    device_model_snmp_point {
+        int id PK
+        int model_protocol_id FK
+        varchar name UK
+        varchar oid
+        tinyint requires_instance
+        varchar unit
+        tinyint enabled
+    }
+
+    device_model ||--o{ device_model_protocol : "model_id"
+    common_code ||--o{ device_model_protocol : "protocol_type_id"
+    device_model_protocol ||--o{ device_model_snmp_point : "model_protocol_id"
+```
+
+```
+device_model (1) ──< device_model_protocol (N) >── common_code (PROTOCOL_TYPE)
+                            │
+                            └──< device_model_snmp_point (N)   ※ protocolCode = snmp 만
+```
+
+| 제약 | 규칙 |
+|------|------|
+| UK | `(model_protocol_id, name)` |
+| 프로토콜 | `protocolCode = snmp` 인 `device_model_protocol`만 point 등록 가능 |
+| 삭제 | protocol 삭제 시 point CASCADE |
+
+---
+
+## boolean 컬럼 규칙 (프로젝트 공통)
+
+플래그성 컬럼은 **`boolean` (`true` / `false`)** 을 사용합니다.  
+**`device_model_snmp_point`가 최초** 적용 대상이며, 이후 Modbus/MQTT point·device 설정 등에도 동일 규칙을 적용합니다.
+
+| 계층 | 규칙 | 예시 |
+|------|------|------|
+| DB | `TINYINT(1) NOT NULL DEFAULT 0` (또는 `1`) | `requires_instance`, `enabled` |
+| Java | `boolean` + `@Column(nullable = false)` | `requiresInstance`, `enabled` |
+| API JSON | `true` / `false` | `requiresInstance`, `enabled` |
+
+| 컬럼 (DB) | API 필드 | 기본값 | 의미 |
+|-----------|----------|--------|------|
+| `requires_instance` | `requiresInstance` | `false` | OID 그대로 사용 (치환 불필요). **instanceId 값을 저장하지 않음** |
+| `requires_instance` | `requiresInstance` | `true` | OID의 `{instanceId}`를 장비 `instanceId`로 치환 |
+| `enabled` | `enabled` | `true` | 수집·스크립트 생성 대상 |
+
+---
+
 ## 컬럼 ↔ 엔티티 매핑
 
 ### identity — `User`
@@ -273,29 +492,39 @@ erDiagram
 | `created_dt` | `createdDt` | `BaseEntity` |
 | `updated_dt` | `updatedDt` | `BaseEntity` |
 
+### devicemodel — `DeviceModel`
+
+| DB 컬럼 | Java 필드 | 출처 |
+|---------|-----------|------|
+| `id` | `id` | `DeviceModel` |
+| `name` | `name` | `DeviceModel` |
+| `manufacturer` | `manufacturer` | `DeviceModel` |
+| `description` | `description` | `DeviceModel` |
+| `created_dt` | `createdDt` | `BaseEntity` |
+| `updated_dt` | `updatedDt` | `BaseEntity` |
+
+### devicemodel — `DeviceModelProtocol`
+
+| DB 컬럼 | Java 필드 | 출처 |
+|---------|-----------|------|
+| `id` | `id` | `DeviceModelProtocol` |
+| `model_id` | `deviceModel` | `DeviceModelProtocol` (`@ManyToOne`) |
+| `protocol_type_id` | `protocolType` | `DeviceModelProtocol` (`@ManyToOne` → `CommonCode`) |
+| `created_dt` | `createdDt` | `BaseEntity` |
+| `updated_dt` | `updatedDt` | `BaseEntity` |
+
+### devicemodel — `DeviceModelSnmpPoint`
+
+| DB 컬럼 | Java 필드 | 출처 |
+|---------|-----------|------|
+| `id` | `id` | `DeviceModelSnmpPoint` |
+| `model_protocol_id` | `modelProtocol` | `DeviceModelSnmpPoint` (`@ManyToOne`) |
+| `name` | `name` | `DeviceModelSnmpPoint` |
+| `oid` | `oid` | `DeviceModelSnmpPoint` |
+| `requires_instance` | `requiresInstance` | `DeviceModelSnmpPoint` (`boolean`) |
+| `unit` | `unit` | `DeviceModelSnmpPoint` |
+| `enabled` | `enabled` | `DeviceModelSnmpPoint` (`boolean`) |
+| `created_dt` | `createdDt` | `BaseEntity` |
+| `updated_dt` | `updatedDt` | `BaseEntity` |
+
 Spring Boot 기본 naming strategy 기준으로 camelCase → snake_case 변환됩니다.
-
----
-
-## DDL 적용 순서
-
-```
-V001 → users
-V002 → code_group
-V003 → common_code        (V002 선행)
-V004 → location_node      (V003 선행)
-```
-
----
-
-## 갱신 이력
-
-| 날짜 | 변경 |
-|------|------|
-| 2026-06-26 | `users` 테이블 최초 등록 |
-| 2026-06-26 | `sql/history/V001__create_users_table.sql` 추가 |
-| 2026-06-26 | `code_group`, `common_code` 테이블 및 ERD 관계 추가 |
-| 2026-06-26 | `sql/history/V002`, `V003` 추가 |
-| 2026-07-01 | `location_node` 테이블 및 ERD 추가 |
-| 2026-07-02 | LocationNode API 설계 문서 추가 (`docs/location/LOCATION_NODE_API.md`) |
-| 2026-07-02 | `location_node` 스키마 확정 — `code`(10자 Base62) PK, `parent_code` 자기참조 |
