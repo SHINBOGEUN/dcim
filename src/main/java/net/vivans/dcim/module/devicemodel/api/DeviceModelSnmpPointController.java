@@ -10,6 +10,7 @@ import net.vivans.dcim.module.devicemodel.api.dto.DeviceModelSnmpPointResponse;
 import net.vivans.dcim.module.devicemodel.application.DeviceModelSnmpPointQueryService;
 import net.vivans.dcim.shared.api.ApiResponse;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -38,6 +39,17 @@ public class DeviceModelSnmpPointController {
                 deviceModelSnmpPointQueryService.getDeviceModelSnmpPoints(modelId, protocolId)));
     }
 
+    @GetMapping("/{pointId}")
+    @Operation(summary = "SNMP 수집 POINT 단건 조회 API")
+    public ResponseEntity<ApiResponse<DeviceModelSnmpPointResponse>> getDeviceModelSnmpPoint(
+            @Parameter(description = "장비 모델 ID") @PathVariable Integer modelId,
+            @Parameter(description = "모델 프로토콜 ID (SNMP)") @PathVariable Integer protocolId,
+            @Parameter(description = "SNMP point ID") @PathVariable Integer pointId
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(
+                deviceModelSnmpPointQueryService.getDeviceModelSnmpPoint(modelId, protocolId, pointId)));
+    }
+
     @PostMapping
     @Operation(summary = "SNMP 수집 POINT 등록 API")
     public ResponseEntity<ApiResponse<DeviceModelSnmpPointResponse>> createDeviceModelSnmpPoint(
@@ -59,5 +71,16 @@ public class DeviceModelSnmpPointController {
     ) {
         return ResponseEntity.ok(ApiResponse.ok(
                 deviceModelSnmpPointQueryService.updateDeviceModelSnmpPoint(modelId, protocolId, pointId, request)));
+    }
+
+    @DeleteMapping("/{pointId}")
+    @Operation(summary = "SNMP 수집 POINT 삭제 API")
+    public ResponseEntity<ApiResponse<Integer>> deleteDeviceModelSnmpPoint(
+            @Parameter(description = "장비 모델 ID") @PathVariable Integer modelId,
+            @Parameter(description = "모델 프로토콜 ID (SNMP)") @PathVariable Integer protocolId,
+            @Parameter(description = "SNMP point ID") @PathVariable Integer pointId
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(
+                deviceModelSnmpPointQueryService.deleteDeviceModelSnmpPoint(modelId, protocolId, pointId)));
     }
 }

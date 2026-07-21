@@ -36,6 +36,15 @@ public class DeviceModelSnmpPointQueryService {
         return responses;
     }
 
+    public DeviceModelSnmpPointResponse getDeviceModelSnmpPoint(
+            Integer modelId,
+            Integer protocolId,
+            Integer pointId
+    ) {
+        findSnmpProtocol(modelId, protocolId);
+        return DeviceModelSnmpPointResponse.from(findSnmpPoint(pointId, protocolId));
+    }
+
     @Transactional
     public DeviceModelSnmpPointResponse createDeviceModelSnmpPoint(
             Integer modelId,
@@ -84,6 +93,14 @@ public class DeviceModelSnmpPointQueryService {
         point.update(request.name(), request.oid(), requiresInstance, request.unit(), enabled);
 
         return DeviceModelSnmpPointResponse.from(deviceModelSnmpPointRepository.save(point));
+    }
+
+    @Transactional
+    public Integer deleteDeviceModelSnmpPoint(Integer modelId, Integer protocolId, Integer pointId) {
+        findSnmpProtocol(modelId, protocolId);
+        DeviceModelSnmpPoint point = findSnmpPoint(pointId, protocolId);
+        deviceModelSnmpPointRepository.delete(point);
+        return pointId;
     }
 
     private DeviceModelProtocol findSnmpProtocol(Integer modelId, Integer protocolId) {

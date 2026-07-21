@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import static net.vivans.dcim.support.AuthTestSupport.bearerToken;
 import static net.vivans.dcim.support.AuthTestSupport.loginAndGetAccessToken;
 import static org.hamcrest.Matchers.hasSize;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -137,6 +138,97 @@ class DeviceModelSnmpPointControllerIntegrationTest {
     }
 
     @Test
+    void getSnmpPoint_returnsOne() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "snmp-point-get-user", "password123");
+        Integer groupId = createCodeGroup(accessToken, "PROTOCOL_TYPE", "Protocol Type");
+        Integer snmpId = createCommonCode(accessToken, groupId, "snmp", "SNMP", 1);
+
+        String modelResponse = mockMvc.perform(post("/api/manager/device-models")
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "CDU-GET",
+                                  "manufacturer": "Vivans",
+                                  "protocols": [
+                                    { "protocolTypeId": %d }
+                                  ]
+                                }
+                                """.formatted(snmpId)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        int modelId = objectMapper.readTree(modelResponse).path("data").path("id").asInt();
+        int protocolId = objectMapper.readTree(modelResponse).path("data").path("protocols").get(0).path("id").asInt();
+
+        String createResponse = mockMvc.perform(post(
+                        "/api/manager/device-models/{modelId}/protocols/{protocolId}/snmp-points",
+                        modelId, protocolId)
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "PRI-FLOW",
+                                  "oid": "1.3.6.1.4.1.12345.10.1.0",
+                                  "unit": "L/min"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        int pointId = objectMapper.readTree(createResponse).path("data").path("id").asInt();
+
+        mockMvc.perform(get(
+                        "/api/manager/device-models/{modelId}/protocols/{protocolId}/snmp-points/{pointId}",
+                        modelId, protocolId, pointId)
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(pointId))
+                .andExpect(jsonPath("$.data.name").value("PRI-FLOW"))
+                .andExpect(jsonPath("$.data.modelId").value(modelId))
+                .andExpect(jsonPath("$.data.protocolId").value(protocolId))
+                .andExpect(jsonPath("$.data.unit").value("L/min"));
+    }
+
+    @Test
+    void getSnmpPoint_whenNotFound_returnsNotFound() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "snmp-point-get-nf-user", "password123");
+        Integer groupId = createCodeGroup(accessToken, "PROTOCOL_TYPE", "Protocol Type");
+        Integer snmpId = createCommonCode(accessToken, groupId, "snmp", "SNMP", 1);
+
+        String modelResponse = mockMvc.perform(post("/api/manager/device-models")
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "CDU-GET-NF",
+                                  "manufacturer": "Vivans",
+                                  "protocols": [
+                                    { "protocolTypeId": %d }
+                                  ]
+                                }
+                                """.formatted(snmpId)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        int modelId = objectMapper.readTree(modelResponse).path("data").path("id").asInt();
+        int protocolId = objectMapper.readTree(modelResponse).path("data").path("protocols").get(0).path("id").asInt();
+
+        mockMvc.perform(get(
+                        "/api/manager/device-models/{modelId}/protocols/{protocolId}/snmp-points/{pointId}",
+                        modelId, protocolId, 999999)
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("DeviceModelSnmpPoint not found: 999999"));
+    }
+
+    @Test
     void updateSnmpPoint_returnsUpdated() throws Exception {
         String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "snmp-point-update-user", "password123");
         Integer groupId = createCodeGroup(accessToken, "PROTOCOL_TYPE", "Protocol Type");
@@ -242,6 +334,98 @@ class DeviceModelSnmpPointControllerIntegrationTest {
                                   "oid": "1.3.6.1.4.1.12345.10.2.0"
                                 }
                                 """))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("DeviceModelSnmpPoint not found: 999999"));
+    }
+
+    @Test
+    void deleteSnmpPoint_removesPoint() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "snmp-point-delete-user", "password123");
+        Integer groupId = createCodeGroup(accessToken, "PROTOCOL_TYPE", "Protocol Type");
+        Integer snmpId = createCommonCode(accessToken, groupId, "snmp", "SNMP", 1);
+
+        String modelResponse = mockMvc.perform(post("/api/manager/device-models")
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "CDU-DELETE",
+                                  "manufacturer": "Vivans",
+                                  "protocols": [
+                                    { "protocolTypeId": %d }
+                                  ]
+                                }
+                                """.formatted(snmpId)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        int modelId = objectMapper.readTree(modelResponse).path("data").path("id").asInt();
+        int protocolId = objectMapper.readTree(modelResponse).path("data").path("protocols").get(0).path("id").asInt();
+
+        String createResponse = mockMvc.perform(post(
+                        "/api/manager/device-models/{modelId}/protocols/{protocolId}/snmp-points",
+                        modelId, protocolId)
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "PRI-FLOW",
+                                  "oid": "1.3.6.1.4.1.12345.10.1.0"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        int pointId = objectMapper.readTree(createResponse).path("data").path("id").asInt();
+
+        mockMvc.perform(delete(
+                        "/api/manager/device-models/{modelId}/protocols/{protocolId}/snmp-points/{pointId}",
+                        modelId, protocolId, pointId)
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").value(pointId));
+
+        mockMvc.perform(get(
+                        "/api/manager/device-models/{modelId}/protocols/{protocolId}/snmp-points/{pointId}",
+                        modelId, protocolId, pointId)
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void deleteSnmpPoint_whenNotFound_returnsNotFound() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "snmp-point-delete-nf-user", "password123");
+        Integer groupId = createCodeGroup(accessToken, "PROTOCOL_TYPE", "Protocol Type");
+        Integer snmpId = createCommonCode(accessToken, groupId, "snmp", "SNMP", 1);
+
+        String modelResponse = mockMvc.perform(post("/api/manager/device-models")
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "CDU-DELETE-NF",
+                                  "manufacturer": "Vivans",
+                                  "protocols": [
+                                    { "protocolTypeId": %d }
+                                  ]
+                                }
+                                """.formatted(snmpId)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        int modelId = objectMapper.readTree(modelResponse).path("data").path("id").asInt();
+        int protocolId = objectMapper.readTree(modelResponse).path("data").path("protocols").get(0).path("id").asInt();
+
+        mockMvc.perform(delete(
+                        "/api/manager/device-models/{modelId}/protocols/{protocolId}/snmp-points/{pointId}",
+                        modelId, protocolId, 999999)
+                        .header("Authorization", bearerToken(accessToken)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("DeviceModelSnmpPoint not found: 999999"));
     }

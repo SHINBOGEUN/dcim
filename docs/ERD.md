@@ -95,7 +95,7 @@ erDiagram
 | location | `location_node` | N → `common_code` (LOCATION_TYPE), 자기참조 `parent_code` |
 | devicemodel | `device_model` | 장비 SKU 카탈로그 (UK: name+manufacturer) |
 | devicemodel | `device_model_protocol` | 모델 ↔ PROTOCOL_TYPE N:M (UK: model_id+protocol_type_id) |
-| devicemodel | `device_model_snmp_point` | ⏳ SNMP point (UK: model_protocol_id+name) |
+| devicemodel | `device_model_snmp_point` | ✅ SNMP point (UK: model_protocol_id+name) |
 | device | `devices` | ⏳ 스켈레톤만 (DDL·API 미구현) |
 
 ---
@@ -344,7 +344,7 @@ V005에서 `code_group` + `common_code` 모두 INSERT (없을 때만).
 
 ### `device_model_snmp_point` — 모델별 SNMP 수집 point (devicemodel 모듈)
 
-**구현 상태:** ⏳ 미구현
+**구현 상태:** ✅ 구현 완료
 
 | 컬럼 | 타입 | NULL | 키 | 기본값 | 설명 |
 |------|------|------|-----|--------|------|
@@ -360,7 +360,7 @@ V005에서 `code_group` + `common_code` 모두 INSERT (없을 때만).
 
 \* UK: `(model_protocol_id, name)` — 같은 SNMP protocol 연결 안에서만 name 유일. **모델 간 `V` 중복은 허용**
 
-**엔티티:** `DeviceModelSnmpPoint` (예정)  
+**엔티티:** `DeviceModelSnmpPoint`  
 **API 설계:** [DEVICE_MODEL_SNMP_POINT_API.md](devicemodel/DEVICE_MODEL_SNMP_POINT_API.md)  
 **DDL:** [V006__create_device_model_snmp_point.sql](../sql/history/V006__create_device_model_snmp_point.sql)
 
@@ -467,7 +467,7 @@ device_model <- device_model_protocol -> common_code (snmp)
 | `created_dt` | `createdDt` | `BaseEntity` |
 | `updated_dt` | `updatedDt` | `BaseEntity` |
 
-### devicemodel — `DeviceModelSnmpPoint` (예정)
+### devicemodel — `DeviceModelSnmpPoint`
 
 | DB 컬럼 | Java 필드 | 출처 |
 |---------|-----------|------|

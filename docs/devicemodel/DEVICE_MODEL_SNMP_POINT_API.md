@@ -127,7 +127,7 @@ device.instanceId = 3   ← 장비 테이블(향후)에 저장
 
 ## 2. 테이블 — `device_model_snmp_point`
 
-**구현 상태:** ⏳ 미구현
+**구현 상태:** ✅ 구현 완료
 
 | 컬럼 | 타입 | NULL | 키 | 기본값 | 설명 |
 |------|------|------|-----|--------|------|
@@ -161,7 +161,7 @@ device_model <- device_model_protocol -> common_code (snmp)
 
 ### 3.1 point 추가 — `POST /api/manager/device-models/{modelId}/protocols/{protocolId}/snmp-points`
 
-**구현 상태:** ⏳ 미구현
+**구현 상태:** ✅ 구현 완료
 
 #### 경로 파라미터
 
@@ -226,7 +226,7 @@ device_model <- device_model_protocol -> common_code (snmp)
 
 ### 4.1 point 수정 — `PUT /api/manager/device-models/{modelId}/protocols/{protocolId}/snmp-points/{pointId}`
 
-**구현 상태:** ⏳ 미구현
+**구현 상태:** ✅ 구현 완료
 
 요청 body는 등록과 동일. **전체 교체** (부분 수정 없음).
 
@@ -244,7 +244,7 @@ device_model <- device_model_protocol -> common_code (snmp)
 
 ### 5.1 목록 — `GET /api/manager/device-models/{modelId}/protocols/{protocolId}/snmp-points`
 
-**구현 상태:** ⏳ 미구현
+**구현 상태:** ✅ 구현 완료
 
 `id` 오름차순. `enabled = false` point도 포함 (필터는 V2 검토).
 
@@ -270,7 +270,7 @@ device_model <- device_model_protocol -> common_code (snmp)
 
 ### 5.2 단건 — `GET /api/manager/device-models/{modelId}/protocols/{protocolId}/snmp-points/{pointId}`
 
-**구현 상태:** ⏳ 미구현
+**구현 상태:** ✅ 구현 완료
 
 목록 항목 1건과 동일 구조.
 
@@ -280,7 +280,7 @@ device_model <- device_model_protocol -> common_code (snmp)
 
 ### 6.1 point 삭제 — `DELETE /api/manager/device-models/{modelId}/protocols/{protocolId}/snmp-points/{pointId}`
 
-**구현 상태:** ⏳ 미구현
+**구현 상태:** ✅ 구현 완료
 
 | 조건 | HTTP | 동작 |
 |------|------|------|
@@ -302,11 +302,11 @@ device_model <- device_model_protocol -> common_code (snmp)
 
 | Method | Path | 설명 | 상태 |
 |--------|------|------|------|
-| `GET` | `.../snmp-points` | SNMP point 목록 | ⏳ |
-| `GET` | `.../snmp-points/{pointId}` | SNMP point 단건 | ⏳ |
-| `POST` | `.../snmp-points` | SNMP point 추가 | ⏳ |
-| `PUT` | `.../snmp-points/{pointId}` | SNMP point 수정 | ⏳ |
-| `DELETE` | `.../snmp-points/{pointId}` | SNMP point 삭제 | ⏳ |
+| `GET` | `.../snmp-points` | SNMP point 목록 | ✅ |
+| `GET` | `.../snmp-points/{pointId}` | SNMP point 단건 | ✅ |
+| `POST` | `.../snmp-points` | SNMP point 추가 | ✅ |
+| `PUT` | `.../snmp-points/{pointId}` | SNMP point 수정 | ✅ |
+| `DELETE` | `.../snmp-points/{pointId}` | SNMP point 삭제 | ✅ |
 
 ---
 
@@ -399,10 +399,10 @@ V2에서 `GET .../snmp-points/script-template?deviceId=` export API 검토.
 | 구분 | 내용 |
 |------|------|
 | 문서 | 본 문서 |
-| DDL | V006 |
-| 도메인 | `DeviceModelSnmpPoint` — 미구현 |
-| Application | `DeviceModelSnmpPointQueryService` — 미구현 |
-| API | sub-resource CRUD — 미구현 |
+| DDL | V006 ✅ |
+| 도메인 | `DeviceModelSnmpPoint` ✅ |
+| Application | `DeviceModelSnmpPointQueryService` ✅ |
+| API | sub-resource CRUD ✅ |
 | device 연동 | `instanceId`, ip/port — 미구현 |
 | script export | — 미구현 |
 
@@ -413,3 +413,4 @@ V2에서 `GET .../snmp-points/script-template?deviceId=` export API 검토.
 | 날짜 | 변경 |
 |------|------|
 | 2026-07-10 | 최초 작성 |
+| 2026-07-21 | CRUD API 구현 완료 (등록·수정·목록·단건·삭제) |
