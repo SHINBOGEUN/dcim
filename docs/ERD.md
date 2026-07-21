@@ -353,15 +353,18 @@ V005에서 `code_group` + `common_code` 모두 INSERT (없을 때만).
 | `name` | VARCHAR(255) | N | UK* | | 식별자·표시명 (`V`, `전압`, `PRI-FLOW`) |
 | `oid` | VARCHAR(512) | N | | | OID 또는 `{instanceId}` 템플릿 |
 | `requires_instance` | TINYINT(1) | N | | `0` | OID `{instanceId}` 치환 필요 여부 (boolean) |
-| `unit` | VARCHAR(50) | Y | | | 단위 |
+| `unit` | VARCHAR(50) | Y | | | 단위 (`V`, `A`, `L/min`) |
 | `enabled` | TINYINT(1) | N | | `1` | 사용 여부 (boolean) |
 | `created_dt` | TIMESTAMP(6) | Y | | | |
 | `updated_dt` | TIMESTAMP(6) | Y | | | |
 
 \* UK: `(model_protocol_id, name)` — 같은 SNMP protocol 연결 안에서만 name 유일. **모델 간 `V` 중복은 허용**
 
-**엔티티:** `DeviceModelSnmpPoint`  
+**엔티티:** `module/devicemodel/domain/model/DeviceModelSnmpPoint.java`  
 **API 설계:** [DEVICE_MODEL_SNMP_POINT_API.md](devicemodel/DEVICE_MODEL_SNMP_POINT_API.md)  
+**상속:** `BaseEntity`  
+**연관:** `@ManyToOne` → `DeviceModelProtocol` (`model_protocol_id`, LAZY)
+
 **DDL:** [V006__create_device_model_snmp_point.sql](../sql/history/V006__create_device_model_snmp_point.sql)
 
 **FK 제약**
@@ -370,13 +373,56 @@ V005에서 `code_group` + `common_code` 모두 INSERT (없을 때만).
 |----|------|-----------|-----------|
 | `fk_device_model_snmp_point_model_protocol_id` | `device_model_protocol(id)` | CASCADE | CASCADE |
 
-**관계**
+**관계도 (devicemodel — SNMP point)**
+
+```mermaid
+erDiagram
+    device_model {
+        int id PK
+        varchar name UK
+        varchar manufacturer UK
+        varchar description
+    }
+
+    device_model_protocol {
+        int id PK
+        int model_id FK
+        int protocol_type_id FK
+    }
+
+    common_code {
+        int id PK
+        int group_id FK
+        varchar code "snmp, modbus, mqtt"
+        varchar name
+    }
+
+    device_model_snmp_point {
+        int id PK
+        int model_protocol_id FK
+        varchar name UK
+        varchar oid
+        tinyint requires_instance
+        varchar unit
+        tinyint enabled
+    }
+
+    device_model ||--o{ device_model_protocol : "model_id"
+    common_code ||--o{ device_model_protocol : "protocol_type_id"
+    device_model_protocol ||--o{ device_model_snmp_point : "model_protocol_id"
+```
 
 ```
-device_model <- device_model_protocol -> common_code (snmp)
-                        |
-                        +-- device_model_snmp_point
+device_model (1) ──< device_model_protocol (N) >── common_code (PROTOCOL_TYPE)
+                            │
+                            └──< device_model_snmp_point (N)   ※ protocolCode = snmp 만
 ```
+
+| 제약 | 규칙 |
+|------|------|
+| UK | `(model_protocol_id, name)` |
+| 프로토콜 | `protocolCode = snmp` 인 `device_model_protocol`만 point 등록 가능 |
+| 삭제 | protocol 삭제 시 point CASCADE |
 
 ---
 
