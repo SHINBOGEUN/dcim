@@ -86,6 +86,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(ApiResponse.error(400, e.getMessage()));
     }
 
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<ApiResponse<Object>> conflictExceptionHandler(ConflictException e) {
+        log.warn("ConflictException: {}", e.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiResponse.error(409, e.getMessage()));
+    }
+
     @ExceptionHandler(EntityNotFoundException.class)
     public ResponseEntity<ApiResponse<Object>> entityNotFoundExceptionHandler(EntityNotFoundException e) {
         log.warn("EntityNotFoundException: {}", e.getMessage());

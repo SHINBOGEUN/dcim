@@ -99,6 +99,11 @@ public class Device extends BaseEntity {
         this.enabled = enabled;
     }
 
+    public void reassignLocation(LocationNode locationNode) {
+        validateLocationNode(locationNode);
+        this.locationNode = locationNode;
+    }
+
     public boolean isLocationUnassigned() {
         return UNASSIGNED_LOCATION_CODE.equals(locationNode.getCode());
     }

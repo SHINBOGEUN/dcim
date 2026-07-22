@@ -49,7 +49,7 @@
 | `description` | 선택 |
 | 응답 `locationNodeName` | `location_node.name` (code는 응답에 포함하지 않음) |
 | 모델 삭제 | `devices.model_id` 참조 중이면 409 ([DEVICE_MODEL_API](../devicemodel/DEVICE_MODEL_API.md)) |
-| 위치 삭제 | `devices.location_node_code` 참조 중이면 409. **`UNASSIGNED`는 삭제 금지** |
+| 위치 삭제 | 참조 device는 **`UNASSIGNED`로 자동 이동** 후 삭제. 이름 충돌 시 409. **`UNASSIGNED`는 삭제 금지** |
 
 ### 1.3 DeviceModel / LocationNode 와의 관계
 

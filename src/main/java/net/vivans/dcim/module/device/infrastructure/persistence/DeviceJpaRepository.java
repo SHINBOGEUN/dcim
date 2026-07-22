@@ -8,6 +8,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -22,8 +24,26 @@ public class DeviceJpaRepository implements DeviceRepository {
     }
 
     @Override
+    public List<Device> saveAll(Iterable<Device> devices) {
+        return springDataRepository.saveAll(devices);
+    }
+
+    @Override
     public Optional<Device> findById(Integer id) {
         return springDataRepository.findById(id);
+    }
+
+    @Override
+    public List<Device> findByLocationNodeCode(String locationNodeCode) {
+        return springDataRepository.findByLocationNode_Code(locationNodeCode);
+    }
+
+    @Override
+    public List<Device> findByLocationNodeCodeIn(Collection<String> locationNodeCodes) {
+        if (locationNodeCodes == null || locationNodeCodes.isEmpty()) {
+            return List.of();
+        }
+        return springDataRepository.findByLocationNode_CodeIn(locationNodeCodes);
     }
 
     @Override

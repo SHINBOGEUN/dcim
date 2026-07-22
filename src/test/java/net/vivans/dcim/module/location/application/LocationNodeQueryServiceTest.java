@@ -4,12 +4,17 @@ import jakarta.persistence.EntityNotFoundException;
 import net.vivans.dcim.module.common.domain.model.CodeGroup;
 import net.vivans.dcim.module.common.domain.model.CommonCode;
 import net.vivans.dcim.module.common.domain.repository.CommonCodeRepository;
+import net.vivans.dcim.module.device.domain.model.Device;
+import net.vivans.dcim.module.device.domain.repository.DeviceRepository;
 import net.vivans.dcim.module.location.api.dto.LocationNodeBulkCreateRequest;
 import net.vivans.dcim.module.location.api.dto.LocationNodeCreateRequest;
+import net.vivans.dcim.module.location.api.dto.LocationNodeDeleteResponse;
 import net.vivans.dcim.module.location.api.dto.LocationNodeParentUpdateRequest;
 import net.vivans.dcim.module.location.api.dto.LocationNodeResponse;
 import net.vivans.dcim.module.location.api.dto.LocationNodeTreeCreateRequest;
 import net.vivans.dcim.module.location.api.dto.LocationNodeUpdateRequest;
+import net.vivans.dcim.module.devicemodel.domain.model.DeviceModel;
+import net.vivans.dcim.shared.exception.ConflictException;
 import net.vivans.dcim.module.location.domain.model.LocationNode;
 import net.vivans.dcim.module.location.domain.model.LocationNodeCodeGenerator;
 import net.vivans.dcim.module.location.domain.repository.LocationNodeRepository;
@@ -23,9 +28,11 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.lenient;
@@ -39,7 +46,7 @@ class LocationNodeQueryServiceTest {
     private static final CommonCode CONTAINER_TYPE;
     private static final CommonCode ZONE_TYPE;
     private static final CommonCode ROW_TYPE;
-    private static final CommonCode DEVICE_TYPE;
+    private static final CommonCode MODEL_TYPE;
 
     static {
         CodeGroup locationGroup = CodeGroup.createCodeGroup("LOCATION_TYPE", "장소 유형");
@@ -50,9 +57,9 @@ class LocationNodeQueryServiceTest {
         ReflectionTestUtils.setField(ZONE_TYPE, "id", 2);
         ReflectionTestUtils.setField(ROW_TYPE, "id", 3);
 
-        CodeGroup deviceGroup = CodeGroup.createCodeGroup("DEVICE_TYPE", "장비 유형");
-        DEVICE_TYPE = CommonCode.createCommonCode(deviceGroup, "pdu", "PDU", 1);
-        ReflectionTestUtils.setField(DEVICE_TYPE, "id", 99);
+        CodeGroup modelGroup = CodeGroup.createCodeGroup("MODEL_TYPE", "Model Type");
+        MODEL_TYPE = CommonCode.createCommonCode(modelGroup, "PDU", "PDU", 1);
+        ReflectionTestUtils.setField(MODEL_TYPE, "id", 99);
     }
 
     @Mock
@@ -60,6 +67,9 @@ class LocationNodeQueryServiceTest {
 
     @Mock
     private CommonCodeRepository commonCodeRepository;
+
+    @Mock
+    private DeviceRepository deviceRepository;
 
     @InjectMocks
     private LocationNodeQueryService locationNodeQueryService;
@@ -137,7 +147,7 @@ class LocationNodeQueryServiceTest {
 
     @Test
     void createLocationNode_throwsWhenLocationTypeIsNotLocationTypeGroup() {
-        when(commonCodeRepository.findById(99)).thenReturn(Optional.of(DEVICE_TYPE));
+        when(commonCodeRepository.findById(99)).thenReturn(Optional.of(MODEL_TYPE));
         when(locationNodeRepository.existsByParentIsNullAndName("컨테이너 A")).thenReturn(false);
         when(locationNodeRepository.existsByCode(anyString())).thenReturn(false);
 
@@ -379,10 +389,62 @@ class LocationNodeQueryServiceTest {
     void deleteLocationNode_deletesLeafNode() {
         when(locationNodeRepository.findByCode("TSTROW0001")).thenReturn(Optional.of(row));
         when(locationNodeRepository.existsByParent_Code("TSTROW0001")).thenReturn(false);
+        when(deviceRepository.findByLocationNodeCodeIn(any())).thenReturn(List.of());
 
-        locationNodeQueryService.deleteLocationNode("TSTROW0001");
+        LocationNodeDeleteResponse response = locationNodeQueryService.deleteLocationNode("TSTROW0001");
 
+        assertThat(response.deletedCode()).isEqualTo("TSTROW0001");
+        assertThat(response.reassignedDeviceCount()).isZero();
         verify(locationNodeRepository).delete(row);
+    }
+
+    @Test
+    void deleteLocationNode_reassignsDevicesToUnassigned() {
+        LocationNode unassigned = LocationNode.createRoot(Device.UNASSIGNED_LOCATION_CODE, CONTAINER_TYPE, "미배정");
+        DeviceModel model = DeviceModel.create("AP8959", "APC", MODEL_TYPE, null);
+        Device device = Device.create(model, row, "PDU-좌", null);
+
+        when(locationNodeRepository.findByCode("TSTROW0001")).thenReturn(Optional.of(row));
+        when(locationNodeRepository.existsByParent_Code("TSTROW0001")).thenReturn(false);
+        when(deviceRepository.findByLocationNodeCodeIn(any())).thenReturn(List.of(device));
+        when(locationNodeRepository.findByCode(Device.UNASSIGNED_LOCATION_CODE)).thenReturn(Optional.of(unassigned));
+        when(deviceRepository.findByLocationNodeCode(Device.UNASSIGNED_LOCATION_CODE)).thenReturn(List.of());
+
+        LocationNodeDeleteResponse response = locationNodeQueryService.deleteLocationNode("TSTROW0001");
+
+        assertThat(response.reassignedDeviceCount()).isEqualTo(1);
+        assertThat(device.getLocationNode()).isEqualTo(unassigned);
+        verify(deviceRepository).saveAll(List.of(device));
+        verify(locationNodeRepository).delete(row);
+    }
+
+    @Test
+    void deleteLocationNode_throwsWhenDeviceNameConflictsAtUnassigned() {
+        LocationNode unassigned = LocationNode.createRoot(Device.UNASSIGNED_LOCATION_CODE, CONTAINER_TYPE, "미배정");
+        DeviceModel model = DeviceModel.create("AP8959", "APC", MODEL_TYPE, null);
+        Device device = Device.create(model, row, "PDU-좌", null);
+        Device existing = Device.create(model, unassigned, "PDU-좌", null);
+
+        when(locationNodeRepository.findByCode("TSTROW0001")).thenReturn(Optional.of(row));
+        when(locationNodeRepository.existsByParent_Code("TSTROW0001")).thenReturn(false);
+        when(deviceRepository.findByLocationNodeCodeIn(any())).thenReturn(List.of(device));
+        when(locationNodeRepository.findByCode(Device.UNASSIGNED_LOCATION_CODE)).thenReturn(Optional.of(unassigned));
+        when(deviceRepository.findByLocationNodeCode(Device.UNASSIGNED_LOCATION_CODE)).thenReturn(List.of(existing));
+
+        assertThatThrownBy(() -> locationNodeQueryService.deleteLocationNode("TSTROW0001"))
+                .isInstanceOf(ConflictException.class)
+                .hasMessage("device name conflict at UNASSIGNED; rename devices before deleting location");
+
+        verify(locationNodeRepository, never()).delete(row);
+    }
+
+    @Test
+    void deleteLocationNode_throwsWhenDeletingSystemNode() {
+        assertThatThrownBy(() -> locationNodeQueryService.deleteLocationNode(Device.UNASSIGNED_LOCATION_CODE))
+                .isInstanceOf(ConflictException.class)
+                .hasMessage("cannot delete system location node");
+
+        verify(locationNodeRepository, never()).delete(any());
     }
 
     @Test
@@ -401,9 +463,12 @@ class LocationNodeQueryServiceTest {
     void deleteLocationNodeSubtree_deletesDeepestFirst() {
         when(locationNodeRepository.existsByCode("TSTCNTR001")).thenReturn(true);
         when(locationNodeRepository.findAll()).thenReturn(List.of(container, row));
+        when(deviceRepository.findByLocationNodeCodeIn(any())).thenReturn(List.of());
 
-        locationNodeQueryService.deleteLocationNodeSubtree("TSTCNTR001");
+        LocationNodeDeleteResponse response = locationNodeQueryService.deleteLocationNodeSubtree("TSTCNTR001");
 
+        assertThat(response.deletedCode()).isEqualTo("TSTCNTR001");
+        assertThat(response.reassignedDeviceCount()).isZero();
         verify(locationNodeRepository).deleteAll(List.of(row, container));
     }
 

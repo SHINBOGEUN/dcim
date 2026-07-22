@@ -9,12 +9,20 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 public interface DeviceSpringDataRepository extends JpaRepository<Device, Integer> {
 
     @EntityGraph(attributePaths = {"deviceModel", "locationNode"})
     Optional<Device> findById(Integer id);
+
+    @EntityGraph(attributePaths = {"deviceModel", "locationNode"})
+    List<Device> findByLocationNode_Code(String locationNodeCode);
+
+    @EntityGraph(attributePaths = {"deviceModel", "locationNode"})
+    List<Device> findByLocationNode_CodeIn(Collection<String> locationNodeCodes);
 
     @EntityGraph(attributePaths = {"deviceModel", "locationNode"})
     @Query("SELECT d FROM Device d " +

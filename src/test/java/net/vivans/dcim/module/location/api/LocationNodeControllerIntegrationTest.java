@@ -3,6 +3,11 @@ package net.vivans.dcim.module.location.api;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import net.vivans.dcim.bootstrap.ManagerServerApplication;
+import net.vivans.dcim.module.common.domain.model.CommonCode;
+import net.vivans.dcim.module.device.domain.model.Device;
+import net.vivans.dcim.module.location.domain.model.LocationNode;
+import net.vivans.dcim.module.location.domain.repository.LocationNodeRepository;
+import net.vivans.dcim.module.common.domain.repository.CommonCodeRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -35,6 +40,12 @@ class LocationNodeControllerIntegrationTest {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private LocationNodeRepository locationNodeRepository;
+
+    @Autowired
+    private CommonCodeRepository commonCodeRepository;
 
     @Test
     void createAndGetTree_returnsNestedChildren() throws Exception {
@@ -220,7 +231,8 @@ class LocationNodeControllerIntegrationTest {
         mockMvc.perform(delete("/api/manager/location-node/{code}", rowCode)
                         .header("Authorization", bearerToken(accessToken)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data").value(rowCode));
+                .andExpect(jsonPath("$.data.deletedCode").value(rowCode))
+                .andExpect(jsonPath("$.data.reassignedDeviceCount").value(0));
 
         mockMvc.perform(get("/api/manager/location-node")
                         .param("parentCode", rootCode)
@@ -260,12 +272,76 @@ class LocationNodeControllerIntegrationTest {
         mockMvc.perform(delete("/api/manager/location-node/{code}/subtree", rootCode)
                         .header("Authorization", bearerToken(accessToken)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data").value(rootCode));
+                .andExpect(jsonPath("$.data.deletedCode").value(rootCode))
+                .andExpect(jsonPath("$.data.reassignedDeviceCount").value(0));
 
         mockMvc.perform(get("/api/manager/location-node")
                         .param("parentCode", rootCode)
                         .header("Authorization", bearerToken(accessToken)))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void deleteLeafNode_reassignsReferencedDevicesToUnassigned() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "location-delete-device-user", "password123");
+        ensureUnassignedLocationNode(accessToken);
+        Integer groupId = findOrCreateCodeGroup(accessToken, "LOCATION_TYPE", "Location Type");
+        Integer rackTypeId = createCommonCode(accessToken, groupId, "RACK", "랙", 3);
+        Integer modelTypeGroupId = createCodeGroup(accessToken, "MODEL_TYPE", "Model Type");
+        Integer deviceTypeId = createCommonCode(accessToken, modelTypeGroupId, "PDU", "PDU", 1);
+        Integer protocolGroupId = createCodeGroup(accessToken, "PROTOCOL_TYPE", "Protocol Type");
+        Integer snmpId = createCommonCode(accessToken, protocolGroupId, "snmp", "SNMP", 1);
+
+        String rackCode = createLocationNode(accessToken, null, rackTypeId, "Rack-Device-Delete");
+        Integer modelId = createDeviceModel(accessToken, deviceTypeId, snmpId, "AP8959", "APC");
+        int deviceId = createDevice(accessToken, modelId, rackCode, "PDU-좌", "delete test");
+
+        mockMvc.perform(delete("/api/manager/location-node/{code}", rackCode)
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.deletedCode").value(rackCode))
+                .andExpect(jsonPath("$.data.reassignedDeviceCount").value(1));
+
+        mockMvc.perform(get("/api/manager/devices/{id}", deviceId)
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.locationNodeName").value("미배정"));
+    }
+
+    @Test
+    void deleteSubtree_whenDeviceNamesConflictAtUnassigned_returnsConflict() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "location-delete-conflict-user", "password123");
+        ensureUnassignedLocationNode(accessToken);
+        Integer groupId = findOrCreateCodeGroup(accessToken, "LOCATION_TYPE", "Location Type");
+        Integer containerTypeId = createCommonCode(accessToken, groupId, "CONTAINER", "컨테이너", 1);
+        Integer rowTypeId = createCommonCode(accessToken, groupId, "ROW", "열", 2);
+        Integer modelTypeGroupId = createCodeGroup(accessToken, "MODEL_TYPE", "Model Type");
+        Integer deviceTypeId = createCommonCode(accessToken, modelTypeGroupId, "PDU", "PDU", 1);
+        Integer protocolGroupId = createCodeGroup(accessToken, "PROTOCOL_TYPE", "Protocol Type");
+        Integer snmpId = createCommonCode(accessToken, protocolGroupId, "snmp", "SNMP", 1);
+
+        Integer modelId = createDeviceModel(accessToken, deviceTypeId, snmpId, "AP8959", "APC");
+        String containerCode = createLocationNode(accessToken, null, containerTypeId, "Container-Conflict");
+        String rowCodeA = createLocationNode(accessToken, containerCode, rowTypeId, "Row-A");
+        String rowCodeB = createLocationNode(accessToken, containerCode, rowTypeId, "Row-B");
+        createDevice(accessToken, modelId, rowCodeA, "PDU-좌", "row a");
+        createDevice(accessToken, modelId, rowCodeB, "PDU-좌", "row b");
+
+        mockMvc.perform(delete("/api/manager/location-node/{code}/subtree", containerCode)
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value(
+                        "device name conflict at UNASSIGNED; rename devices before deleting location"));
+    }
+
+    @Test
+    void deleteUnassignedNode_returnsConflict() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "location-delete-unassigned-user", "password123");
+
+        mockMvc.perform(delete("/api/manager/location-node/{code}", "UNASSIGNED")
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("cannot delete system location node"));
     }
 
     @Test
@@ -277,6 +353,58 @@ class LocationNodeControllerIntegrationTest {
                         .header("Authorization", bearerToken(accessToken)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404));
+    }
+
+    private void ensureUnassignedLocationNode(String accessToken) throws Exception {
+        Integer groupId = findOrCreateCodeGroup(accessToken, "LOCATION_TYPE", "Location Type");
+        Integer unassignedTypeId = findOrCreateCommonCode(accessToken, groupId, "UNASSIGNED", "미배정", -1);
+        if (!locationNodeRepository.existsByCode(Device.UNASSIGNED_LOCATION_CODE)) {
+            CommonCode unassignedType = commonCodeRepository.findById(unassignedTypeId).orElseThrow();
+            locationNodeRepository.save(
+                    LocationNode.createRoot(Device.UNASSIGNED_LOCATION_CODE, unassignedType, "미배정")
+            );
+        }
+    }
+
+    private Integer findOrCreateCodeGroup(String accessToken, String groupKey, String groupName) throws Exception {
+        String listResponse = mockMvc.perform(get("/api/manager/code-groups")
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        for (JsonNode node : objectMapper.readTree(listResponse).path("data")) {
+            if (groupKey.equals(node.path("groupKey").asText())) {
+                return node.path("id").asInt();
+            }
+        }
+
+        return createCodeGroup(accessToken, groupKey, groupName);
+    }
+
+    private Integer findOrCreateCommonCode(
+            String accessToken,
+            Integer groupId,
+            String code,
+            String name,
+            Integer sortOrder
+    ) throws Exception {
+        String listResponse = mockMvc.perform(get("/api/manager/common-codes")
+                        .param("codeGroupId", String.valueOf(groupId))
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        for (JsonNode node : objectMapper.readTree(listResponse).path("data")) {
+            if (code.equals(node.path("code").asText())) {
+                return node.path("id").asInt();
+            }
+        }
+
+        return createCommonCode(accessToken, groupId, code, name, sortOrder);
     }
 
     private Integer createCodeGroup(String accessToken, String groupKey, String groupName) throws Exception {
@@ -335,5 +463,59 @@ class LocationNodeControllerIntegrationTest {
 
         JsonNode codeNode = objectMapper.readTree(response).path("data").path("code");
         return codeNode.asText();
+    }
+
+    private Integer createDeviceModel(
+            String accessToken,
+            Integer deviceTypeId,
+            Integer protocolTypeId,
+            String name,
+            String manufacturer
+    ) throws Exception {
+        String response = mockMvc.perform(post("/api/manager/device-models")
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "%s",
+                                  "manufacturer": "%s",
+                                  "deviceTypeId": %d,
+                                  "protocols": [
+                                    { "protocolTypeId": %d }
+                                  ]
+                                }
+                                """.formatted(name, manufacturer, deviceTypeId, protocolTypeId)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        return objectMapper.readTree(response).path("data").path("id").asInt();
+    }
+
+    private int createDevice(
+            String accessToken,
+            Integer modelId,
+            String locationCode,
+            String name,
+            String description
+    ) throws Exception {
+        String response = mockMvc.perform(post("/api/manager/devices")
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "modelId": %d,
+                                  "locationNodeCode": "%s",
+                                  "name": "%s",
+                                  "description": "%s"
+                                }
+                                """.formatted(modelId, locationCode, name, description)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        return objectMapper.readTree(response).path("data").path("id").asInt();
     }
 }

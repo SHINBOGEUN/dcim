@@ -4,8 +4,11 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import net.vivans.dcim.module.common.domain.model.CommonCode;
 import net.vivans.dcim.module.common.domain.repository.CommonCodeRepository;
+import net.vivans.dcim.module.device.domain.model.Device;
+import net.vivans.dcim.module.device.domain.repository.DeviceRepository;
 import net.vivans.dcim.module.location.api.dto.LocationNodeBulkCreateRequest;
 import net.vivans.dcim.module.location.api.dto.LocationNodeCreateRequest;
+import net.vivans.dcim.module.location.api.dto.LocationNodeDeleteResponse;
 import net.vivans.dcim.module.location.api.dto.LocationNodeParentUpdateRequest;
 import net.vivans.dcim.module.location.api.dto.LocationNodeResponse;
 import net.vivans.dcim.module.location.api.dto.LocationNodeTreeCreateRequest;
@@ -13,6 +16,7 @@ import net.vivans.dcim.module.location.api.dto.LocationNodeUpdateRequest;
 import net.vivans.dcim.module.location.domain.model.LocationNode;
 import net.vivans.dcim.module.location.domain.model.LocationNodeCodeGenerator;
 import net.vivans.dcim.module.location.domain.repository.LocationNodeRepository;
+import net.vivans.dcim.shared.exception.ConflictException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,9 +34,12 @@ public class LocationNodeQueryService {
 
     private static final int MAX_CODE_GENERATION_ATTEMPTS = 5;
     private static final String CHILD_DEEPER_THAN_PARENT_MESSAGE = "child location type must be deeper than parent";
+    private static final String CANNOT_DELETE_SYSTEM_NODE_MESSAGE = "cannot delete system location node";
+    private static final String DEVICE_NAME_CONFLICT_AT_UNASSIGNED_MESSAGE = "device name conflict at UNASSIGNED; rename devices before deleting location";
 
     private final LocationNodeRepository locationNodeRepository;
     private final CommonCodeRepository commonCodeRepository;
+    private final DeviceRepository deviceRepository;
 
     @Transactional
     public LocationNodeResponse createLocationNode(LocationNodeCreateRequest request) {
@@ -104,24 +111,75 @@ public class LocationNodeQueryService {
     }
 
     @Transactional
-    public void deleteLocationNode(String code) {
+    public LocationNodeDeleteResponse deleteLocationNode(String code) {
+        validateNotSystemLocationNode(code);
         LocationNode node = locationNodeRepository.findByCode(code)
                 .orElseThrow(() -> new EntityNotFoundException("LocationNode not found: " + code));
         if (locationNodeRepository.existsByParent_Code(code)) {
             throw new IllegalArgumentException("cannot delete node with children");
         }
+
+        int reassignedCount = reassignDevicesToUnassigned(List.of(code));
         locationNodeRepository.delete(node);
+        return new LocationNodeDeleteResponse(code, reassignedCount);
     }
 
     @Transactional
-    public void deleteLocationNodeSubtree(String code) {
+    public LocationNodeDeleteResponse deleteLocationNodeSubtree(String code) {
+        validateNotSystemLocationNode(code);
         if (!locationNodeRepository.existsByCode(code)) {
             throw new EntityNotFoundException("LocationNode not found: " + code);
         }
 
         List<LocationNode> subtree = filterSubtree(code, locationNodeRepository.findAll());
+        List<String> subtreeCodes = subtree.stream().map(LocationNode::getCode).toList();
+        int reassignedCount = reassignDevicesToUnassigned(subtreeCodes);
+
         List<LocationNode> deleteOrder = sortByDepthDescending(subtree);
         locationNodeRepository.deleteAll(deleteOrder);
+        return new LocationNodeDeleteResponse(code, reassignedCount);
+    }
+
+    private int reassignDevicesToUnassigned(List<String> locationCodes) {
+        List<Device> devicesToReassign = deviceRepository.findByLocationNodeCodeIn(locationCodes);
+        if (devicesToReassign.isEmpty()) {
+            return 0;
+        }
+
+        LocationNode unassigned = findUnassignedLocationNode();
+        validateNoNameConflictAtUnassigned(devicesToReassign, unassigned);
+
+        for (Device device : devicesToReassign) {
+            device.reassignLocation(unassigned);
+        }
+        deviceRepository.saveAll(devicesToReassign);
+        return devicesToReassign.size();
+    }
+
+    private void validateNoNameConflictAtUnassigned(List<Device> devicesToReassign, LocationNode unassigned) {
+        Set<String> namesInBatch = new HashSet<>();
+        for (Device device : devicesToReassign) {
+            if (!namesInBatch.add(device.getName())) {
+                throw new ConflictException(DEVICE_NAME_CONFLICT_AT_UNASSIGNED_MESSAGE);
+            }
+        }
+
+        for (Device existing : deviceRepository.findByLocationNodeCode(unassigned.getCode())) {
+            if (namesInBatch.contains(existing.getName())) {
+                throw new ConflictException(DEVICE_NAME_CONFLICT_AT_UNASSIGNED_MESSAGE);
+            }
+        }
+    }
+
+    private LocationNode findUnassignedLocationNode() {
+        return locationNodeRepository.findByCode(Device.UNASSIGNED_LOCATION_CODE)
+                .orElseThrow(() -> new IllegalStateException("UNASSIGNED location node is not configured"));
+    }
+
+    private void validateNotSystemLocationNode(String code) {
+        if (Device.UNASSIGNED_LOCATION_CODE.equals(code)) {
+            throw new ConflictException(CANNOT_DELETE_SYSTEM_NODE_MESSAGE);
+        }
     }
 
     public List<LocationNodeResponse> getLocationNodes(String name, String parentCode, Integer locationTypeId) {

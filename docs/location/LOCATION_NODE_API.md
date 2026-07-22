@@ -325,18 +325,34 @@ CONTAINER
 
 **구현 상태:** ✅ 구현됨
 
-- 자식 없음 → 삭제 성공, 삭제된 `code` 반환
+- 자식 없음 → 삭제 성공
+- 해당 location을 참조하는 **device가 있으면 `UNASSIGNED`로 이동** 후 삭제
 - 자식 있음 → 400 (`cannot delete node with children`)
 - **`code = UNASSIGNED` → 409** (시스템 노드 삭제 금지)
+- `UNASSIGNED`에서 이름 충돌 → 409 (`device name conflict at UNASSIGNED; rename devices before deleting location`)
 - 노드 없음 → 404
+
+#### 응답 — `200 OK`
+
+```json
+{
+  "success": true,
+  "data": {
+    "deletedCode": "M4n3B2v1C0",
+    "reassignedDeviceCount": 2
+  }
+}
+```
 
 ### 5.2 서브트리 전체 삭제 — `DELETE /api/manager/location-node/{code}/subtree`
 
 **구현 상태:** ✅ 구현됨
 
-- 해당 노드 + 모든 자손 cascade 삭제 (깊은 노드부터 삭제)
+- 해당 노드 + 모든 자손 cascade 삭제 (깊은 노드부터)
+- subtree 내 location을 참조하는 **device는 `UNASSIGNED`로 이동** 후 삭제
+- `UNASSIGNED` 삭제 시도 → 409
+- 이름 충돌 시 → 409 (5.1과 동일)
 - 노드 없음 → 404
-- 향후 `devices.location_node_code` 참조 시 RESTRICT/409 검토
 
 ---
 
@@ -373,3 +389,4 @@ CONTAINER
 | 2026-07-02 | `id` 제거, `code` PK·서버 자동 생성, `parentCode` 기준으로 전환 |
 | 2026-07-02 | `code` 형식을 UUID → **10자 Base62** 로 변경 (`LocationNodeCodeGenerator`) |
 | 2026-07-02 | GET 응답을 트리(`children`) 구조로 정리 |
+| 2026-07-22 | location 삭제 시 참조 device를 UNASSIGNED로 자동 이동 |
