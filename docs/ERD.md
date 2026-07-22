@@ -464,7 +464,7 @@ device_model (1) ──< device_model_protocol (N) >── common_code (PROTOCOL
 
 **UK:** `(location_node_code, name)` — 같은 위치 아래 표시명 중복 불가
 
-**엔티티:** `module/device/domain/model/Device.java` (스켈레톤, 구현 시 `id` INT PK로 교체)  
+**엔티티:** `module/device/domain/model/Device.java` ✅  
 **API 설계:** [DEVICE_API.md](device/DEVICE_API.md)  
 **상속:** `BaseEntity`  
 **연관:**

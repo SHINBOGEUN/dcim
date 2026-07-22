@@ -137,7 +137,7 @@ erDiagram
 
 ### 3.1 등록 — `POST /api/manager/devices`
 
-**구현 상태:** ⏳ 미구현
+**구현 상태:** ✅ 구현됨
 
 #### 요청
 
@@ -159,7 +159,7 @@ erDiagram
 | `description` | X | string | 설명 |
 | `enabled` | X | boolean | 기본 `true` |
 
-#### 응답 — `201 Created`
+#### 응답 — `200 OK` (ApiResponse)
 
 ```json
 {
@@ -310,10 +310,10 @@ erDiagram
 | 구분 | 내용 |
 |------|------|
 | 문서 | 본 문서 |
-| DDL | V007 ⏳ |
-| 도메인 | `Device` — 스켈레톤만 (`deviceId` String, 구현 시 `id` INT로 교체) |
-| Application | — 미구현 |
-| API | CRUD — 미구현 |
+| DDL | V007 ✅ (문서·SQL) |
+| 도메인 | `Device` — `id` INT, model/location/name/enabled ✅ |
+| Application | `DeviceQueryService.createDevice` ✅ |
+| API | 등록 `POST` ✅ / 조회·수정·삭제 — 미구현 |
 | protocol config | — 미구현 (2차) |
 | hierarchy | — 미구현 (2차) |
 
@@ -324,3 +324,6 @@ erDiagram
 | 날짜 | 변경 |
 |------|------|
 | 2026-07-21 | 최초 작성 — devices 본체 CRUD·V007 DDL 설계 |
+| 2026-07-22 | location NOT NULL + UNASSIGNED 시드 반영 |
+| 2026-07-22 | Device 도메인·단위 테스트 추가 (API 미구현) |
+| 2026-07-22 | Device 등록 API·통합 테스트 추가 |
