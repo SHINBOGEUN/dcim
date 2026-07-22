@@ -12,12 +12,13 @@
 
 | 개념 | 설명 |
 |------|------|
-| **DeviceModel** | 제조사·제품명 등 **장비 SKU/제품군** 메타데이터 |
+| **DeviceModel** | 제조사·제품명·**장비 유형** 등 **장비 SKU/제품군** 메타데이터 |
 | **DeviceModelProtocol** | 모델 ↔ `PROTOCOL_TYPE` common_code **N:M** 조인 (`model_id`, `protocol_type_id`) |
-| **Device** (향후) | 실제 장비 인스턴스. `model_id` FK로 모델 참조 |
+| **Device** | 실제 장비 인스턴스. `model_id` FK로 모델 참조 (유형은 모델에 귀속) |
 
-> 장비 인스턴스 CRUD: [DEVICE_API.md](DEVICE_API.md)
+> 장비 인스턴스 CRUD: [DEVICE_API.md](../device/DEVICE_API.md)
 
+장비 유형은 `common_code`(`MODEL_TYPE`)이며 `device_model.device_type_id`로 참조합니다.  
 프로토콜 타입(SNMP, MQTT …)은 `common_code`(`PROTOCOL_TYPE`)에 존재하며, 모델과의 연결은 `device_model_protocol` 조인 테이블로 표현합니다.  
 프로토콜 연결은 **DeviceModel 등록·수정 API**의 `protocols[]`로만 관리합니다 (별도 Protocol API 없음).
 
@@ -29,6 +30,7 @@
 |------|------|
 | `name` | 필수 |
 | `manufacturer` | 필수. `(name, manufacturer)` UK |
+| `deviceTypeId` | 필수. `MODEL_TYPE` common_code만 허용 |
 | `description` | 선택 |
 | `protocols` | 등록·수정 시 **1개 이상** 필수 |
 | `protocolTypeId` | `PROTOCOL_TYPE` common_code만 허용 |
@@ -50,6 +52,7 @@
 {
   "name": "LHT65N-PIR",
   "manufacturer": "Dragino",
+  "deviceTypeId": 13,
   "description": "동작 감지 센서",
   "protocols": [
     { "protocolTypeId": 7 },
@@ -62,6 +65,7 @@
 |------|------|------|
 | `name` | O | 모델/제품명 |
 | `manufacturer` | O | 제조사 |
+| `deviceTypeId` | O | `MODEL_TYPE` common_code ID |
 | `description` | X | 설명 |
 | `protocols` | O | 1개 이상 |
 | `protocols[].protocolTypeId` | O | `PROTOCOL_TYPE` common_code ID |
@@ -75,6 +79,9 @@
     "id": 1,
     "name": "LHT65N-PIR",
     "manufacturer": "Dragino",
+    "deviceTypeId": 13,
+    "deviceTypeCode": "SENSOR",
+    "deviceTypeName": "Sensor",
     "description": "동작 감지 센서",
     "protocols": [
       {
@@ -100,6 +107,8 @@
 |------|------|------------|
 | 필수값 누락 | 400 | validation message |
 | `(name, manufacturer)` 중복 | 400 | `device model already exists` |
+| deviceTypeId 없음 | 404 | `CommonCode not found: {id}` |
+| MODEL_TYPE 아님 | 400 | `deviceType must belong to MODEL_TYPE group` |
 | protocolTypeId 없음 | 404 | `CommonCode not found: {id}` |
 | PROTOCOL_TYPE 아님 | 400 | `protocolType must belong to PROTOCOL_TYPE group` |
 | protocols 내 type 중복 | 400 | `duplicate protocol type in request` |
@@ -158,6 +167,9 @@
       "id": 1,
       "name": "LHT65N-PIR",
       "manufacturer": "Dragino",
+      "deviceTypeId": 13,
+      "deviceTypeCode": "SENSOR",
+      "deviceTypeName": "Sensor",
       "description": "동작 감지 센서",
       "protocols": [
         {

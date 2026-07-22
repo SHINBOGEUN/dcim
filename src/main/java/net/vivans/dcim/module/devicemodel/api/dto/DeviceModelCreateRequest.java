@@ -17,6 +17,10 @@ public record DeviceModelCreateRequest(
         @NotBlank(message = "manufacturer must not be empty")
         String manufacturer,
 
+        @Schema(description = "모델 유형 ID (MODEL_TYPE)", example = "13")
+        @NotNull(message = "deviceTypeId must not be null")
+        Integer deviceTypeId,
+
         @Schema(description = "설명", example = "동작 감지 센서")
         String description,
 

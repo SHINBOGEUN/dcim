@@ -3,14 +3,18 @@ package net.vivans.dcim.module.devicemodel.domain.model;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import net.vivans.dcim.module.common.domain.model.CommonCode;
 import net.vivans.dcim.shared.persistence.BaseEntity;
 
 import java.util.ArrayList;
@@ -22,6 +26,8 @@ import java.util.List;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class DeviceModel extends BaseEntity {
 
+    private static final String MODEL_TYPE_GROUP_KEY = "MODEL_TYPE";
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
@@ -32,29 +38,37 @@ public class DeviceModel extends BaseEntity {
     @Column(nullable = false)
     private String manufacturer;
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "device_type_id", nullable = false)
+    private CommonCode deviceType;
+
     @Column(length = 1000)
     private String description;
 
     @OneToMany(mappedBy = "deviceModel", cascade = CascadeType.ALL, orphanRemoval = true)
     private final List<DeviceModelProtocol> protocols = new ArrayList<>();
 
-    private DeviceModel(String name, String manufacturer, String description) {
+    private DeviceModel(String name, String manufacturer, CommonCode deviceType, String description) {
         validateName(name);
         validateManufacturer(manufacturer);
+        validateDeviceType(deviceType);
         this.name = name;
         this.manufacturer = manufacturer;
+        this.deviceType = deviceType;
         this.description = description;
     }
 
-    public static DeviceModel create(String name, String manufacturer, String description) {
-        return new DeviceModel(name, manufacturer, description);
+    public static DeviceModel create(String name, String manufacturer, CommonCode deviceType, String description) {
+        return new DeviceModel(name, manufacturer, deviceType, description);
     }
 
-    public void update(String name, String manufacturer, String description) {
+    public void update(String name, String manufacturer, CommonCode deviceType, String description) {
         validateName(name);
         validateManufacturer(manufacturer);
+        validateDeviceType(deviceType);
         this.name = name;
         this.manufacturer = manufacturer;
+        this.deviceType = deviceType;
         this.description = description;
     }
 
@@ -97,6 +111,15 @@ public class DeviceModel extends BaseEntity {
     private static void validateManufacturer(String manufacturer) {
         if (manufacturer == null || manufacturer.isBlank()) {
             throw new IllegalArgumentException("manufacturer is required");
+        }
+    }
+
+    private static void validateDeviceType(CommonCode deviceType) {
+        if (deviceType == null) {
+            throw new IllegalArgumentException("deviceType is required");
+        }
+        if (!MODEL_TYPE_GROUP_KEY.equals(deviceType.getCodeGroup().getGroupKey())) {
+            throw new IllegalArgumentException("deviceType must belong to MODEL_TYPE group");
         }
     }
 }

@@ -54,6 +54,7 @@ erDiagram
         int id PK "AUTO_INCREMENT"
         varchar name UK "모델/제품명"
         varchar manufacturer UK "제조사"
+        int device_type_id FK "common_code.id (MODEL_TYPE)"
         varchar description "설명 (nullable)"
         timestamp created_dt "생성 시각"
         timestamp updated_dt "수정 시각"
@@ -93,6 +94,7 @@ erDiagram
     code_group ||--o{ common_code : "group_id"
     common_code ||--o{ location_node : "location_type_id"
     location_node ||--o{ location_node : "parent_code"
+    common_code ||--o{ device_model : "device_type_id"
     device_model ||--o{ device_model_protocol : "model_id"
     common_code ||--o{ device_model_protocol : "protocol_type_id"
     device_model_protocol ||--o{ device_model_snmp_point : "model_protocol_id"
@@ -106,7 +108,7 @@ erDiagram
 | common | `code_group` | 1 |
 | common | `common_code` | N → `code_group` |
 | location | `location_node` | N → `common_code` (LOCATION_TYPE), 자기참조 `parent_code` |
-| devicemodel | `device_model` | 장비 SKU 카탈로그 (UK: name+manufacturer) |
+| devicemodel | `device_model` | N → `common_code` (MODEL_TYPE), UK: name+manufacturer |
 | devicemodel | `device_model_protocol` | 모델 ↔ PROTOCOL_TYPE N:M (UK: model_id+protocol_type_id) |
 | devicemodel | `device_model_snmp_point` | ✅ SNMP point (UK: model_protocol_id+name) |
 | device | `devices` | ⏳ 장비 인스턴스 (UK: location_node_code+name, 미지정=`UNASSIGNED`) |
@@ -288,18 +290,25 @@ erDiagram
 | `id` | INT | N | PK | 모델 ID (AUTO_INCREMENT) |
 | `name` | VARCHAR(255) | N | UK | 모델/제품명 |
 | `manufacturer` | VARCHAR(255) | N | UK | 제조사 |
+| `device_type_id` | INT | N | FK | `common_code.id` (**MODEL_TYPE**만) |
 | `description` | VARCHAR(1000) | Y | | 설명 |
 | `created_dt` | TIMESTAMP(6) | Y | | 최초 생성 시각 |
 | `updated_dt` | TIMESTAMP(6) | Y | | 최종 수정 시각 |
 
-\* UK: `(name, manufacturer)`
+\* UK: `(name, manufacturer)`  
+\* 장비 유형은 모델에만 두고, `devices`에는 type FK를 두지 않음. 컬럼명은 `device_type_id`, 그룹 키는 `MODEL_TYPE`.
 
 **엔티티:** `module/devicemodel/domain/model/DeviceModel.java`  
 **API 설계:** [DEVICE_MODEL_API.md](devicemodel/DEVICE_MODEL_API.md)  
 **상속:** `BaseEntity`  
-**연관:** `@OneToMany` → `DeviceModelProtocol` (`mappedBy = "deviceModel"`, cascade ALL)
+**연관:** `@ManyToOne` → `CommonCode` (`device_type_id`), `@OneToMany` → `DeviceModelProtocol` (`mappedBy = "deviceModel"`, cascade ALL)
 
-**DDL:** [V005__create_device_model_tables.sql](../sql/history/V005__create_device_model_tables.sql)
+**DDL:** [V005__create_device_model_tables.sql](../sql/history/V005__create_device_model_tables.sql) (신규)  
+**마이그레이션:** [V008__add_device_model_device_type_id.sql](../sql/history/V008__add_device_model_device_type_id.sql) (이미 `device_model`이 있는 DB)
+
+| 제약 | 대상 | ON DELETE | ON UPDATE |
+|------|------|-----------|-----------|
+| `fk_device_model_device_type_id` | `common_code(id)` | RESTRICT | CASCADE |
 
 **범위**
 

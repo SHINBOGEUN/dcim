@@ -11,10 +11,10 @@ import java.util.Optional;
 
 public interface DeviceModelSpringDataRepository extends JpaRepository<DeviceModel, Integer> {
 
-    @EntityGraph(attributePaths = {"protocols", "protocols.protocolType"})
+    @EntityGraph(attributePaths = {"deviceType", "protocols", "protocols.protocolType"})
     Optional<DeviceModel> findById(Integer id);
 
-    @EntityGraph(attributePaths = {"protocols", "protocols.protocolType"})
+    @EntityGraph(attributePaths = {"deviceType", "protocols", "protocols.protocolType"})
     @Query("SELECT dm FROM DeviceModel dm " +
             "WHERE (:name IS NULL OR LOWER(dm.name) LIKE LOWER(CONCAT('%', :name, '%'))) " +
             "AND (:manufacturer IS NULL OR LOWER(dm.manufacturer) LIKE LOWER(CONCAT('%', :manufacturer, '%'))) " +

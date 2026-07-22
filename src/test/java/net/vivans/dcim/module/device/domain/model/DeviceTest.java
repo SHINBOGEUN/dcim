@@ -15,7 +15,7 @@ class DeviceTest {
 
     @Test
     void create_withValidFields_succeeds() {
-        DeviceModel model = DeviceModel.create("AP8959", "APC", "3상 PDU");
+        DeviceModel model = DeviceModel.create("AP8959", "APC", modelType(), "3상 PDU");
         LocationNode location = unassignedLocation();
 
         Device device = Device.create(model, location, "PDU-좌", "Rack 미배정");
@@ -32,7 +32,7 @@ class DeviceTest {
     @Test
     void create_withEnabledFalse_succeeds() {
         Device device = Device.create(
-                DeviceModel.create("LHT65N", "Dragino", null),
+                DeviceModel.create("LHT65N", "Dragino", modelType(), null),
                 unassignedLocation(),
                 "센서-01",
                 null,
@@ -52,7 +52,7 @@ class DeviceTest {
 
     @Test
     void create_withoutLocationNode_throws() {
-        DeviceModel model = DeviceModel.create("AP8959", "APC", null);
+        DeviceModel model = DeviceModel.create("AP8959", "APC", modelType(), null);
 
         assertThatThrownBy(() -> Device.create(model, null, "PDU-좌", null))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -61,7 +61,7 @@ class DeviceTest {
 
     @Test
     void create_withoutName_throws() {
-        DeviceModel model = DeviceModel.create("AP8959", "APC", null);
+        DeviceModel model = DeviceModel.create("AP8959", "APC", modelType(), null);
 
         assertThatThrownBy(() -> Device.create(model, unassignedLocation(), "  ", null))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -70,12 +70,12 @@ class DeviceTest {
 
     @Test
     void update_changesFields() {
-        DeviceModel model = DeviceModel.create("AP8959", "APC", null);
+        DeviceModel model = DeviceModel.create("AP8959", "APC", modelType(), null);
         LocationNode unassigned = unassignedLocation();
         LocationNode rack = rackLocation();
         Device device = Device.create(model, unassigned, "PDU-좌", null);
 
-        DeviceModel newModel = DeviceModel.create("LHT65N", "Dragino", "sensor");
+        DeviceModel newModel = DeviceModel.create("LHT65N", "Dragino", modelType(), "sensor");
         device.update(newModel, rack, "1층-온습도-01", "배치 완료", false);
 
         assertThat(device.getDeviceModel()).isEqualTo(newModel);
@@ -89,7 +89,7 @@ class DeviceTest {
     @Test
     void update_withoutName_throws() {
         Device device = Device.create(
-                DeviceModel.create("AP8959", "APC", null),
+                DeviceModel.create("AP8959", "APC", modelType(), null),
                 unassignedLocation(),
                 "PDU-좌",
                 null
@@ -104,6 +104,11 @@ class DeviceTest {
         ))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("name is required");
+    }
+
+    private CommonCode modelType() {
+        CodeGroup group = CodeGroup.createCodeGroup("MODEL_TYPE", "Model Type");
+        return CommonCode.createCommonCode(group, "PDU", "PDU", 1);
     }
 
     private LocationNode unassignedLocation() {

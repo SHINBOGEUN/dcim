@@ -433,6 +433,8 @@ class DeviceControllerIntegrationTest {
     }
 
     private Integer createDeviceModel(String accessToken, String name, String manufacturer) throws Exception {
+        Integer modelTypeGroupId = findOrCreateCodeGroup(accessToken, "MODEL_TYPE", "Model Type");
+        Integer deviceTypeId = findOrCreateCommonCode(accessToken, modelTypeGroupId, "PDU", "PDU", 1);
         Integer groupId = findOrCreateCodeGroup(accessToken, "PROTOCOL_TYPE", "Protocol Type");
         Integer snmpId = findOrCreateCommonCode(accessToken, groupId, "snmp", "SNMP", 1);
 
@@ -443,11 +445,12 @@ class DeviceControllerIntegrationTest {
                                 {
                                   "name": "%s",
                                   "manufacturer": "%s",
+                                  "deviceTypeId": %d,
                                   "protocols": [
                                     { "protocolTypeId": %d }
                                   ]
                                 }
-                                """.formatted(name, manufacturer, snmpId)))
+                                """.formatted(name, manufacturer, deviceTypeId, snmpId)))
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse()

@@ -24,6 +24,7 @@ import java.util.Set;
 public class DeviceModelQueryService {
 
     private static final String PROTOCOL_TYPE_GROUP_KEY = "PROTOCOL_TYPE";
+    private static final String MODEL_TYPE_GROUP_KEY = "MODEL_TYPE";
 
     private final DeviceModelRepository deviceModelRepository;
     private final CommonCodeRepository commonCodeRepository;
@@ -32,9 +33,11 @@ public class DeviceModelQueryService {
     public DeviceModelResponse createDeviceModel(DeviceModelCreateRequest request) {
         validateUniqueNameAndManufacturer(request.name(), request.manufacturer(), null);
 
+        CommonCode deviceType = findDeviceType(request.deviceTypeId());
         DeviceModel deviceModel = DeviceModel.create(
                 request.name(),
                 request.manufacturer(),
+                deviceType,
                 request.description()
         );
         replaceProtocolsFromRequest(deviceModel, request.protocols());
@@ -47,7 +50,8 @@ public class DeviceModelQueryService {
         DeviceModel deviceModel = findDeviceModel(id);
         validateUniqueNameAndManufacturer(request.name(), request.manufacturer(), id);
 
-        deviceModel.update(request.name(), request.manufacturer(), request.description());
+        CommonCode deviceType = findDeviceType(request.deviceTypeId());
+        deviceModel.update(request.name(), request.manufacturer(), deviceType, request.description());
         replaceProtocolsFromRequest(deviceModel, request.protocols());
 
         return DeviceModelResponse.from(deviceModelRepository.save(deviceModel));
@@ -128,5 +132,15 @@ public class DeviceModelQueryService {
             throw new IllegalArgumentException("protocolType must belong to PROTOCOL_TYPE group");
         }
         return protocolType;
+    }
+
+    private CommonCode findDeviceType(Integer deviceTypeId) {
+        CommonCode deviceType = commonCodeRepository.findById(deviceTypeId)
+                .orElseThrow(() -> new EntityNotFoundException("CommonCode not found: " + deviceTypeId));
+
+        if (!MODEL_TYPE_GROUP_KEY.equals(deviceType.getCodeGroup().getGroupKey())) {
+            throw new IllegalArgumentException("deviceType must belong to MODEL_TYPE group");
+        }
+        return deviceType;
     }
 }
