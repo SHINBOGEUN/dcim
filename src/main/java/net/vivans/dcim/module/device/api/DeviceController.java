@@ -11,6 +11,7 @@ import net.vivans.dcim.module.device.application.DeviceQueryService;
 import net.vivans.dcim.shared.api.ApiResponse;
 import net.vivans.dcim.shared.api.PageResponse;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -60,5 +61,13 @@ public class DeviceController {
             @Parameter(description = "장비 ID") @PathVariable Integer id,
             @Valid @RequestBody DeviceCreateRequest request) {
         return ResponseEntity.ok(ApiResponse.ok(deviceQueryService.updateDevice(id, request)));
+    }
+
+    @DeleteMapping("/{id}")
+    @Operation(summary = "장비 삭제 API")
+    public ResponseEntity<ApiResponse<Integer>> deleteDevice(
+            @Parameter(description = "장비 ID") @PathVariable Integer id) {
+        deviceQueryService.deleteDevice(id);
+        return ResponseEntity.ok(ApiResponse.ok(id));
     }
 }

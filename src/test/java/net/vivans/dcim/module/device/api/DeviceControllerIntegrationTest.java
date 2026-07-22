@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import static net.vivans.dcim.support.AuthTestSupport.bearerToken;
 import static net.vivans.dcim.support.AuthTestSupport.loginAndGetAccessToken;
 import static org.hamcrest.Matchers.hasSize;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -56,7 +57,7 @@ class DeviceControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.modelId").value(modelId))
                 .andExpect(jsonPath("$.data.modelName").value("AP8959"))
                 .andExpect(jsonPath("$.data.manufacturer").value("APC"))
-                .andExpect(jsonPath("$.data.locationNodeCode").value(locationCode))
+                .andExpect(jsonPath("$.data.locationNodeName").value("Rack-01"))
                 .andExpect(jsonPath("$.data.name").value("PDU-좌"))
                 .andExpect(jsonPath("$.data.description").value("Rack-01 좌측 PDU"))
                 .andExpect(jsonPath("$.data.enabled").value(true));
@@ -183,7 +184,7 @@ class DeviceControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.modelId").value(modelId))
                 .andExpect(jsonPath("$.data.modelName").value("AP8959"))
                 .andExpect(jsonPath("$.data.manufacturer").value("APC"))
-                .andExpect(jsonPath("$.data.locationNodeCode").value(locationCode))
+                .andExpect(jsonPath("$.data.locationNodeName").value("Rack-Get"))
                 .andExpect(jsonPath("$.data.name").value("PDU-좌"))
                 .andExpect(jsonPath("$.data.description").value("단건 조회용"))
                 .andExpect(jsonPath("$.data.enabled").value(true));
@@ -299,7 +300,7 @@ class DeviceControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.modelId").value(newModelId))
                 .andExpect(jsonPath("$.data.modelName").value("LHT65N"))
                 .andExpect(jsonPath("$.data.manufacturer").value("Dragino"))
-                .andExpect(jsonPath("$.data.locationNodeCode").value(newLocationCode))
+                .andExpect(jsonPath("$.data.locationNodeName").value("Rack-Update-2"))
                 .andExpect(jsonPath("$.data.name").value("센서-01"))
                 .andExpect(jsonPath("$.data.description").value("after"))
                 .andExpect(jsonPath("$.data.enabled").value(false));
@@ -386,6 +387,34 @@ class DeviceControllerIntegrationTest {
                                 """.formatted(locationCode)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("Invalid value for parameter 'modelId'"));
+    }
+
+    @Test
+    void deleteDevice_removesDevice() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "device-delete-user", "password123");
+        Integer modelId = createDeviceModel(accessToken, "AP8959", "APC");
+        String locationCode = createRootLocation(accessToken, "Rack-Delete");
+        int deviceId = createDevice(accessToken, modelId, locationCode, "PDU-좌", "to delete");
+
+        mockMvc.perform(delete("/api/manager/devices/{id}", deviceId)
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").value(deviceId));
+
+        mockMvc.perform(get("/api/manager/devices/{id}", deviceId)
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("Device not found: " + deviceId));
+    }
+
+    @Test
+    void deleteDevice_whenNotFound_returnsNotFound() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "device-delete-nf-user", "password123");
+
+        mockMvc.perform(delete("/api/manager/devices/{id}", 999999)
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("Device not found: 999999"));
     }
 
     private int createDevice(

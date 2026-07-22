@@ -7,7 +7,7 @@ public record DeviceResponse(
         Integer modelId,
         String modelName,
         String manufacturer,
-        String locationNodeCode,
+        String locationNodeName,
         String name,
         String description,
         boolean enabled
@@ -19,7 +19,7 @@ public record DeviceResponse(
                 device.getDeviceModel().getId(),
                 device.getDeviceModel().getName(),
                 device.getDeviceModel().getManufacturer(),
-                device.getLocationNode().getCode(),
+                device.getLocationNode().getName(),
                 device.getName(),
                 device.getDescription(),
                 device.isEnabled()

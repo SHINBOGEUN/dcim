@@ -47,6 +47,7 @@
 | `name` | 필수. **같은 위치**(`location_node_code`) 아래에서 중복 불가 |
 | `enabled` | boolean. 기본 `true` |
 | `description` | 선택 |
+| 응답 `locationNodeName` | `location_node.name` (code는 응답에 포함하지 않음) |
 | 모델 삭제 | `devices.model_id` 참조 중이면 409 ([DEVICE_MODEL_API](../devicemodel/DEVICE_MODEL_API.md)) |
 | 위치 삭제 | `devices.location_node_code` 참조 중이면 409. **`UNASSIGNED`는 삭제 금지** |
 
@@ -169,7 +170,7 @@ erDiagram
     "modelId": 1,
     "modelName": "APC-8941",
     "manufacturer": "APC",
-    "locationNodeCode": "M4n3B2v1C0",
+    "locationNodeName": "Rack-01",
     "name": "PDU-01",
     "description": "Rack-01 좌측 PDU",
     "enabled": true
@@ -218,7 +219,7 @@ erDiagram
 | 파라미터 | 설명 |
 |----------|------|
 | `modelId` | 모델 ID 일치 |
-| `locationNodeCode` | 위치 code 일치 |
+| `locationNodeCode` | 위치 code 일치 (내부 필터) |
 | `name` | 표시명 부분 일치 |
 | `enabled` | `true` / `false` |
 | `page` | 페이지 번호 (**1부터**, 기본 `1`) |
@@ -238,7 +239,7 @@ erDiagram
         "modelId": 1,
         "modelName": "APC-8941",
         "manufacturer": "APC",
-        "locationNodeCode": "M4n3B2v1C0",
+        "locationNodeName": "Rack-01",
         "name": "PDU-01",
         "description": "Rack-01 좌측 PDU",
         "enabled": true
@@ -270,7 +271,7 @@ erDiagram
 
 ### 6.1 삭제 — `DELETE /api/manager/devices/{id}`
 
-**구현 상태:** ⏳ 미구현
+**구현 상태:** ✅ 구현됨
 
 | 조건 | HTTP | 동작 |
 |------|------|------|
@@ -293,11 +294,11 @@ erDiagram
 
 | Method | Path | 설명 | 상태 |
 |--------|------|------|------|
-| `GET` | `/api/manager/devices` | 장비 목록 (+ 필터) | ⏳ |
-| `GET` | `/api/manager/devices/{id}` | 장비 단건 | ⏳ |
-| `POST` | `/api/manager/devices` | 장비 등록 | ⏳ |
-| `PUT` | `/api/manager/devices/{id}` | 장비 수정 (전체 교체) | ⏳ |
-| `DELETE` | `/api/manager/devices/{id}` | 장비 삭제 | ⏳ |
+| `GET` | `/api/manager/devices` | 장비 목록 (+ 필터) | ✅ |
+| `GET` | `/api/manager/devices/{id}` | 장비 단건 | ✅ |
+| `POST` | `/api/manager/devices` | 장비 등록 | ✅ |
+| `PUT` | `/api/manager/devices/{id}` | 장비 수정 (전체 교체) | ✅ |
+| `DELETE` | `/api/manager/devices/{id}` | 장비 삭제 | ✅ |
 
 ---
 
@@ -323,7 +324,7 @@ erDiagram
 | DDL | V007 ✅ (문서·SQL) |
 | 도메인 | `Device` — `id` INT, model/location/name/enabled ✅ |
 | Application | `DeviceQueryService.createDevice` ✅ |
-| API | 등록 `POST` ✅ / 수정 `PUT /{id}` ✅ / 목록 `GET` (페이징) ✅ / 단건 `GET /{id}` ✅ / 삭제 — 미구현 |
+| API | 등록 `POST` ✅ / 수정 `PUT /{id}` ✅ / 목록 `GET` (페이징) ✅ / 단건 `GET /{id}` ✅ / 삭제 `DELETE /{id}` ✅ |
 | protocol config | — 미구현 (2차) |
 | hierarchy | — 미구현 (2차) |
 
@@ -340,3 +341,5 @@ erDiagram
 | 2026-07-22 | Device 단건 조회 API·통합 테스트 추가 |
 | 2026-07-22 | Device 목록 조회 API (페이징·필터)·통합 테스트 추가 |
 | 2026-07-22 | Device 수정 API·통합 테스트 추가 |
+| 2026-07-22 | Device 삭제 API·통합 테스트 추가 |
+| 2026-07-22 | Device 응답의 위치 필드를 `locationNodeName`으로 변경 (code 미노출) |

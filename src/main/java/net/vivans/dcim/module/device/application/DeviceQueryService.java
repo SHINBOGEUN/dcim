@@ -85,6 +85,12 @@ public class DeviceQueryService {
         return DeviceResponse.from(deviceRepository.save(device));
     }
 
+    @Transactional
+    public void deleteDevice(Integer id) {
+        Device device = findDevice(id);
+        deviceRepository.delete(device);
+    }
+
     private Device findDevice(Integer id) {
         return deviceRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Device not found: " + id));

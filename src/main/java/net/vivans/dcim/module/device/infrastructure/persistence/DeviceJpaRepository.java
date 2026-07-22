@@ -53,6 +53,11 @@ public class DeviceJpaRepository implements DeviceRepository {
         return springDataRepository.existsByLocationNodeAndNameAndIdNot(locationNode, name, id);
     }
 
+    @Override
+    public void delete(Device device) {
+        springDataRepository.delete(device);
+    }
+
     private static String blankToNull(String value) {
         if (value == null || value.isBlank()) {
             return null;

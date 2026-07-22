@@ -24,4 +24,6 @@ public interface DeviceRepository {
     boolean existsByLocationNodeAndName(LocationNode locationNode, String name);
 
     boolean existsByLocationNodeAndNameAndIdNot(LocationNode locationNode, String name, Integer id);
+
+    void delete(Device device);
 }
