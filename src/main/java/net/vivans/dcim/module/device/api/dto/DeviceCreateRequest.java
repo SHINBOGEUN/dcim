@@ -17,7 +17,7 @@ public record DeviceCreateRequest(
         @NotBlank(message = "name must not be empty")
         String name,
 
-        @Schema(description = "설명", example = "Rack-01 좌측 PDU")
+        @Schema(description = "설명", example = "TEST PDU 입니다.")
         String description,
 
         @Schema(description = "사용 여부 (기본 true)", example = "true")

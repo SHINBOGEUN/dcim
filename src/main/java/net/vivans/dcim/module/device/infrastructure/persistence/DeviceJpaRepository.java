@@ -4,6 +4,8 @@ import lombok.RequiredArgsConstructor;
 import net.vivans.dcim.module.device.domain.model.Device;
 import net.vivans.dcim.module.device.domain.repository.DeviceRepository;
 import net.vivans.dcim.module.location.domain.model.LocationNode;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -25,6 +27,23 @@ public class DeviceJpaRepository implements DeviceRepository {
     }
 
     @Override
+    public Page<Device> findAll(
+            Integer modelId,
+            String locationNodeCode,
+            String name,
+            Boolean enabled,
+            Pageable pageable
+    ) {
+        return springDataRepository.findAllWithFilters(
+                modelId,
+                blankToNull(locationNodeCode),
+                blankToNull(name),
+                enabled,
+                pageable
+        );
+    }
+
+    @Override
     public boolean existsByLocationNodeAndName(LocationNode locationNode, String name) {
         return springDataRepository.existsByLocationNodeAndName(locationNode, name);
     }
@@ -32,5 +51,12 @@ public class DeviceJpaRepository implements DeviceRepository {
     @Override
     public boolean existsByLocationNodeAndNameAndIdNot(LocationNode locationNode, String name, Integer id) {
         return springDataRepository.existsByLocationNodeAndNameAndIdNot(locationNode, name, id);
+    }
+
+    private static String blankToNull(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value;
     }
 }

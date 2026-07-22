@@ -192,7 +192,7 @@ erDiagram
 
 ### 4.1 수정 — `PUT /api/manager/devices/{id}`
 
-**구현 상태:** ⏳ 미구현
+**구현 상태:** ✅ 구현됨
 
 요청 body는 등록과 동일. **전체 교체** (부분 수정 없음).
 
@@ -211,7 +211,7 @@ erDiagram
 
 ### 5.1 목록 — `GET /api/manager/devices`
 
-**구현 상태:** ⏳ 미구현
+**구현 상태:** ✅ 구현됨
 
 #### 쿼리 파라미터
 
@@ -221,6 +221,8 @@ erDiagram
 | `locationNodeCode` | 위치 code 일치 |
 | `name` | 표시명 부분 일치 |
 | `enabled` | `true` / `false` |
+| `page` | 페이지 번호 (**1부터**, 기본 `1`) |
+| `size` | 페이지 크기 (기본 `20`, 최대 `100`) |
 
 정렬: `id` 오름차순.
 
@@ -229,24 +231,32 @@ erDiagram
 ```json
 {
   "success": true,
-  "data": [
-    {
-      "id": 101,
-      "modelId": 1,
-      "modelName": "APC-8941",
-      "manufacturer": "APC",
-      "locationNodeCode": "M4n3B2v1C0",
-      "name": "PDU-01",
-      "description": "Rack-01 좌측 PDU",
-      "enabled": true
-    }
-  ]
+  "data": {
+    "content": [
+      {
+        "id": 101,
+        "modelId": 1,
+        "modelName": "APC-8941",
+        "manufacturer": "APC",
+        "locationNodeCode": "M4n3B2v1C0",
+        "name": "PDU-01",
+        "description": "Rack-01 좌측 PDU",
+        "enabled": true
+      }
+    ],
+    "page": 1,
+    "size": 20,
+    "totalElements": 1,
+    "totalPages": 1,
+    "first": true,
+    "last": true
+  }
 }
 ```
 
 ### 5.2 단건 — `GET /api/manager/devices/{id}`
 
-**구현 상태:** ⏳ 미구현
+**구현 상태:** ✅ 구현됨
 
 목록 항목 1건과 동일 구조.
 
@@ -313,7 +323,7 @@ erDiagram
 | DDL | V007 ✅ (문서·SQL) |
 | 도메인 | `Device` — `id` INT, model/location/name/enabled ✅ |
 | Application | `DeviceQueryService.createDevice` ✅ |
-| API | 등록 `POST` ✅ / 조회·수정·삭제 — 미구현 |
+| API | 등록 `POST` ✅ / 수정 `PUT /{id}` ✅ / 목록 `GET` (페이징) ✅ / 단건 `GET /{id}` ✅ / 삭제 — 미구현 |
 | protocol config | — 미구현 (2차) |
 | hierarchy | — 미구현 (2차) |
 
@@ -327,3 +337,6 @@ erDiagram
 | 2026-07-22 | location NOT NULL + UNASSIGNED 시드 반영 |
 | 2026-07-22 | Device 도메인·단위 테스트 추가 (API 미구현) |
 | 2026-07-22 | Device 등록 API·통합 테스트 추가 |
+| 2026-07-22 | Device 단건 조회 API·통합 테스트 추가 |
+| 2026-07-22 | Device 목록 조회 API (페이징·필터)·통합 테스트 추가 |
+| 2026-07-22 | Device 수정 API·통합 테스트 추가 |
