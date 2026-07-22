@@ -371,6 +371,9 @@ V2에서 `GET .../snmp-points/script-template?deviceId=` export API 검토.
 
 ## 10. 향후 범위 (device 모듈)
 
+> 1차: [DEVICE_API.md](../device/DEVICE_API.md) — `devices` 본체 CRUD  
+> 2차: 아래 protocol config 테이블
+
 | 항목 | 저장 위치 | 비고 |
 |------|-----------|------|
 | `ip`, `port` | `device_snmp_config` (예정) | 장비별 |

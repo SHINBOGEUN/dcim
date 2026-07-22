@@ -79,12 +79,25 @@ erDiagram
         timestamp updated_dt "수정 시각"
     }
 
+    devices {
+        int id PK "AUTO_INCREMENT"
+        int model_id FK "device_model.id"
+        char location_node_code FK "NOT NULL, 미지정=UNASSIGNED"
+        varchar name UK "현장 표시명"
+        varchar description "설명 nullable"
+        tinyint enabled "CHECK 0/1, 기본 1"
+        timestamp created_dt "생성 시각"
+        timestamp updated_dt "수정 시각"
+    }
+
     code_group ||--o{ common_code : "group_id"
     common_code ||--o{ location_node : "location_type_id"
     location_node ||--o{ location_node : "parent_code"
     device_model ||--o{ device_model_protocol : "model_id"
     common_code ||--o{ device_model_protocol : "protocol_type_id"
     device_model_protocol ||--o{ device_model_snmp_point : "model_protocol_id"
+    device_model ||--o{ devices : "model_id"
+    location_node ||--o{ devices : "location_node_code"
 ```
 
 | 모듈 | 테이블 | 관계 |
@@ -96,7 +109,7 @@ erDiagram
 | devicemodel | `device_model` | 장비 SKU 카탈로그 (UK: name+manufacturer) |
 | devicemodel | `device_model_protocol` | 모델 ↔ PROTOCOL_TYPE N:M (UK: model_id+protocol_type_id) |
 | devicemodel | `device_model_snmp_point` | ✅ SNMP point (UK: model_protocol_id+name) |
-| device | `devices` | ⏳ 스켈레톤만 (DDL·API 미구현) |
+| device | `devices` | ⏳ 장비 인스턴스 (UK: location_node_code+name, 미지정=`UNASSIGNED`) |
 
 ---
 
@@ -233,7 +246,9 @@ erDiagram
 
 | 컬럼 | 설명 |
 |------|------|
-| `devices.location_node_code` | 장비가 속한 위치 노드 FK → `location_node(code)` (`CHAR(10)`, CONTAINER/ROW/RACK 등 모든 유형 가능) |
+| `devices.location_node_code` | 장비 위치 FK → `location_node(code)` (**NOT NULL**. 미지정 시 시드 노드 `UNASSIGNED`) |
+
+> API·DDL: [DEVICE_API.md](device/DEVICE_API.md), [V007__create_devices_table.sql](../sql/history/V007__create_devices_table.sql)
 
 **트리 규칙 (애플리케이션)**
 
@@ -242,14 +257,16 @@ erDiagram
 | 루트 노드 | `parent_code IS NULL` |
 | 리프 노드 | `parent_code = 이 노드 code` 인 행이 없음 |
 | 위치 유형 | `location_type_id` → `common_code` 중 `group_key = 'LOCATION_TYPE'`만 허용 (DB FK는 `common_code`만 검증) |
-| `code` | 생성 시 10자 Base62 자동 부여, 변경 불가 |
+| `code` | 일반: 생성 시 10자 Base62. **시스템: `UNASSIGNED` 고정 시드** |
+| `UNASSIGNED` | 삭제·이름 변경 금지. 장비 선등록 시 임시 위치 |
 | 순환 참조 | 금지 (애플리케이션 검증) |
 | 자식 있는 노드 삭제 | 리프만 단건 삭제 / 서브트리 cascade 삭제 API로 분리 ([API 설계](../location/LOCATION_NODE_API.md#5-삭제-api)) |
 | 유형 삽입 시 재구성 | 중간 유형 등록 시 기존 직접 자식 재부모화 ([API 설계](../location/LOCATION_NODE_API.md#자식-등록-시-트리-재구성-핵심-규칙)) |
 
-**예시 데이터**
+**시드 데이터 (V004)**
 
-`LOCATION_TYPE` common_code: `CONTAINER`, `ZONE`, `ROW`, `RACK` …
+`LOCATION_TYPE`: `UNASSIGNED`, `CONTAINER`, `ZONE`, `ROW`, `RACK`  
+`location_node`: `code=UNASSIGNED`, `name=미배정`, `parent_code=NULL`
 
 | code | parent_code | location_type_id | name |
 |------|-------------|------------------|------|
@@ -426,6 +443,89 @@ device_model (1) ──< device_model_protocol (N) >── common_code (PROTOCOL
 
 ---
 
+### `devices` — 장비 인스턴스 (device 모듈, 1차)
+
+**구현 상태:** ⏳ 미구현 (DDL·문서만)
+
+> 4층 아키텍처 **② 인스턴스층** — host/port·프로토콜 설정은 V008 `device_protocol_endpoint`에서 분리.  
+> 설계: [DEVICE_ARCHITECTURE.md](device/DEVICE_ARCHITECTURE.md)  
+> 위치 미지정: V004 시드 노드 **`UNASSIGNED`** 참조 (NULL 아님)
+
+| 컬럼 | 타입 | NULL | 키 | 기본값 | 설명 |
+|------|------|------|-----|--------|------|
+| `id` | INT | N | PK | AUTO_INCREMENT | 장비 ID (API·Influx `device_id`) |
+| `model_id` | INT | N | FK | | `device_model.id` |
+| `location_node_code` | CHAR(10) | N | FK, UK | | `location_node.code` (미지정=`UNASSIGNED`) |
+| `name` | VARCHAR(255) | N | UK | | 현장 표시명 |
+| `description` | VARCHAR(1000) | Y | | | 설명 |
+| `enabled` | TINYINT(1) | N | | `1` | 사용 여부 (CHECK 0/1) |
+| `created_dt` | TIMESTAMP(6) | Y | | | |
+| `updated_dt` | TIMESTAMP(6) | Y | | | |
+
+**UK:** `(location_node_code, name)` — 같은 위치 아래 표시명 중복 불가
+
+**엔티티:** `module/device/domain/model/Device.java` (스켈레톤, 구현 시 `id` INT PK로 교체)  
+**API 설계:** [DEVICE_API.md](device/DEVICE_API.md)  
+**상속:** `BaseEntity`  
+**연관:**
+- `@ManyToOne` → `DeviceModel` (`model_id`)
+- `@ManyToOne` → `LocationNode` (`location_node_code`, required)
+
+**DDL:** [V007__create_devices_table.sql](../sql/history/V007__create_devices_table.sql)
+
+**FK 제약**
+
+| FK | 참조 | ON DELETE | ON UPDATE |
+|----|------|-----------|-----------|
+| `fk_devices_model_id` | `device_model(id)` | RESTRICT | CASCADE |
+| `fk_devices_location_node_code` | `location_node(code)` | RESTRICT | CASCADE |
+
+**2차 이후 (V008+, 본 테이블에 넣지 않음)**
+
+| 테이블 | 역할 |
+|--------|------|
+| `device_protocol_endpoint` | host, port (프로토콜 공통) |
+| `device_endpoint_snmp` | community, instanceId |
+| `device_endpoint_modbus` | unit_id |
+| `devices.parent_device_id` | 장비 계층 (V010+) |
+
+**관계도**
+
+```mermaid
+erDiagram
+    device_model {
+        int id PK
+        varchar name
+        varchar manufacturer
+    }
+
+    location_node {
+        char code PK
+        varchar name
+    }
+
+    devices {
+        int id PK
+        int model_id FK
+        char location_node_code FK
+        varchar name
+        tinyint enabled
+    }
+
+    device_model ||--o{ devices : "model_id"
+    location_node ||--o{ devices : "location_node_code"
+```
+
+**1차 범위 / 2차 예정**
+
+| 1차 (devices 본체) | 2차 (V008+, 본 테이블 미포함) |
+|--------------------|------------------------------|
+| model_id, location(필수), name, enabled | `device_protocol_endpoint` (host, port) |
+| 미지정 = `UNASSIGNED` | `device_endpoint_snmp` / `device_endpoint_modbus` |
+| attributes JSON 금지 | `parent_device_id` (V010+) |
+
+---
+
 ## boolean 컬럼 규칙 (프로젝트 공통)
 
 플래그성 컬럼은 **`boolean` (`true` / `false`)** 을 사용합니다.  
@@ -524,6 +624,19 @@ device_model (1) ──< device_model_protocol (N) >── common_code (PROTOCOL
 | `requires_instance` | `requiresInstance` | `DeviceModelSnmpPoint` (`boolean`) |
 | `unit` | `unit` | `DeviceModelSnmpPoint` |
 | `enabled` | `enabled` | `DeviceModelSnmpPoint` (`boolean`) |
+| `created_dt` | `createdDt` | `BaseEntity` |
+| `updated_dt` | `updatedDt` | `BaseEntity` |
+
+### device — `Device`
+
+| DB 컬럼 | Java 필드 | 출처 |
+|---------|-----------|------|
+| `id` | `id` | `Device` |
+| `model_id` | `deviceModel` | `Device` (`@ManyToOne`) |
+| `location_node_code` | `locationNode` | `Device` (`@ManyToOne`, required) |
+| `name` | `name` | `Device` |
+| `description` | `description` | `Device` |
+| `enabled` | `enabled` | `Device` (`boolean`) |
 | `created_dt` | `createdDt` | `BaseEntity` |
 | `updated_dt` | `updatedDt` | `BaseEntity` |
 

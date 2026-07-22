@@ -57,9 +57,10 @@ mysql -h 192.168.10.14 -P 20181 -u dcim -p dcim_new < sql/history/V001__create_u
 | V001 | `V001__create_users_table.sql` | | dcim_new | users 최초 생성 |
 | V002 | `V002__create_code_group_table.sql` | | dcim_new | code_group 생성 |
 | V003 | `V003__create_common_code_table.sql` | | dcim_new | common_code 생성 (V002 선행) |
-| V004 | `V004__create_location_node_table.sql` | | dcim_new | location_node 생성 (V003 선행) |
+| V004 | `V004__create_location_node_table.sql` | | dcim_new | location_node + LOCATION_TYPE·UNASSIGNED 시드 (V003 선행) |
 | V005 | `V005__create_device_model_tables.sql` | | dcim_new | device_model, device_model_protocol (V003 선행) |
 | V006 | `V006__create_device_model_snmp_point.sql` | | dcim_new | device_model_snmp_point (V005 선행) |
+| V007 | `V007__create_devices_table.sql` | | dcim_new | devices (V004·V005 선행, location NOT NULL → UNASSIGNED) |
 
 > 운영 반영 후 위 표에 날짜·환경을 채워 주세요.
 

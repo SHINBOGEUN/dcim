@@ -18,7 +18,7 @@
 | 자식 노드 | `parent_code`로 부모 노드에 연결 |
 | 위치 유형 | `common_code` 중 `group_key = 'LOCATION_TYPE'`만 허용 |
 | 리프 노드 | 자식이 없는 노드 |
-| `code` | **PK**. 서버가 **10자 Base62** 랜덤 문자열로 자동 생성. 불변. API·FK 식별자 |
+| `code` | **PK**. 일반 노드: 서버가 **10자 Base62** 랜덤 생성. **시스템 시드: `UNASSIGNED`**. 불변. API·FK 식별자 |
 
 트리 구조의 진실 원천은 **`parent_code`** 입니다.  
 사용자는 **`name`** 만 입력합니다.
@@ -28,16 +28,28 @@
 | 항목 | 규칙 |
 |------|------|
 | `name` | 필수. 같은 부모 아래에서 중복 불가 (`uk_location_node_parent_code_name`, 루트는 앱 검증) |
-| `code` | 서버 자동 생성 (10자 Base62, `[0-9A-Za-z]`). 사용자 입력 없음. 변경 불가 |
+| `code` | 서버 자동 생성 (10자 Base62, `[0-9A-Za-z]`). 사용자 입력 없음. 변경 불가. **예외: `UNASSIGNED` 시드** |
 | `location_type_id` | 필수. `LOCATION_TYPE` 그룹 소속만 허용 |
+| `UNASSIGNED` | 삭제·이름 변경·부모 변경 금지 (시스템 루트) |
 | 순환 참조 | 금지 (자기 자신·자손을 부모로 지정 불가) |
 
-### 1.2 향후 devices 연동
+### 1.2 devices 연동 · 미배정(`UNASSIGNED`)
 
-장비(`devices`)는 위치 노드의 **`code`를 FK**(`CHAR(10)`)로 참조합니다.
+장비(`devices`)는 위치 노드의 **`code`를 FK**(`CHAR(10)`, **NOT NULL**)로 참조합니다.
 
 - CONTAINER에 슬라이딩 도어·배연창 → `location_node_code` = CONTAINER의 `code`
 - ROW/RACK 장비도 동일 — **유형 제한 없음**
+- **위치를 아직 모를 때** → `location_node_code = 'UNASSIGNED'` (V004 시드). 이후 수정 API로 실제 위치 지정
+
+**V004 시드**
+
+| 테이블 | 내용 |
+|--------|------|
+| `code_group` | `LOCATION_TYPE` |
+| `common_code` | `UNASSIGNED`, `CONTAINER`, `ZONE`, `ROW`, `RACK` |
+| `location_node` | `code=UNASSIGNED`, `name=미배정`, `parent_code=NULL` |
+
+> API·DDL: [DEVICE_API.md](../device/DEVICE_API.md), [V007__create_devices_table.sql](../../sql/history/V007__create_devices_table.sql)
 
 ---
 
@@ -49,6 +61,7 @@
 
 | code | name | sort_order (유형 순서) |
 |------|------|------------------------|
+| UNASSIGNED | 미배정 | -1 (시스템, 계층 순서 대상 아님) |
 | CONTAINER | 컨테이너 | 0 |
 | ZONE | 존 | 1 |
 | ROW | 열 | 2 |
@@ -314,6 +327,7 @@ CONTAINER
 
 - 자식 없음 → 삭제 성공, 삭제된 `code` 반환
 - 자식 있음 → 400 (`cannot delete node with children`)
+- **`code = UNASSIGNED` → 409** (시스템 노드 삭제 금지)
 - 노드 없음 → 404
 
 ### 5.2 서브트리 전체 삭제 — `DELETE /api/manager/location-node/{code}/subtree`

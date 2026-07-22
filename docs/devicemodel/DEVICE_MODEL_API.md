@@ -16,6 +16,8 @@
 | **DeviceModelProtocol** | 모델 ↔ `PROTOCOL_TYPE` common_code **N:M** 조인 (`model_id`, `protocol_type_id`) |
 | **Device** (향후) | 실제 장비 인스턴스. `model_id` FK로 모델 참조 |
 
+> 장비 인스턴스 CRUD: [DEVICE_API.md](DEVICE_API.md)
+
 프로토콜 타입(SNMP, MQTT …)은 `common_code`(`PROTOCOL_TYPE`)에 존재하며, 모델과의 연결은 `device_model_protocol` 조인 테이블로 표현합니다.  
 프로토콜 연결은 **DeviceModel 등록·수정 API**의 `protocols[]`로만 관리합니다 (별도 Protocol API 없음).
 
