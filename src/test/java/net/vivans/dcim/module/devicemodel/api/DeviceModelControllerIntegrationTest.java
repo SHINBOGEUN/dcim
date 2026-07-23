@@ -391,6 +391,53 @@ class DeviceModelControllerIntegrationTest {
                 .andExpect(jsonPath("$.error").value("DeviceModel not found: 999999"));
     }
 
+    @Test
+    void deleteDeviceModel_whenReferencedByDevices_returnsConflict() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "device-model-delete-conflict-user", "password123");
+        Integer deviceTypeId = createModelType(accessToken);
+        Integer groupId = createCodeGroup(accessToken, "PROTOCOL_TYPE", "Protocol Type");
+        Integer mqttId = createCommonCode(accessToken, groupId, "mqtt", "MQTT", 1);
+
+        String createResponse = mockMvc.perform(post("/api/manager/device-models")
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "AP8959",
+                                  "manufacturer": "APC",
+                                  "deviceTypeId": %d,
+                                  "protocols": [
+                                    { "protocolTypeId": %d }
+                                  ]
+                                }
+                                """.formatted(deviceTypeId, mqttId)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        int modelId = objectMapper.readTree(createResponse).path("data").path("id").asInt();
+        String locationCode = createRootLocation(accessToken, "Rack-Conflict");
+
+        mockMvc.perform(post("/api/manager/devices")
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "modelId": %d,
+                                  "locationNodeCode": "%s",
+                                  "name": "PDU-좌",
+                                  "description": "referenced"
+                                }
+                                """.formatted(modelId, locationCode)))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(delete("/api/manager/device-models/{id}", modelId)
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("device model is referenced by devices"));
+    }
+
     private Integer createModelType(String accessToken) throws Exception {
         Integer groupId = createCodeGroup(accessToken, "MODEL_TYPE", "Model Type");
         return createCommonCode(accessToken, groupId, "SENSOR", "Sensor", 1);
@@ -430,5 +477,73 @@ class DeviceModelControllerIntegrationTest {
                 .getContentAsString();
 
         return objectMapper.readTree(response).path("data").path("id").asInt();
+    }
+
+    private String createRootLocation(String accessToken, String name) throws Exception {
+        Integer groupId = findOrCreateCodeGroup(accessToken, "LOCATION_TYPE", "Location Type");
+        Integer rackTypeId = findOrCreateCommonCode(accessToken, groupId, "RACK", "랙", 3);
+        return createLocationNode(accessToken, null, rackTypeId, name);
+    }
+
+    private Integer findOrCreateCodeGroup(String accessToken, String groupKey, String groupName) throws Exception {
+        String listResponse = mockMvc.perform(get("/api/manager/code-groups")
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        for (com.fasterxml.jackson.databind.JsonNode node : objectMapper.readTree(listResponse).path("data")) {
+            if (groupKey.equals(node.path("groupKey").asText())) {
+                return node.path("id").asInt();
+            }
+        }
+
+        return createCodeGroup(accessToken, groupKey, groupName);
+    }
+
+    private Integer findOrCreateCommonCode(
+            String accessToken,
+            Integer groupId,
+            String code,
+            String name,
+            Integer sortOrder
+    ) throws Exception {
+        String listResponse = mockMvc.perform(get("/api/manager/common-codes")
+                        .param("codeGroupId", String.valueOf(groupId))
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        for (com.fasterxml.jackson.databind.JsonNode node : objectMapper.readTree(listResponse).path("data")) {
+            if (code.equals(node.path("code").asText())) {
+                return node.path("id").asInt();
+            }
+        }
+
+        return createCommonCode(accessToken, groupId, code, name, sortOrder);
+    }
+
+    private String createLocationNode(
+            String accessToken,
+            String parentCode,
+            Integer locationTypeId,
+            String name
+    ) throws Exception {
+        String parentJson = parentCode == null ? "null" : "\"%s\"".formatted(parentCode);
+        String response = mockMvc.perform(post("/api/manager/location-node")
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"parentCode": %s, "locationTypeId": %d, "name": "%s"}
+                                """.formatted(parentJson, locationTypeId, name)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        return objectMapper.readTree(response).path("data").path("code").asText();
     }
 }

@@ -36,7 +36,7 @@
 | `protocolTypeId` | `PROTOCOL_TYPE` common_code만 허용 |
 | `(model_id, protocol_type_id)` | UK — 동일 모델에 같은 프로토콜 타입 중복 불가 |
 | 수정 시 protocols | **전체 교체** (부분 수정 없음) |
-| 모델 삭제 | `devices.model_id` 참조 중이면 409 (향후) |
+| 모델 삭제 | `devices.model_id` 참조 중이면 409 |
 
 ---
 
@@ -225,7 +225,7 @@
 | 도메인 | `DeviceModel.create/update`, `replaceProtocols`, `getSortedProtocols` |
 | Application | `DeviceModelQueryService` — CRUD + protocols 전체 교체 |
 | API | `DeviceModelController` — 5 endpoints |
-| 미구현 | devices 참조 시 삭제 409 |
+| 삭제 제약 | `devices` 참조 시 409 (`device model is referenced by devices`) |
 
 ---
 

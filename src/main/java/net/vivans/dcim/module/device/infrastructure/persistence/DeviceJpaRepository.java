@@ -74,6 +74,11 @@ public class DeviceJpaRepository implements DeviceRepository {
     }
 
     @Override
+    public boolean existsByDeviceModelId(Integer deviceModelId) {
+        return springDataRepository.existsByDeviceModel_Id(deviceModelId);
+    }
+
+    @Override
     public void delete(Device device) {
         springDataRepository.delete(device);
     }

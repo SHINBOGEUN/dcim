@@ -41,4 +41,6 @@ public interface DeviceSpringDataRepository extends JpaRepository<Device, Intege
     boolean existsByLocationNodeAndName(LocationNode locationNode, String name);
 
     boolean existsByLocationNodeAndNameAndIdNot(LocationNode locationNode, String name, Integer id);
+
+    boolean existsByDeviceModel_Id(Integer deviceModelId);
 }
