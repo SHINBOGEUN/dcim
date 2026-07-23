@@ -62,14 +62,14 @@ location_node (1) ──< devices (N)   ※ location_node_code NOT NULL
 - 위치를 아직 모를 때는 V004 시드 노드 **`UNASSIGNED`(미배정)** 를 넣고, 수정 API로 Rack/Zone 등에 붙입니다.
 - CONTAINER·ROW·RACK 등 **유형 제한 없음** ([LOCATION_NODE_API §1.2](../location/LOCATION_NODE_API.md#12-향후-devices-연동)).
 
-### 1.4 향후 연동 (2차 이후)
+### 1.4 연동 (2차 이후)
 
-| 테이블 | 용도 | 선행 |
+| 테이블 | 용도 | 상태 |
 |--------|------|------|
-| `device_protocol_endpoint` | host, port (프로토콜 공통) | devices |
-| `device_endpoint_snmp` | community, instanceId, version | endpoint |
-| `device_endpoint_modbus` | unit_id, timeout_ms | endpoint |
-| `devices.parent_device_id` | 장비 계층 (자기참조) | devices |
+| `device_protocol_endpoint` | host, port (프로토콜 공통) | ✅ [DEVICE_ENDPOINT_API](./DEVICE_ENDPOINT_API.md) |
+| `device_endpoint_snmp` | community, instanceId, version | ⬜ 예정 |
+| `device_endpoint_modbus` | unit_id, timeout_ms | ⬜ 예정 |
+| `devices.parent_device_id` | 장비 계층 (자기참조) | ⬜ 예정 |
 
 SNMP point OID 템플릿 + 장비 설정 합성은 [DEVICE_MODEL_SNMP_POINT_API §9](../devicemodel/DEVICE_MODEL_SNMP_POINT_API.md#9-스크립트-생성-향후) 참고.
 
@@ -77,7 +77,7 @@ SNMP point OID 템플릿 + 장비 설정 합성은 [DEVICE_MODEL_SNMP_POINT_API 
 
 ## 2. 테이블 — `devices`
 
-**구현 상태:** ⏳ 미구현 (DDL·문서만)
+**구현 상태:** ✅ 구현됨
 
 | 컬럼 | 타입 | NULL | 키 | 기본값 | 설명 |
 |------|------|------|-----|--------|------|
@@ -275,9 +275,8 @@ erDiagram
 
 | 조건 | HTTP | 동작 |
 |------|------|------|
-| 존재 | 200 | 삭제, 삭제된 `id` 반환 |
+| 존재 | 200 | 삭제, 삭제된 `id` 반환. `device_protocol_endpoint`는 **CASCADE** |
 | 없음 | 404 | `Device not found: {id}` |
-| `device_snmp_config` 등 참조 (향후) | 409 | `device is referenced by snmp config` |
 
 #### 응답 — `200 OK`
 
@@ -312,7 +311,8 @@ erDiagram
 6. `DeviceController` — 5 endpoints
 7. 통합 테스트 (모델/위치 FK, name UK, enabled 필터)
 8. [ERD.md](../ERD.md) 구현 상태 ✅ 갱신
-9. (2차) `device_snmp_config` 설계·구현
+9. (2차) `device_protocol_endpoint` — [DEVICE_ENDPOINT_API](./DEVICE_ENDPOINT_API.md) ✅
+10. (이후) `device_endpoint_snmp` 등 확장 테이블
 
 ---
 
@@ -323,10 +323,11 @@ erDiagram
 | 문서 | 본 문서 |
 | DDL | V007 ✅ (문서·SQL) |
 | 도메인 | `Device` — `id` INT, model/location/name/enabled ✅ |
-| Application | `DeviceQueryService.createDevice` ✅ |
-| API | 등록 `POST` ✅ / 수정 `PUT /{id}` ✅ / 목록 `GET` (페이징) ✅ / 단건 `GET /{id}` ✅ / 삭제 `DELETE /{id}` ✅ |
-| protocol config | — 미구현 (2차) |
-| hierarchy | — 미구현 (2차) |
+| Application | `DeviceQueryService` CRUD ✅ |
+| API | 등록·수정·목록·단건·삭제 ✅ |
+| protocol endpoint | ✅ 공통 전송층 ([DEVICE_ENDPOINT_API](./DEVICE_ENDPOINT_API.md)) |
+| protocol 확장 | — snmp/modbus 미구현 |
+| hierarchy | — 미구현 |
 
 ---
 
@@ -343,3 +344,4 @@ erDiagram
 | 2026-07-22 | Device 수정 API·통합 테스트 추가 |
 | 2026-07-22 | Device 삭제 API·통합 테스트 추가 |
 | 2026-07-22 | Device 응답의 위치 필드를 `locationNodeName`으로 변경 (code 미노출) |
+| 2026-07-23 | §1.4·삭제 CASCADE·구현 현황 — `device_protocol_endpoint` (V009) 연동 |

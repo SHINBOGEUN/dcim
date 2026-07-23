@@ -94,33 +94,41 @@ erDiagram
 | MQTT broker 추가 | endpoint + `device_endpoint_mqtt` 확장만 추가 |
 | 수집기가 "어디로 붙지?" | endpoint 1곳에서 조회 |
 
-### 2.2 2차 스키마 개요 (V008 예정)
+### 2.2 2차 스키마 개요 (V009 — 공통 전송층)
 
-**`device_protocol_endpoint`** — 공통 전송층
+> DDL 번호: 문서 초안의 V008은 `device_model.device_type_id` ALTER에 사용됨 → endpoint는 **V009**.  
+> API: [DEVICE_ENDPOINT_API.md](./DEVICE_ENDPOINT_API.md)
+
+**`device_protocol_endpoint`** — 공통 전송층 ✅ 구현됨
 
 | 컬럼 | 설명 |
 |------|------|
-| `device_id` | FK → devices |
+| `device_id` | FK → devices (ON DELETE CASCADE) |
 | `protocol_type_id` | FK → common_code (`PROTOCOL_TYPE`) |
 | `host`, `port` | IP/hostname, 포트 |
 | `enabled` | 사용 여부 |
 
-**`device_endpoint_snmp`** — SNMP 전용 (`endpoint_id` PK FK)
+**UK:** `(device_id, protocol_type_id)` — 장비당 프로토콜 1엔드포인트
+
+검증: `device_model_protocol`에 없는 프로토콜 endpoint 등록 불가.
+
+**`device_endpoint_snmp`** — SNMP 전용 (`endpoint_id` PK FK) — ⬜ 예정
 
 | 컬럼 | 설명 |
 |------|------|
 | `community`, `version` | SNMP 접속 정보 |
 | `instance_id` | OID `{instanceId}` 치환용 |
 
-**`device_endpoint_modbus`** — Modbus 전용 (`endpoint_id` PK FK)
+**`device_endpoint_modbus`** — Modbus 전용 (`endpoint_id` PK FK) — ⬜ 예정
 
 | 컬럼 | 설명 |
 |------|------|
 | `unit_id`, `timeout_ms` | 슬레이브 ID, 타임아웃 |
 
-검증: `device_model_protocol`에 없는 프로토콜 endpoint 등록 불가.
+현재 API는 Device 자식 리소스(`/devices/{deviceId}/endpoints`) CRUD입니다.  
+Device 등록 시 nested `endpoints[]` 일괄 등록은 **이후** (필수는 아님).
 
-장비 등록 시 endpoint를 nested body로 받습니다.
+참고용 nested body 예시 (향후):
 
 ```json
 {
@@ -236,7 +244,7 @@ flowchart LR
 | `getInRowZone("IRC")` | `locationNodeCode` + subtree |
 | Coupang 전용 API | generic response + site layout |
 
-### 5.1 Point 카탈로그 확장 (V009 예정)
+### 5.1 Point 카탈로그 확장 (V010 예정)
 
 [`device_model_snmp_point`](../devicemodel/DEVICE_MODEL_SNMP_POINT_API.md)에 메타데이터 컬럼 추가. **한 포인트 정의가 수집·조회·UI·분석을 모두 결정.**
 
@@ -361,7 +369,7 @@ sequenceDiagram
 
 ## 7. 구현 로드맵
 
-현재 [DEVICE_API.md](./DEVICE_API.md) + V007은 **② 인스턴스 본체**만 정의 — 방향 맞음.
+현재 [DEVICE_API.md](./DEVICE_API.md) + V007은 **② 인스턴스 본체**, [DEVICE_ENDPOINT_API.md](./DEVICE_ENDPOINT_API.md) + V009는 **③ 공통 전송층**까지 구현.
 
 ```mermaid
 flowchart LR
@@ -375,25 +383,25 @@ flowchart LR
 
 | 단계 | 작업 | 산출물 | 상태 |
 |------|------|--------|------|
-| **1차** | `devices` CRUD — model, location, name, enabled | V007, [DEVICE_API.md](./DEVICE_API.md) | ⏳ DDL·문서 (V007 개선됨) |
-| **2차** | `device_protocol_endpoint` + snmp/modbus 확장 | V008, DEVICE_ENDPOINT_API.md | ⬜ 예정 |
-| **2.5차** | point 카탈로그 확장 (category, influx_field …) | V009, devicemodel 문서 | ⬜ 예정 |
+| **1차** | `devices` CRUD — model, location, name, enabled | V007, [DEVICE_API.md](./DEVICE_API.md) | ✅ |
+| **2차** | `device_protocol_endpoint` 공통 전송층 CRUD | V009, [DEVICE_ENDPOINT_API.md](./DEVICE_ENDPOINT_API.md) | ✅ (확장 테이블 제외) |
+| **2.5차** | snmp/modbus 확장 + point 카탈로그 | V010+, 문서 | ⬜ 예정 |
 | **3차** | `GET /devices/capabilities` | DEVICE_CAPABILITY_API.md | ⬜ 예정 |
 | **3.5차** | 범용 telemetry query API | TELEMETRY_API.md | ⬜ 예정 |
 | **4차** | analysis API 재설계 | ANALYSIS_API.md | ⬜ 예정 |
 | **5차** | site layout, display alias | dashboard 모듈 | ⬜ 예정 |
-| **6차** | parent_device_id, collection_script | V010+ | ⬜ 예정 |
+| **6차** | parent_device_id, collection_script | V011+ | ⬜ 예정 |
 
 ### 7.1 지금 할 일 (체크리스트)
 
-- [ ] `feat/device`에서 DEVICE_API.md, V007, ERD 문서 커밋
-- [ ] 1차: devices 엔티티·Repository·Service·Controller·통합테스트 (V007)
-- [ ] 2차: device_protocol_endpoint + snmp/modbus 확장 설계 (V008, DEVICE_ENDPOINT_API.md)
-- [ ] devicemodel point에 point_category(common_code) 추가 설계
+- [x] 1차: devices 엔티티·Repository·Service·Controller·통합테스트 (V007)
+- [x] 2차(공통): device_protocol_endpoint CRUD (V009, DEVICE_ENDPOINT_API.md)
+- [x] DeviceModel 삭제 시 devices 참조 409 검증
+- [ ] 2차(확장): device_endpoint_snmp / modbus
+- [ ] Device 등록 nested `endpoints[]` (선택)
+- [ ] point 카탈로그 확장 (category, influx_field …)
 - [ ] DeviceCapabilityProfile 조회 API 설계
 - [ ] 범용 telemetry / analysis API 설계
-- [ ] DeviceModel 삭제 시 devices 참조 409 검증
-- [ ] DEVICE_API.md에 엔드포인트 패턴·JSON 금지 원칙 반영
 
 ---
 

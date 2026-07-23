@@ -454,10 +454,10 @@ device_model (1) ──< device_model_protocol (N) >── common_code (PROTOCOL
 
 ### `devices` — 장비 인스턴스 (device 모듈, 1차)
 
-**구현 상태:** ⏳ 미구현 (DDL·문서만)
+**구현 상태:** ✅ 구현됨
 
-> 4층 아키텍처 **② 인스턴스층** — host/port·프로토콜 설정은 V008 `device_protocol_endpoint`에서 분리.  
-> 설계: [DEVICE_ARCHITECTURE.md](device/DEVICE_ARCHITECTURE.md)  
+> 4층 아키텍처 **② 인스턴스층** — host/port·프로토콜 설정은 V009 `device_protocol_endpoint`에서 분리.  
+> 설계: [DEVICE_ARCHITECTURE.md](device/DEVICE_ARCHITECTURE.md) · [DEVICE_API.md](device/DEVICE_API.md)  
 > 위치 미지정: V004 시드 노드 **`UNASSIGNED`** 참조 (NULL 아님)
 
 | 컬럼 | 타입 | NULL | 키 | 기본값 | 설명 |
@@ -489,15 +489,6 @@ device_model (1) ──< device_model_protocol (N) >── common_code (PROTOCOL
 | `fk_devices_model_id` | `device_model(id)` | RESTRICT | CASCADE |
 | `fk_devices_location_node_code` | `location_node(code)` | RESTRICT | CASCADE |
 
-**2차 이후 (V008+, 본 테이블에 넣지 않음)**
-
-| 테이블 | 역할 |
-|--------|------|
-| `device_protocol_endpoint` | host, port (프로토콜 공통) |
-| `device_endpoint_snmp` | community, instanceId |
-| `device_endpoint_modbus` | unit_id |
-| `devices.parent_device_id` | 장비 계층 (V010+) |
-
 **관계도**
 
 ```mermaid
@@ -525,13 +516,76 @@ erDiagram
     location_node ||--o{ devices : "location_node_code"
 ```
 
-**1차 범위 / 2차 예정**
+---
 
-| 1차 (devices 본체) | 2차 (V008+, 본 테이블 미포함) |
-|--------------------|------------------------------|
-| model_id, location(필수), name, enabled | `device_protocol_endpoint` (host, port) |
-| 미지정 = `UNASSIGNED` | `device_endpoint_snmp` / `device_endpoint_modbus` |
-| attributes JSON 금지 | `parent_device_id` (V010+) |
+### `device_protocol_endpoint` — 프로토콜 엔드포인트 (공통 전송층)
+
+**구현 상태:** ✅ 구현됨 (공통 테이블만 — snmp/modbus 확장 제외)
+
+> 4층 아키텍처 **③ 엔드포인트층** — host/port.  
+> API: [DEVICE_ENDPOINT_API.md](device/DEVICE_ENDPOINT_API.md)  
+> DDL: [V009__create_device_protocol_endpoint.sql](../sql/history/V009__create_device_protocol_endpoint.sql)
+
+| 컬럼 | 타입 | NULL | 키 | 기본값 | 설명 |
+|------|------|------|-----|--------|------|
+| `id` | INT | N | PK | AUTO_INCREMENT | 엔드포인트 ID |
+| `device_id` | INT | N | FK, UK | | `devices.id` |
+| `protocol_type_id` | INT | N | FK, UK | | `common_code.id` (`PROTOCOL_TYPE`) |
+| `host` | VARCHAR(255) | N | | | IP 또는 hostname |
+| `port` | INT | N | | | 포트 (CHECK 1~65535) |
+| `enabled` | TINYINT(1) | N | | `1` | 사용 여부 |
+| `created_dt` | TIMESTAMP(6) | Y | | | |
+| `updated_dt` | TIMESTAMP(6) | Y | | | |
+
+**UK:** `(device_id, protocol_type_id)` — 장비당 프로토콜 1엔드포인트
+
+**엔티티:** `module/device/domain/model/DeviceProtocolEndpoint.java` ✅  
+**상속:** `BaseEntity`  
+**연관:**
+- `@ManyToOne` → `Device` (`device_id`)
+- `@ManyToOne` → `CommonCode` (`protocol_type_id`)
+
+**FK 제약**
+
+| FK | 참조 | ON DELETE | ON UPDATE |
+|----|------|-----------|-----------|
+| `fk_device_protocol_endpoint_device_id` | `devices(id)` | CASCADE | CASCADE |
+| `fk_device_protocol_endpoint_protocol_type_id` | `common_code(id)` | RESTRICT | CASCADE |
+
+**관계도**
+
+```mermaid
+erDiagram
+    devices {
+        int id PK
+        varchar name
+    }
+
+    common_code {
+        int id PK
+        varchar code
+    }
+
+    device_protocol_endpoint {
+        int id PK
+        int device_id FK
+        int protocol_type_id FK
+        varchar host
+        int port
+        tinyint enabled
+    }
+
+    devices ||--o{ device_protocol_endpoint : "device_id"
+    common_code ||--o{ device_protocol_endpoint : "protocol_type_id"
+```
+
+**이후 (본 테이블에 넣지 않음)**
+
+| 테이블 | 역할 | 상태 |
+|--------|------|------|
+| `device_endpoint_snmp` | community, instanceId, version | ⬜ |
+| `device_endpoint_modbus` | unit_id, timeout_ms | ⬜ |
+| `devices.parent_device_id` | 장비 계층 | ⬜ V011+ |
 
 ---
 

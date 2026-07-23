@@ -17,6 +17,9 @@ import net.vivans.dcim.shared.exception.ConflictException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -30,6 +33,23 @@ public class DeviceProtocolEndpointQueryService {
     private final DeviceModelRepository deviceModelRepository;
     private final DeviceProtocolEndpointRepository deviceProtocolEndpointRepository;
     private final CommonCodeRepository commonCodeRepository;
+
+    public List<DeviceProtocolEndpointResponse> getEndpoints(Integer deviceId) {
+        findDevice(deviceId);
+        List<DeviceProtocolEndpoint> endpoints =
+                deviceProtocolEndpointRepository.findAllByDeviceIdOrderByIdAsc(deviceId);
+
+        List<DeviceProtocolEndpointResponse> responses = new ArrayList<>();
+        for (DeviceProtocolEndpoint endpoint : endpoints) {
+            responses.add(DeviceProtocolEndpointResponse.from(endpoint));
+        }
+        return responses;
+    }
+
+    public DeviceProtocolEndpointResponse getEndpoint(Integer deviceId, Integer endpointId) {
+        findDevice(deviceId);
+        return DeviceProtocolEndpointResponse.from(findEndpoint(endpointId, deviceId));
+    }
 
     @Transactional
     public DeviceProtocolEndpointResponse createEndpoint(
@@ -75,6 +95,14 @@ public class DeviceProtocolEndpointQueryService {
         boolean enabled = request.enabled() == null || request.enabled();
         endpoint.update(protocolType, request.host(), request.port(), enabled);
         return DeviceProtocolEndpointResponse.from(deviceProtocolEndpointRepository.save(endpoint));
+    }
+
+    @Transactional
+    public Integer deleteEndpoint(Integer deviceId, Integer endpointId) {
+        findDevice(deviceId);
+        DeviceProtocolEndpoint endpoint = findEndpoint(endpointId, deviceId);
+        deviceProtocolEndpointRepository.delete(endpoint);
+        return endpointId;
     }
 
     private Device findDevice(Integer deviceId) {

@@ -18,7 +18,7 @@
 -- 1차 devices 설계 원칙 (DEVICE_ARCHITECTURE §6):
 --   - 인스턴스 공통 필드만 — model, location, name, enabled, description
 --   - location_node_code — 필수 (미지정 시 V004 시드 'UNASSIGNED' 참조)
---   - host/port, community, instanceId → 2차 device_protocol_endpoint (V008)
+--   - host/port, community, instanceId → 2차 device_protocol_endpoint (V009)
 --   - OID/point 정의 → devicemodel 카탈로그 (V005/V006)
 --   - parent_device_id, collection_script → 6차 이후 (V010+)
 --   - attributes JSON 컬럼 금지

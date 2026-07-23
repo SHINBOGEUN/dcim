@@ -14,6 +14,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import static net.vivans.dcim.support.AuthTestSupport.bearerToken;
 import static net.vivans.dcim.support.AuthTestSupport.loginAndGetAccessToken;
+import static org.hamcrest.Matchers.hasSize;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -344,6 +346,129 @@ class DeviceProtocolEndpointControllerIntegrationTest {
                                 """.formatted(snmpId)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error").value("endpoint already exists for this protocol"));
+    }
+
+    @Test
+    void getEndpoints_returnsEndpointsOrderedById() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "endpoint-list-user", "password123");
+        Integer protocolGroupId = findOrCreateCodeGroup(accessToken, "PROTOCOL_TYPE", "Protocol Type");
+        Integer snmpId = findOrCreateCommonCode(accessToken, protocolGroupId, "snmp", "SNMP", 1);
+        Integer modbusId = findOrCreateCommonCode(accessToken, protocolGroupId, "modbus", "Modbus", 2);
+        Integer modelId = createDeviceModelWithProtocols(
+                accessToken, "AP8959-LIST", "APC", snmpId, modbusId);
+        int deviceId = createDevice(accessToken, modelId, "PDU-list");
+        int snmpEndpointId = createEndpoint(accessToken, deviceId, snmpId, "192.168.1.10", 161);
+        int modbusEndpointId = createEndpoint(accessToken, deviceId, modbusId, "192.168.1.10", 502);
+
+        mockMvc.perform(get("/api/manager/devices/{deviceId}/endpoints", deviceId)
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(2)))
+                .andExpect(jsonPath("$.data[0].id").value(snmpEndpointId))
+                .andExpect(jsonPath("$.data[0].protocolCode").value("snmp"))
+                .andExpect(jsonPath("$.data[0].host").value("192.168.1.10"))
+                .andExpect(jsonPath("$.data[0].port").value(161))
+                .andExpect(jsonPath("$.data[1].id").value(modbusEndpointId))
+                .andExpect(jsonPath("$.data[1].protocolCode").value("modbus"))
+                .andExpect(jsonPath("$.data[1].port").value(502));
+    }
+
+    @Test
+    void getEndpoints_whenEmpty_returnsEmptyList() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "endpoint-list-empty", "password123");
+        Integer snmpId = snmpProtocolTypeId(accessToken);
+        Integer modelId = createDeviceModel(accessToken, "AP8959-LIST-EMPTY", "APC", snmpId);
+        int deviceId = createDevice(accessToken, modelId, "PDU-list-empty");
+
+        mockMvc.perform(get("/api/manager/devices/{deviceId}/endpoints", deviceId)
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(0)));
+    }
+
+    @Test
+    void getEndpoints_whenDeviceNotFound_returnsNotFound() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "endpoint-list-device-nf", "password123");
+
+        mockMvc.perform(get("/api/manager/devices/{deviceId}/endpoints", 999999)
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("Device not found: 999999"));
+    }
+
+    @Test
+    void getEndpoint_returnsEndpoint() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "endpoint-get-user", "password123");
+        Integer snmpId = snmpProtocolTypeId(accessToken);
+        Integer modelId = createDeviceModel(accessToken, "AP8959-GET", "APC", snmpId);
+        int deviceId = createDevice(accessToken, modelId, "PDU-get");
+        int endpointId = createEndpoint(accessToken, deviceId, snmpId, "192.168.1.10", 161);
+
+        mockMvc.perform(get("/api/manager/devices/{deviceId}/endpoints/{endpointId}", deviceId, endpointId)
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(endpointId))
+                .andExpect(jsonPath("$.data.deviceId").value(deviceId))
+                .andExpect(jsonPath("$.data.protocolTypeId").value(snmpId))
+                .andExpect(jsonPath("$.data.protocolCode").value("snmp"))
+                .andExpect(jsonPath("$.data.host").value("192.168.1.10"))
+                .andExpect(jsonPath("$.data.port").value(161))
+                .andExpect(jsonPath("$.data.enabled").value(true));
+    }
+
+    @Test
+    void getEndpoint_whenNotFound_returnsNotFound() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "endpoint-get-nf", "password123");
+        Integer snmpId = snmpProtocolTypeId(accessToken);
+        Integer modelId = createDeviceModel(accessToken, "AP8959-GET-NF", "APC", snmpId);
+        int deviceId = createDevice(accessToken, modelId, "PDU-get-nf");
+
+        mockMvc.perform(get("/api/manager/devices/{deviceId}/endpoints/{endpointId}", deviceId, 999999)
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("DeviceProtocolEndpoint not found: 999999"));
+    }
+
+    @Test
+    void deleteEndpoint_deletesAndReturnsId() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "endpoint-delete-user", "password123");
+        Integer snmpId = snmpProtocolTypeId(accessToken);
+        Integer modelId = createDeviceModel(accessToken, "AP8959-DEL", "APC", snmpId);
+        int deviceId = createDevice(accessToken, modelId, "PDU-del");
+        int endpointId = createEndpoint(accessToken, deviceId, snmpId, "192.168.1.10", 161);
+
+        mockMvc.perform(delete("/api/manager/devices/{deviceId}/endpoints/{endpointId}", deviceId, endpointId)
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").value(endpointId));
+
+        mockMvc.perform(get("/api/manager/devices/{deviceId}/endpoints/{endpointId}", deviceId, endpointId)
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("DeviceProtocolEndpoint not found: " + endpointId));
+    }
+
+    @Test
+    void deleteEndpoint_whenNotFound_returnsNotFound() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "endpoint-delete-nf", "password123");
+        Integer snmpId = snmpProtocolTypeId(accessToken);
+        Integer modelId = createDeviceModel(accessToken, "AP8959-DEL-NF", "APC", snmpId);
+        int deviceId = createDevice(accessToken, modelId, "PDU-del-nf");
+
+        mockMvc.perform(delete("/api/manager/devices/{deviceId}/endpoints/{endpointId}", deviceId, 999999)
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("DeviceProtocolEndpoint not found: 999999"));
+    }
+
+    @Test
+    void deleteEndpoint_whenDeviceNotFound_returnsNotFound() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "endpoint-delete-device-nf", "password123");
+
+        mockMvc.perform(delete("/api/manager/devices/{deviceId}/endpoints/{endpointId}", 999999, 1)
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("Device not found: 999999"));
     }
 
     private Integer snmpProtocolTypeId(String accessToken) throws Exception {
