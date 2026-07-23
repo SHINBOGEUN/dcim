@@ -16,17 +16,17 @@
 | **DeviceModel** | 장비 제품 모델 (SKU/제품군) |
 | **DeviceModelProtocol** | 모델 ↔ `PROTOCOL_TYPE` 연결. SNMP는 `protocolCode = snmp` |
 | **DeviceModelSnmpPoint** | SNMP 프로토콜 연결 1건 아래의 **수집 point 정의** (OID 템플릿) |
-| **Device** (향후) | 실제 장비. `ip`, `port`, `instanceId` 등 **인스턴스별 값** 보유 |
+| **Device** | 실제 장비. host/port는 [endpoint](../device/DEVICE_ENDPOINT_API.md), SNMP 전용 값은 확장 테이블(예정) |
 
 SNMP 수집에 필요한 정보는 두 층으로 나뉩니다.
 
 | 층 | 저장 위치 | 예시 |
 |----|-----------|------|
 | **모델 카탈로그** | `device_model_snmp_point` | point별 OID 패턴, `전압`, `V` |
-| **장비 인스턴스** | `device` + snmp 설정 (향후) | `192.168.1.10`, `161`, `instanceId = 2` |
+| **장비 인스턴스** | `devices` + `device_protocol_endpoint` (+ snmp 확장 예정) | `192.168.1.10`, `161`, `instanceId = 2` |
 
 모델에는 **name + OID(또는 OID 템플릿)** 를 미리 정의해 두고,  
-장비 등록·스크립트 생성 시 `ip`, `port`, `instanceId`를 합쳐 최종 OID를 만듭니다.
+장비 등록·스크립트 생성 시 `host`, `port`, `instanceId`를 합쳐 최종 OID를 만듭니다.
 
 ### 1.1 OID 패턴
 
@@ -95,7 +95,7 @@ oid               = 1.3.6.1.4.1.12345.10.1.0
 ```text
 requires_instance = true (1)
 oid               = 1.3.6.1.4.1.12345.{instanceId}.10.1.0
-device.instanceId = 3   ← 장비 테이블(향후)에 저장
+device.instanceId = 3   ← `device_endpoint_snmp.instance_id` (예정)에 저장
 → 최종 OID: 1.3.6.1.4.1.12345.3.10.1.0
 ```
 
@@ -352,14 +352,15 @@ OID 숫자는 **예시**이며, 실제 vendor MIB에 맞게 조정합니다.
 ```
 입력:
   - device_model_snmp_point[]  (id 순)
-  - device.ip, device.port, device.instanceId
+  - endpoint.host, endpoint.port
+  - snmp.instanceId (device_endpoint_snmp, 예정)
 
 처리:
   for point in points where enabled:
     oid = point.oid
     if point.requiresInstance:
-      oid = oid.replace("{instanceId}", device.instanceId)
-    emit collect(ip, port, oid, point.name)
+      oid = oid.replace("{instanceId}", snmp.instanceId)
+    emit collect(host, port, oid, point.name)
 
 출력:
   - 수집 스크립트 / 설정 JSON
@@ -369,16 +370,21 @@ V2에서 `GET .../snmp-points/script-template?deviceId=` export API 검토.
 
 ---
 
-## 10. 향후 범위 (device 모듈)
+## 10. device 모듈 연동
 
-| 항목 | 저장 위치 | 비고 |
+> 장비 본체: [DEVICE_API.md](../device/DEVICE_API.md)  
+> host/port 공통 전송층: [DEVICE_ENDPOINT_API.md](../device/DEVICE_ENDPOINT_API.md) (V009 ✅)  
+> SNMP 전용 확장: `device_endpoint_snmp` (예정)
+
+| 항목 | 저장 위치 | 상태 |
 |------|-----------|------|
-| `ip`, `port` | `device_snmp_config` (예정) | 장비별 |
-| `instanceId` | `device_snmp_config` (예정) | OID 템플릿 치환용 **실제 값** |
-| `community`, `version` | `device_snmp_config` (예정) | 향후 추가 |
+| `host`, `port` | `device_protocol_endpoint` | ✅ |
+| `instanceId` | `device_endpoint_snmp.instance_id` | ⬜ 예정 |
+| `community`, `version` | `device_endpoint_snmp` | ⬜ 예정 |
 
 모델 API는 **카탈로그(무엇을 어떤 OID로 읽을지)** 만 담당하고,  
-연결 정보·치환 값은 device 모듈에서 관리합니다.
+연결 정보·치환 값은 device 모듈(endpoint + 확장)에서 관리합니다.  
+(`device_snmp_config` 단독 테이블은 쓰지 않음 — [DEVICE_ARCHITECTURE §2](../device/DEVICE_ARCHITECTURE.md))
 
 ---
 
@@ -403,7 +409,7 @@ V2에서 `GET .../snmp-points/script-template?deviceId=` export API 검토.
 | 도메인 | `DeviceModelSnmpPoint` ✅ |
 | Application | `DeviceModelSnmpPointQueryService` ✅ |
 | API | sub-resource CRUD ✅ |
-| device 연동 | `instanceId`, ip/port — 미구현 |
+| device 연동 | host/port — ✅ endpoint / instanceId·community — ⬜ snmp 확장 |
 | script export | — 미구현 |
 
 ---
@@ -414,3 +420,4 @@ V2에서 `GET .../snmp-points/script-template?deviceId=` export API 검토.
 |------|------|
 | 2026-07-10 | 최초 작성 |
 | 2026-07-21 | CRUD API 구현 완료 (등록·수정·목록·단건·삭제) |
+| 2026-07-23 | device 연동 경로를 `device_protocol_endpoint`(+ snmp 확장)로 정정 (`device_snmp_config` 폐기) |

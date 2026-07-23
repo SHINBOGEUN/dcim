@@ -38,7 +38,7 @@ class DeviceModelSnmpPointControllerIntegrationTest {
         String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "snmp-point-create-user", "password123");
         Integer groupId = createCodeGroup(accessToken, "PROTOCOL_TYPE", "Protocol Type");
         Integer snmpId = createCommonCode(accessToken, groupId, "snmp", "SNMP", 1);
-
+        Integer deviceTypeId = createModelType(accessToken);
         String modelResponse = mockMvc.perform(post("/api/manager/device-models")
                         .header("Authorization", bearerToken(accessToken))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -46,11 +46,12 @@ class DeviceModelSnmpPointControllerIntegrationTest {
                                 {
                                   "name": "CDU-100",
                                   "manufacturer": "Vivans",
+                                  "deviceTypeId": %d,
                                   "protocols": [
                                     { "protocolTypeId": %d }
                                   ]
                                 }
-                                """.formatted(snmpId)))
+                                """.formatted(deviceTypeId, snmpId)))
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse()
@@ -84,7 +85,7 @@ class DeviceModelSnmpPointControllerIntegrationTest {
         String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "snmp-point-list-user", "password123");
         Integer groupId = createCodeGroup(accessToken, "PROTOCOL_TYPE", "Protocol Type");
         Integer snmpId = createCommonCode(accessToken, groupId, "snmp", "SNMP", 1);
-
+        Integer deviceTypeId = createModelType(accessToken);
         String modelResponse = mockMvc.perform(post("/api/manager/device-models")
                         .header("Authorization", bearerToken(accessToken))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -92,11 +93,12 @@ class DeviceModelSnmpPointControllerIntegrationTest {
                                 {
                                   "name": "CDU-LIST",
                                   "manufacturer": "Vivans",
+                                  "deviceTypeId": %d,
                                   "protocols": [
                                     { "protocolTypeId": %d }
                                   ]
                                 }
-                                """.formatted(snmpId)))
+                                """.formatted(deviceTypeId, snmpId)))
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse()
@@ -142,7 +144,7 @@ class DeviceModelSnmpPointControllerIntegrationTest {
         String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "snmp-point-get-user", "password123");
         Integer groupId = createCodeGroup(accessToken, "PROTOCOL_TYPE", "Protocol Type");
         Integer snmpId = createCommonCode(accessToken, groupId, "snmp", "SNMP", 1);
-
+        Integer deviceTypeId = createModelType(accessToken);
         String modelResponse = mockMvc.perform(post("/api/manager/device-models")
                         .header("Authorization", bearerToken(accessToken))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -150,11 +152,12 @@ class DeviceModelSnmpPointControllerIntegrationTest {
                                 {
                                   "name": "CDU-GET",
                                   "manufacturer": "Vivans",
+                                  "deviceTypeId": %d,
                                   "protocols": [
                                     { "protocolTypeId": %d }
                                   ]
                                 }
-                                """.formatted(snmpId)))
+                                """.formatted(deviceTypeId, snmpId)))
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse()
@@ -199,7 +202,7 @@ class DeviceModelSnmpPointControllerIntegrationTest {
         String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "snmp-point-get-nf-user", "password123");
         Integer groupId = createCodeGroup(accessToken, "PROTOCOL_TYPE", "Protocol Type");
         Integer snmpId = createCommonCode(accessToken, groupId, "snmp", "SNMP", 1);
-
+        Integer deviceTypeId = createModelType(accessToken);
         String modelResponse = mockMvc.perform(post("/api/manager/device-models")
                         .header("Authorization", bearerToken(accessToken))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -207,11 +210,12 @@ class DeviceModelSnmpPointControllerIntegrationTest {
                                 {
                                   "name": "CDU-GET-NF",
                                   "manufacturer": "Vivans",
+                                  "deviceTypeId": %d,
                                   "protocols": [
                                     { "protocolTypeId": %d }
                                   ]
                                 }
-                                """.formatted(snmpId)))
+                                """.formatted(deviceTypeId, snmpId)))
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse()
@@ -233,7 +237,7 @@ class DeviceModelSnmpPointControllerIntegrationTest {
         String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "snmp-point-update-user", "password123");
         Integer groupId = createCodeGroup(accessToken, "PROTOCOL_TYPE", "Protocol Type");
         Integer snmpId = createCommonCode(accessToken, groupId, "snmp", "SNMP", 1);
-
+        Integer deviceTypeId = createModelType(accessToken);
         String modelResponse = mockMvc.perform(post("/api/manager/device-models")
                         .header("Authorization", bearerToken(accessToken))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -241,11 +245,12 @@ class DeviceModelSnmpPointControllerIntegrationTest {
                                 {
                                   "name": "CDU-200",
                                   "manufacturer": "Vivans",
+                                  "deviceTypeId": %d,
                                   "protocols": [
                                     { "protocolTypeId": %d }
                                   ]
                                 }
-                                """.formatted(snmpId)))
+                                """.formatted(deviceTypeId, snmpId)))
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse()
@@ -302,7 +307,7 @@ class DeviceModelSnmpPointControllerIntegrationTest {
         String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "snmp-point-update-nf-user", "password123");
         Integer groupId = createCodeGroup(accessToken, "PROTOCOL_TYPE", "Protocol Type");
         Integer snmpId = createCommonCode(accessToken, groupId, "snmp", "SNMP", 1);
-
+        Integer deviceTypeId = createModelType(accessToken);
         String modelResponse = mockMvc.perform(post("/api/manager/device-models")
                         .header("Authorization", bearerToken(accessToken))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -310,11 +315,12 @@ class DeviceModelSnmpPointControllerIntegrationTest {
                                 {
                                   "name": "CDU-300",
                                   "manufacturer": "Vivans",
+                                  "deviceTypeId": %d,
                                   "protocols": [
                                     { "protocolTypeId": %d }
                                   ]
                                 }
-                                """.formatted(snmpId)))
+                                """.formatted(deviceTypeId, snmpId)))
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse()
@@ -343,7 +349,7 @@ class DeviceModelSnmpPointControllerIntegrationTest {
         String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "snmp-point-delete-user", "password123");
         Integer groupId = createCodeGroup(accessToken, "PROTOCOL_TYPE", "Protocol Type");
         Integer snmpId = createCommonCode(accessToken, groupId, "snmp", "SNMP", 1);
-
+        Integer deviceTypeId = createModelType(accessToken);
         String modelResponse = mockMvc.perform(post("/api/manager/device-models")
                         .header("Authorization", bearerToken(accessToken))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -351,11 +357,12 @@ class DeviceModelSnmpPointControllerIntegrationTest {
                                 {
                                   "name": "CDU-DELETE",
                                   "manufacturer": "Vivans",
+                                  "deviceTypeId": %d,
                                   "protocols": [
                                     { "protocolTypeId": %d }
                                   ]
                                 }
-                                """.formatted(snmpId)))
+                                """.formatted(deviceTypeId, snmpId)))
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse()
@@ -401,7 +408,7 @@ class DeviceModelSnmpPointControllerIntegrationTest {
         String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "snmp-point-delete-nf-user", "password123");
         Integer groupId = createCodeGroup(accessToken, "PROTOCOL_TYPE", "Protocol Type");
         Integer snmpId = createCommonCode(accessToken, groupId, "snmp", "SNMP", 1);
-
+        Integer deviceTypeId = createModelType(accessToken);
         String modelResponse = mockMvc.perform(post("/api/manager/device-models")
                         .header("Authorization", bearerToken(accessToken))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -409,11 +416,12 @@ class DeviceModelSnmpPointControllerIntegrationTest {
                                 {
                                   "name": "CDU-DELETE-NF",
                                   "manufacturer": "Vivans",
+                                  "deviceTypeId": %d,
                                   "protocols": [
                                     { "protocolTypeId": %d }
                                   ]
                                 }
-                                """.formatted(snmpId)))
+                                """.formatted(deviceTypeId, snmpId)))
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse()
@@ -433,6 +441,7 @@ class DeviceModelSnmpPointControllerIntegrationTest {
     @Test
     void createSnmpPoint_whenProtocolIsNotSnmp_returnsBadRequest() throws Exception {
         String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "snmp-point-mqtt-user", "password123");
+        Integer deviceTypeId = createModelType(accessToken);
         Integer groupId = createCodeGroup(accessToken, "PROTOCOL_TYPE", "Protocol Type");
         Integer mqttId = createCommonCode(accessToken, groupId, "mqtt", "MQTT", 1);
 
@@ -443,11 +452,12 @@ class DeviceModelSnmpPointControllerIntegrationTest {
                                 {
                                   "name": "LHT65N-PIR",
                                   "manufacturer": "Dragino",
+                                  "deviceTypeId": %d,
                                   "protocols": [
                                     { "protocolTypeId": %d }
                                   ]
                                 }
-                                """.formatted(mqttId)))
+                                """.formatted(deviceTypeId, mqttId)))
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse()
@@ -467,6 +477,11 @@ class DeviceModelSnmpPointControllerIntegrationTest {
                                 """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("protocol must be snmp"));
+    }
+
+    private Integer createModelType(String accessToken) throws Exception {
+        Integer groupId = createCodeGroup(accessToken, "MODEL_TYPE", "Model Type");
+        return createCommonCode(accessToken, groupId, "CDU", "CDU", 1);
     }
 
     private Integer createCodeGroup(String accessToken, String groupKey, String groupName) throws Exception {

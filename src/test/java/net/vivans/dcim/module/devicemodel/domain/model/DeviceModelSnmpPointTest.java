@@ -114,7 +114,7 @@ class DeviceModelSnmpPointTest {
 
     @Test
     void create_withNonSnmpProtocol_throws() {
-        DeviceModel model = DeviceModel.create("PDU-3P", "Vendor", null);
+        DeviceModel model = DeviceModel.create("PDU-3P", "Vendor", modelType(), null);
         CommonCode modbus = protocolType("modbus", "Modbus");
         DeviceModelProtocol protocol = DeviceModelProtocol.of(model, modbus);
 
@@ -156,8 +156,13 @@ class DeviceModelSnmpPointTest {
     }
 
     private DeviceModelProtocol snmpProtocol() {
-        DeviceModel model = DeviceModel.create("IRCR01K41CDU", "Vendor", null);
+        DeviceModel model = DeviceModel.create("IRCR01K41CDU", "Vendor", modelType(), null);
         return DeviceModelProtocol.of(model, protocolType("snmp", "SNMP"));
+    }
+
+    private CommonCode modelType() {
+        CodeGroup group = CodeGroup.createCodeGroup("MODEL_TYPE", "Model Type");
+        return CommonCode.createCommonCode(group, "CDU", "CDU", 1);
     }
 
     private CommonCode protocolType(String code, String name) {

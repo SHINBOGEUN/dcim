@@ -54,6 +54,7 @@ erDiagram
         int id PK "AUTO_INCREMENT"
         varchar name UK "모델/제품명"
         varchar manufacturer UK "제조사"
+        int device_type_id FK "common_code.id (MODEL_TYPE)"
         varchar description "설명 (nullable)"
         timestamp created_dt "생성 시각"
         timestamp updated_dt "수정 시각"
@@ -79,12 +80,26 @@ erDiagram
         timestamp updated_dt "수정 시각"
     }
 
+    devices {
+        int id PK "AUTO_INCREMENT"
+        int model_id FK "device_model.id"
+        char location_node_code FK "NOT NULL, 미지정=UNASSIGNED"
+        varchar name UK "현장 표시명"
+        varchar description "설명 nullable"
+        tinyint enabled "CHECK 0/1, 기본 1"
+        timestamp created_dt "생성 시각"
+        timestamp updated_dt "수정 시각"
+    }
+
     code_group ||--o{ common_code : "group_id"
     common_code ||--o{ location_node : "location_type_id"
     location_node ||--o{ location_node : "parent_code"
+    common_code ||--o{ device_model : "device_type_id"
     device_model ||--o{ device_model_protocol : "model_id"
     common_code ||--o{ device_model_protocol : "protocol_type_id"
     device_model_protocol ||--o{ device_model_snmp_point : "model_protocol_id"
+    device_model ||--o{ devices : "model_id"
+    location_node ||--o{ devices : "location_node_code"
 ```
 
 | 모듈 | 테이블 | 관계 |
@@ -93,10 +108,10 @@ erDiagram
 | common | `code_group` | 1 |
 | common | `common_code` | N → `code_group` |
 | location | `location_node` | N → `common_code` (LOCATION_TYPE), 자기참조 `parent_code` |
-| devicemodel | `device_model` | 장비 SKU 카탈로그 (UK: name+manufacturer) |
+| devicemodel | `device_model` | N → `common_code` (MODEL_TYPE), UK: name+manufacturer |
 | devicemodel | `device_model_protocol` | 모델 ↔ PROTOCOL_TYPE N:M (UK: model_id+protocol_type_id) |
 | devicemodel | `device_model_snmp_point` | ✅ SNMP point (UK: model_protocol_id+name) |
-| device | `devices` | ⏳ 스켈레톤만 (DDL·API 미구현) |
+| device | `devices` | ⏳ 장비 인스턴스 (UK: location_node_code+name, 미지정=`UNASSIGNED`) |
 
 ---
 
@@ -233,7 +248,9 @@ erDiagram
 
 | 컬럼 | 설명 |
 |------|------|
-| `devices.location_node_code` | 장비가 속한 위치 노드 FK → `location_node(code)` (`CHAR(10)`, CONTAINER/ROW/RACK 등 모든 유형 가능) |
+| `devices.location_node_code` | 장비 위치 FK → `location_node(code)` (**NOT NULL**. 미지정 시 시드 노드 `UNASSIGNED`) |
+
+> API·DDL: [DEVICE_API.md](device/DEVICE_API.md), [V007__create_devices_table.sql](../sql/history/V007__create_devices_table.sql)
 
 **트리 규칙 (애플리케이션)**
 
@@ -242,14 +259,16 @@ erDiagram
 | 루트 노드 | `parent_code IS NULL` |
 | 리프 노드 | `parent_code = 이 노드 code` 인 행이 없음 |
 | 위치 유형 | `location_type_id` → `common_code` 중 `group_key = 'LOCATION_TYPE'`만 허용 (DB FK는 `common_code`만 검증) |
-| `code` | 생성 시 10자 Base62 자동 부여, 변경 불가 |
+| `code` | 일반: 생성 시 10자 Base62. **시스템: `UNASSIGNED` 고정 시드** |
+| `UNASSIGNED` | 삭제·이름 변경 금지. 장비 선등록 시 임시 위치 |
 | 순환 참조 | 금지 (애플리케이션 검증) |
 | 자식 있는 노드 삭제 | 리프만 단건 삭제 / 서브트리 cascade 삭제 API로 분리 ([API 설계](../location/LOCATION_NODE_API.md#5-삭제-api)) |
 | 유형 삽입 시 재구성 | 중간 유형 등록 시 기존 직접 자식 재부모화 ([API 설계](../location/LOCATION_NODE_API.md#자식-등록-시-트리-재구성-핵심-규칙)) |
 
-**예시 데이터**
+**시드 데이터 (V004)**
 
-`LOCATION_TYPE` common_code: `CONTAINER`, `ZONE`, `ROW`, `RACK` …
+`LOCATION_TYPE`: `UNASSIGNED`, `CONTAINER`, `ZONE`, `ROW`, `RACK`  
+`location_node`: `code=UNASSIGNED`, `name=미배정`, `parent_code=NULL`
 
 | code | parent_code | location_type_id | name |
 |------|-------------|------------------|------|
@@ -271,18 +290,25 @@ erDiagram
 | `id` | INT | N | PK | 모델 ID (AUTO_INCREMENT) |
 | `name` | VARCHAR(255) | N | UK | 모델/제품명 |
 | `manufacturer` | VARCHAR(255) | N | UK | 제조사 |
+| `device_type_id` | INT | N | FK | `common_code.id` (**MODEL_TYPE**만) |
 | `description` | VARCHAR(1000) | Y | | 설명 |
 | `created_dt` | TIMESTAMP(6) | Y | | 최초 생성 시각 |
 | `updated_dt` | TIMESTAMP(6) | Y | | 최종 수정 시각 |
 
-\* UK: `(name, manufacturer)`
+\* UK: `(name, manufacturer)`  
+\* 장비 유형은 모델에만 두고, `devices`에는 type FK를 두지 않음. 컬럼명은 `device_type_id`, 그룹 키는 `MODEL_TYPE`.
 
 **엔티티:** `module/devicemodel/domain/model/DeviceModel.java`  
 **API 설계:** [DEVICE_MODEL_API.md](devicemodel/DEVICE_MODEL_API.md)  
 **상속:** `BaseEntity`  
-**연관:** `@OneToMany` → `DeviceModelProtocol` (`mappedBy = "deviceModel"`, cascade ALL)
+**연관:** `@ManyToOne` → `CommonCode` (`device_type_id`), `@OneToMany` → `DeviceModelProtocol` (`mappedBy = "deviceModel"`, cascade ALL)
 
-**DDL:** [V005__create_device_model_tables.sql](../sql/history/V005__create_device_model_tables.sql)
+**DDL:** [V005__create_device_model_tables.sql](../sql/history/V005__create_device_model_tables.sql) (신규)  
+**마이그레이션:** [V008__add_device_model_device_type_id.sql](../sql/history/V008__add_device_model_device_type_id.sql) (이미 `device_model`이 있는 DB)
+
+| 제약 | 대상 | ON DELETE | ON UPDATE |
+|------|------|-----------|-----------|
+| `fk_device_model_device_type_id` | `common_code(id)` | RESTRICT | CASCADE |
 
 **범위**
 
@@ -426,6 +452,143 @@ device_model (1) ──< device_model_protocol (N) >── common_code (PROTOCOL
 
 ---
 
+### `devices` — 장비 인스턴스 (device 모듈, 1차)
+
+**구현 상태:** ✅ 구현됨
+
+> 4층 아키텍처 **② 인스턴스층** — host/port·프로토콜 설정은 V009 `device_protocol_endpoint`에서 분리.  
+> 설계: [DEVICE_ARCHITECTURE.md](device/DEVICE_ARCHITECTURE.md) · [DEVICE_API.md](device/DEVICE_API.md)  
+> 위치 미지정: V004 시드 노드 **`UNASSIGNED`** 참조 (NULL 아님)
+
+| 컬럼 | 타입 | NULL | 키 | 기본값 | 설명 |
+|------|------|------|-----|--------|------|
+| `id` | INT | N | PK | AUTO_INCREMENT | 장비 ID (API·Influx `device_id`) |
+| `model_id` | INT | N | FK | | `device_model.id` |
+| `location_node_code` | CHAR(10) | N | FK, UK | | `location_node.code` (미지정=`UNASSIGNED`) |
+| `name` | VARCHAR(255) | N | UK | | 현장 표시명 |
+| `description` | VARCHAR(1000) | Y | | | 설명 |
+| `enabled` | TINYINT(1) | N | | `1` | 사용 여부 (CHECK 0/1) |
+| `created_dt` | TIMESTAMP(6) | Y | | | |
+| `updated_dt` | TIMESTAMP(6) | Y | | | |
+
+**UK:** `(location_node_code, name)` — 같은 위치 아래 표시명 중복 불가
+
+**엔티티:** `module/device/domain/model/Device.java` ✅  
+**API 설계:** [DEVICE_API.md](device/DEVICE_API.md)  
+**상속:** `BaseEntity`  
+**연관:**
+- `@ManyToOne` → `DeviceModel` (`model_id`)
+- `@ManyToOne` → `LocationNode` (`location_node_code`, required)
+
+**DDL:** [V007__create_devices_table.sql](../sql/history/V007__create_devices_table.sql)
+
+**FK 제약**
+
+| FK | 참조 | ON DELETE | ON UPDATE |
+|----|------|-----------|-----------|
+| `fk_devices_model_id` | `device_model(id)` | RESTRICT | CASCADE |
+| `fk_devices_location_node_code` | `location_node(code)` | RESTRICT | CASCADE |
+
+**관계도**
+
+```mermaid
+erDiagram
+    device_model {
+        int id PK
+        varchar name
+        varchar manufacturer
+    }
+
+    location_node {
+        char code PK
+        varchar name
+    }
+
+    devices {
+        int id PK
+        int model_id FK
+        char location_node_code FK
+        varchar name
+        tinyint enabled
+    }
+
+    device_model ||--o{ devices : "model_id"
+    location_node ||--o{ devices : "location_node_code"
+```
+
+---
+
+### `device_protocol_endpoint` — 프로토콜 엔드포인트 (공통 전송층)
+
+**구현 상태:** ✅ 구현됨 (공통 테이블만 — snmp/modbus 확장 제외)
+
+> 4층 아키텍처 **③ 엔드포인트층** — host/port.  
+> API: [DEVICE_ENDPOINT_API.md](device/DEVICE_ENDPOINT_API.md)  
+> DDL: [V009__create_device_protocol_endpoint.sql](../sql/history/V009__create_device_protocol_endpoint.sql)
+
+| 컬럼 | 타입 | NULL | 키 | 기본값 | 설명 |
+|------|------|------|-----|--------|------|
+| `id` | INT | N | PK | AUTO_INCREMENT | 엔드포인트 ID |
+| `device_id` | INT | N | FK, UK | | `devices.id` |
+| `protocol_type_id` | INT | N | FK, UK | | `common_code.id` (`PROTOCOL_TYPE`) |
+| `host` | VARCHAR(255) | N | | | IP 또는 hostname |
+| `port` | INT | N | | | 포트 (CHECK 1~65535) |
+| `enabled` | TINYINT(1) | N | | `1` | 사용 여부 |
+| `created_dt` | TIMESTAMP(6) | Y | | | |
+| `updated_dt` | TIMESTAMP(6) | Y | | | |
+
+**UK:** `(device_id, protocol_type_id)` — 장비당 프로토콜 1엔드포인트
+
+**엔티티:** `module/device/domain/model/DeviceProtocolEndpoint.java` ✅  
+**상속:** `BaseEntity`  
+**연관:**
+- `@ManyToOne` → `Device` (`device_id`)
+- `@ManyToOne` → `CommonCode` (`protocol_type_id`)
+
+**FK 제약**
+
+| FK | 참조 | ON DELETE | ON UPDATE |
+|----|------|-----------|-----------|
+| `fk_device_protocol_endpoint_device_id` | `devices(id)` | CASCADE | CASCADE |
+| `fk_device_protocol_endpoint_protocol_type_id` | `common_code(id)` | RESTRICT | CASCADE |
+
+**관계도**
+
+```mermaid
+erDiagram
+    devices {
+        int id PK
+        varchar name
+    }
+
+    common_code {
+        int id PK
+        varchar code
+    }
+
+    device_protocol_endpoint {
+        int id PK
+        int device_id FK
+        int protocol_type_id FK
+        varchar host
+        int port
+        tinyint enabled
+    }
+
+    devices ||--o{ device_protocol_endpoint : "device_id"
+    common_code ||--o{ device_protocol_endpoint : "protocol_type_id"
+```
+
+**이후 (본 테이블에 넣지 않음)**
+
+| 테이블 | 역할 | 상태 |
+|--------|------|------|
+| `device_endpoint_snmp` | community, instanceId, version | ⬜ |
+| `device_endpoint_modbus` | unit_id, timeout_ms | ⬜ |
+| `devices.parent_device_id` | 장비 계층 | ⬜ V011+ |
+
+---
+
 ## boolean 컬럼 규칙 (프로젝트 공통)
 
 플래그성 컬럼은 **`boolean` (`true` / `false`)** 을 사용합니다.  
@@ -524,6 +687,19 @@ device_model (1) ──< device_model_protocol (N) >── common_code (PROTOCOL
 | `requires_instance` | `requiresInstance` | `DeviceModelSnmpPoint` (`boolean`) |
 | `unit` | `unit` | `DeviceModelSnmpPoint` |
 | `enabled` | `enabled` | `DeviceModelSnmpPoint` (`boolean`) |
+| `created_dt` | `createdDt` | `BaseEntity` |
+| `updated_dt` | `updatedDt` | `BaseEntity` |
+
+### device — `Device`
+
+| DB 컬럼 | Java 필드 | 출처 |
+|---------|-----------|------|
+| `id` | `id` | `Device` |
+| `model_id` | `deviceModel` | `Device` (`@ManyToOne`) |
+| `location_node_code` | `locationNode` | `Device` (`@ManyToOne`, required) |
+| `name` | `name` | `Device` |
+| `description` | `description` | `Device` |
+| `enabled` | `enabled` | `Device` (`boolean`) |
 | `created_dt` | `createdDt` | `BaseEntity` |
 | `updated_dt` | `updatedDt` | `BaseEntity` |
 

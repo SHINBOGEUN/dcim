@@ -4,12 +4,14 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import net.vivans.dcim.module.common.domain.model.CommonCode;
 import net.vivans.dcim.module.common.domain.repository.CommonCodeRepository;
+import net.vivans.dcim.module.device.domain.repository.DeviceRepository;
 import net.vivans.dcim.module.devicemodel.api.dto.DeviceModelCreateRequest;
 import net.vivans.dcim.module.devicemodel.api.dto.DeviceModelProtocolRequest;
 import net.vivans.dcim.module.devicemodel.api.dto.DeviceModelResponse;
 import net.vivans.dcim.module.devicemodel.domain.model.DeviceModel;
 import net.vivans.dcim.module.devicemodel.domain.model.DeviceModelProtocol;
 import net.vivans.dcim.module.devicemodel.domain.repository.DeviceModelRepository;
+import net.vivans.dcim.shared.exception.ConflictException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,17 +26,22 @@ import java.util.Set;
 public class DeviceModelQueryService {
 
     private static final String PROTOCOL_TYPE_GROUP_KEY = "PROTOCOL_TYPE";
+    private static final String MODEL_TYPE_GROUP_KEY = "MODEL_TYPE";
+    private static final String DEVICE_MODEL_REFERENCED_MESSAGE = "device model is referenced by devices";
 
     private final DeviceModelRepository deviceModelRepository;
     private final CommonCodeRepository commonCodeRepository;
+    private final DeviceRepository deviceRepository;
 
     @Transactional
     public DeviceModelResponse createDeviceModel(DeviceModelCreateRequest request) {
         validateUniqueNameAndManufacturer(request.name(), request.manufacturer(), null);
 
+        CommonCode deviceType = findDeviceType(request.deviceTypeId());
         DeviceModel deviceModel = DeviceModel.create(
                 request.name(),
                 request.manufacturer(),
+                deviceType,
                 request.description()
         );
         replaceProtocolsFromRequest(deviceModel, request.protocols());
@@ -47,7 +54,8 @@ public class DeviceModelQueryService {
         DeviceModel deviceModel = findDeviceModel(id);
         validateUniqueNameAndManufacturer(request.name(), request.manufacturer(), id);
 
-        deviceModel.update(request.name(), request.manufacturer(), request.description());
+        CommonCode deviceType = findDeviceType(request.deviceTypeId());
+        deviceModel.update(request.name(), request.manufacturer(), deviceType, request.description());
         replaceProtocolsFromRequest(deviceModel, request.protocols());
 
         return DeviceModelResponse.from(deviceModelRepository.save(deviceModel));
@@ -69,6 +77,9 @@ public class DeviceModelQueryService {
     @Transactional
     public void deleteDeviceModel(Integer id) {
         DeviceModel deviceModel = findDeviceModel(id);
+        if (deviceRepository.existsByDeviceModelId(id)) {
+            throw new ConflictException(DEVICE_MODEL_REFERENCED_MESSAGE);
+        }
         deviceModelRepository.delete(deviceModel);
     }
 
@@ -128,5 +139,15 @@ public class DeviceModelQueryService {
             throw new IllegalArgumentException("protocolType must belong to PROTOCOL_TYPE group");
         }
         return protocolType;
+    }
+
+    private CommonCode findDeviceType(Integer deviceTypeId) {
+        CommonCode deviceType = commonCodeRepository.findById(deviceTypeId)
+                .orElseThrow(() -> new EntityNotFoundException("CommonCode not found: " + deviceTypeId));
+
+        if (!MODEL_TYPE_GROUP_KEY.equals(deviceType.getCodeGroup().getGroupKey())) {
+            throw new IllegalArgumentException("deviceType must belong to MODEL_TYPE group");
+        }
+        return deviceType;
     }
 }

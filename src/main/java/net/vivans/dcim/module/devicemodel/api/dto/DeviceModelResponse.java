@@ -10,6 +10,9 @@ public record DeviceModelResponse(
         Integer id,
         String name,
         String manufacturer,
+        Integer deviceTypeId,
+        String deviceTypeCode,
+        String deviceTypeName,
         String description,
         List<DeviceModelProtocolResponse> protocols
 ) {
@@ -23,6 +26,9 @@ public record DeviceModelResponse(
                 deviceModel.getId(),
                 deviceModel.getName(),
                 deviceModel.getManufacturer(),
+                deviceModel.getDeviceType().getId(),
+                deviceModel.getDeviceType().getCode(),
+                deviceModel.getDeviceType().getName(),
                 deviceModel.getDescription(),
                 protocolResponses
         );
