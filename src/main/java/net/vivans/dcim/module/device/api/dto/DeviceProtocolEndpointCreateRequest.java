@@ -7,7 +7,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 public record DeviceProtocolEndpointCreateRequest(
-        @Schema(description = "PROTOCOL_TYPE common_code ID", example = "7")
+        @Schema(description = "PROTOCOL_TYPE common_code ID", example = "9")
         @NotNull(message = "protocolTypeId is required")
         Integer protocolTypeId,
 

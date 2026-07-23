@@ -56,9 +56,36 @@ public class DeviceProtocolEndpointQueryService {
         return DeviceProtocolEndpointResponse.from(deviceProtocolEndpointRepository.save(endpoint));
     }
 
+    @Transactional
+    public DeviceProtocolEndpointResponse updateEndpoint(
+            Integer deviceId,
+            Integer endpointId,
+            DeviceProtocolEndpointCreateRequest request
+    ) {
+        Device device = findDevice(deviceId);
+        DeviceProtocolEndpoint endpoint = findEndpoint(endpointId, deviceId);
+        CommonCode protocolType = findProtocolType(request.protocolTypeId());
+        validateProtocolSupportedByModel(device, protocolType);
+
+        if (deviceProtocolEndpointRepository.existsByDeviceIdAndProtocolTypeIdAndIdNot(
+                deviceId, protocolType.getId(), endpointId)) {
+            throw new ConflictException(ENDPOINT_ALREADY_EXISTS_MESSAGE);
+        }
+
+        boolean enabled = request.enabled() == null || request.enabled();
+        endpoint.update(protocolType, request.host(), request.port(), enabled);
+        return DeviceProtocolEndpointResponse.from(deviceProtocolEndpointRepository.save(endpoint));
+    }
+
     private Device findDevice(Integer deviceId) {
         return deviceRepository.findById(deviceId)
                 .orElseThrow(() -> new EntityNotFoundException("Device not found: " + deviceId));
+    }
+
+    private DeviceProtocolEndpoint findEndpoint(Integer endpointId, Integer deviceId) {
+        return deviceProtocolEndpointRepository.findByIdAndDeviceId(endpointId, deviceId)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "DeviceProtocolEndpoint not found: " + endpointId));
     }
 
     private CommonCode findProtocolType(Integer protocolTypeId) {

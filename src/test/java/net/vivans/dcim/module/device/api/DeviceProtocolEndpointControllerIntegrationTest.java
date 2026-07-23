@@ -16,6 +16,7 @@ import static net.vivans.dcim.support.AuthTestSupport.bearerToken;
 import static net.vivans.dcim.support.AuthTestSupport.loginAndGetAccessToken;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -222,9 +223,157 @@ class DeviceProtocolEndpointControllerIntegrationTest {
                 .andExpect(jsonPath("$.error").value("Invalid value for parameter 'port'"));
     }
 
+    @Test
+    void updateEndpoint_returnsUpdatedEndpoint() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "endpoint-update-user", "password123");
+        Integer snmpId = snmpProtocolTypeId(accessToken);
+        Integer modelId = createDeviceModel(accessToken, "AP8959-UPD", "APC", snmpId);
+        int deviceId = createDevice(accessToken, modelId, "PDU-upd");
+        int endpointId = createEndpoint(accessToken, deviceId, snmpId, "192.168.1.10", 161);
+
+        mockMvc.perform(put("/api/manager/devices/{deviceId}/endpoints/{endpointId}", deviceId, endpointId)
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "protocolTypeId": %d,
+                                  "host": "10.0.0.5",
+                                  "port": 1161,
+                                  "enabled": false
+                                }
+                                """.formatted(snmpId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(endpointId))
+                .andExpect(jsonPath("$.data.deviceId").value(deviceId))
+                .andExpect(jsonPath("$.data.protocolTypeId").value(snmpId))
+                .andExpect(jsonPath("$.data.host").value("10.0.0.5"))
+                .andExpect(jsonPath("$.data.port").value(1161))
+                .andExpect(jsonPath("$.data.enabled").value(false));
+    }
+
+    @Test
+    void updateEndpoint_whenEndpointNotFound_returnsNotFound() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "endpoint-update-nf", "password123");
+        Integer snmpId = snmpProtocolTypeId(accessToken);
+        Integer modelId = createDeviceModel(accessToken, "AP8959-UPD-NF", "APC", snmpId);
+        int deviceId = createDevice(accessToken, modelId, "PDU-upd-nf");
+
+        mockMvc.perform(put("/api/manager/devices/{deviceId}/endpoints/{endpointId}", deviceId, 999999)
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "protocolTypeId": %d,
+                                  "host": "10.0.0.5",
+                                  "port": 161
+                                }
+                                """.formatted(snmpId)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("DeviceProtocolEndpoint not found: 999999"));
+    }
+
+    @Test
+    void updateEndpoint_whenDeviceNotFound_returnsNotFound() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "endpoint-update-device-nf", "password123");
+        Integer snmpId = snmpProtocolTypeId(accessToken);
+
+        mockMvc.perform(put("/api/manager/devices/{deviceId}/endpoints/{endpointId}", 999999, 1)
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "protocolTypeId": %d,
+                                  "host": "10.0.0.5",
+                                  "port": 161
+                                }
+                                """.formatted(snmpId)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("Device not found: 999999"));
+    }
+
+    @Test
+    void updateEndpoint_whenProtocolNotSupportedByModel_returnsBadRequest() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "endpoint-update-unsupported", "password123");
+        Integer snmpId = snmpProtocolTypeId(accessToken);
+        Integer modbusId = findOrCreateCommonCode(
+                accessToken,
+                findOrCreateCodeGroup(accessToken, "PROTOCOL_TYPE", "Protocol Type"),
+                "modbus",
+                "Modbus",
+                2
+        );
+        Integer modelId = createDeviceModel(accessToken, "AP8959-UPD-UNSUP", "APC", snmpId);
+        int deviceId = createDevice(accessToken, modelId, "PDU-upd-unsup");
+        int endpointId = createEndpoint(accessToken, deviceId, snmpId, "192.168.1.10", 161);
+
+        mockMvc.perform(put("/api/manager/devices/{deviceId}/endpoints/{endpointId}", deviceId, endpointId)
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "protocolTypeId": %d,
+                                  "host": "192.168.1.10",
+                                  "port": 502
+                                }
+                                """.formatted(modbusId)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("protocol not supported by device model"));
+    }
+
+    @Test
+    void updateEndpoint_withDuplicateProtocol_returnsConflict() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "endpoint-update-dup", "password123");
+        Integer protocolGroupId = findOrCreateCodeGroup(accessToken, "PROTOCOL_TYPE", "Protocol Type");
+        Integer snmpId = findOrCreateCommonCode(accessToken, protocolGroupId, "snmp", "SNMP", 1);
+        Integer modbusId = findOrCreateCommonCode(accessToken, protocolGroupId, "modbus", "Modbus", 2);
+        Integer modelId = createDeviceModelWithProtocols(
+                accessToken, "AP8959-UPD-DUP", "APC", snmpId, modbusId);
+        int deviceId = createDevice(accessToken, modelId, "PDU-upd-dup");
+        createEndpoint(accessToken, deviceId, snmpId, "192.168.1.10", 161);
+        int modbusEndpointId = createEndpoint(accessToken, deviceId, modbusId, "192.168.1.10", 502);
+
+        mockMvc.perform(put("/api/manager/devices/{deviceId}/endpoints/{endpointId}", deviceId, modbusEndpointId)
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "protocolTypeId": %d,
+                                  "host": "192.168.1.10",
+                                  "port": 161
+                                }
+                                """.formatted(snmpId)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("endpoint already exists for this protocol"));
+    }
+
     private Integer snmpProtocolTypeId(String accessToken) throws Exception {
         Integer groupId = findOrCreateCodeGroup(accessToken, "PROTOCOL_TYPE", "Protocol Type");
         return findOrCreateCommonCode(accessToken, groupId, "snmp", "SNMP", 1);
+    }
+
+    private int createEndpoint(
+            String accessToken,
+            int deviceId,
+            Integer protocolTypeId,
+            String host,
+            int port
+    ) throws Exception {
+        String response = mockMvc.perform(post("/api/manager/devices/{deviceId}/endpoints", deviceId)
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "protocolTypeId": %d,
+                                  "host": "%s",
+                                  "port": %d
+                                }
+                                """.formatted(protocolTypeId, host, port)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        return objectMapper.readTree(response).path("data").path("id").asInt();
     }
 
     private int createDevice(String accessToken, Integer modelId, String name) throws Exception {
@@ -270,6 +419,38 @@ class DeviceProtocolEndpointControllerIntegrationTest {
                                   ]
                                 }
                                 """.formatted(name, manufacturer, deviceTypeId, protocolTypeId)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        return objectMapper.readTree(response).path("data").path("id").asInt();
+    }
+
+    private Integer createDeviceModelWithProtocols(
+            String accessToken,
+            String name,
+            String manufacturer,
+            Integer protocolTypeId1,
+            Integer protocolTypeId2
+    ) throws Exception {
+        Integer modelTypeGroupId = findOrCreateCodeGroup(accessToken, "MODEL_TYPE", "Model Type");
+        Integer deviceTypeId = findOrCreateCommonCode(accessToken, modelTypeGroupId, "PDU", "PDU", 1);
+
+        String response = mockMvc.perform(post("/api/manager/device-models")
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "%s",
+                                  "manufacturer": "%s",
+                                  "deviceTypeId": %d,
+                                  "protocols": [
+                                    { "protocolTypeId": %d },
+                                    { "protocolTypeId": %d }
+                                  ]
+                                }
+                                """.formatted(name, manufacturer, deviceTypeId, protocolTypeId1, protocolTypeId2)))
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse()

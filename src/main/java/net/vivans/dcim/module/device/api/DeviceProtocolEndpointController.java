@@ -12,6 +12,7 @@ import net.vivans.dcim.shared.api.ApiResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -30,6 +31,20 @@ public class DeviceProtocolEndpointController {
             @Parameter(description = "장비 ID") @PathVariable Integer deviceId,
             @Valid @RequestBody DeviceProtocolEndpointCreateRequest request
     ) {
-        return ResponseEntity.ok(ApiResponse.ok(deviceProtocolEndpointQueryService.createEndpoint(deviceId, request)));
+        return ResponseEntity.ok(ApiResponse.ok(
+                deviceProtocolEndpointQueryService.createEndpoint(deviceId, request)));
+    }
+
+    @PutMapping("/{endpointId}")
+    @Operation(summary = "프로토콜 엔드포인트 수정 API", description = "요청 body는 등록과 동일하며 전체 교체입니다.")
+    public ResponseEntity<ApiResponse<DeviceProtocolEndpointResponse>> updateEndpoint(
+            @Parameter(description = "장비 ID") @PathVariable Integer deviceId,
+            @Parameter(description = "엔드포인트 ID") @PathVariable Integer endpointId,
+            @Valid @RequestBody DeviceProtocolEndpointCreateRequest request
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(
+                deviceProtocolEndpointQueryService.updateEndpoint(deviceId, endpointId, request)));
     }
 }
+
+
