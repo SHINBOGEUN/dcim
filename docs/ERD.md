@@ -80,6 +80,22 @@ erDiagram
         timestamp updated_dt "수정 시각"
     }
 
+    device_model_modbus_point {
+        int id PK "AUTO_INCREMENT"
+        int model_protocol_id FK "device_model_protocol.id"
+        varchar name UK "식별자·표시명"
+        varchar register_type "COIL/DISCRETE/HOLDING/INPUT"
+        varchar data_type "INT16/UINT16/INT32/UINT32/FLOAT32"
+        varchar byte_order "ABCD/CDAB/BADC/DCBA, 멀티만"
+        int address "주소 nullable (인스턴스면 NULL)"
+        tinyint requires_instance "boolean, 기본 0"
+        double scale "배율 nullable"
+        varchar unit "단위 nullable"
+        tinyint enabled "boolean, 기본 1"
+        timestamp created_dt "생성 시각"
+        timestamp updated_dt "수정 시각"
+    }
+
     devices {
         int id PK "AUTO_INCREMENT"
         int model_id FK "device_model.id"
@@ -98,6 +114,7 @@ erDiagram
     device_model ||--o{ device_model_protocol : "model_id"
     common_code ||--o{ device_model_protocol : "protocol_type_id"
     device_model_protocol ||--o{ device_model_snmp_point : "model_protocol_id"
+    device_model_protocol ||--o{ device_model_modbus_point : "model_protocol_id"
     device_model ||--o{ devices : "model_id"
     location_node ||--o{ devices : "location_node_code"
 ```
@@ -111,6 +128,7 @@ erDiagram
 | devicemodel | `device_model` | N → `common_code` (MODEL_TYPE), UK: name+manufacturer |
 | devicemodel | `device_model_protocol` | 모델 ↔ PROTOCOL_TYPE N:M (UK: model_id+protocol_type_id) |
 | devicemodel | `device_model_snmp_point` | ✅ SNMP point (UK: model_protocol_id+name) |
+| devicemodel | `device_model_modbus_point` | ⏳ Modbus point 카탈로그 (UK: model_protocol_id+name) |
 | device | `devices` | ⏳ 장비 인스턴스 (UK: location_node_code+name, 미지정=`UNASSIGNED`) |
 
 ---
