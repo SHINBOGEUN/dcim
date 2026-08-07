@@ -40,6 +40,21 @@ public class DeviceModelSnmpPointJpaRepository implements DeviceModelSnmpPointRe
     }
 
     @Override
+    public boolean existsByModelProtocolIdAndOid(Integer modelProtocolId, String oid) {
+        return springDataRepository.existsByModelProtocolIdAndOid(modelProtocolId, oid);
+    }
+
+    @Override
+    public boolean existsByModelProtocolIdAndOidAndIdNot(Integer modelProtocolId, String oid, Integer id) {
+        return springDataRepository.existsByModelProtocolIdAndOidAndIdNot(modelProtocolId, oid, id);
+    }
+
+    @Override
+    public boolean existsByModelProtocolIdAndRequiresInstanceTrue(Integer modelProtocolId) {
+        return springDataRepository.existsByModelProtocolIdAndRequiresInstanceTrue(modelProtocolId);
+    }
+
+    @Override
     public void delete(DeviceModelSnmpPoint modelSnmpPoint) {
         springDataRepository.delete(modelSnmpPoint);
     }

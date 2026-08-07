@@ -13,3 +13,9 @@ spring:
       use_sql_comment: true
       jdbc.time_zone: UTC
     open-in-view: false
+
+management:
+  influx:
+    metrics:
+      export:
+        enabled: false

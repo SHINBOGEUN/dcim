@@ -24,16 +24,16 @@ SNMP·Modbus·MQTT 모두 목적지 주소(host, port)가 필요합니다. 프�
 |----|--------|------|---------|
 | ② 인스턴스 | `devices` | 현장 1대 식별 | [DEVICE_API](./DEVICE_API.md) |
 | ③ 엔드포인트 | `device_protocol_endpoint` | host, port | **본 문서 (구현됨)** |
-| ④ 확장 | `device_endpoint_snmp` 등 | community, instanceId … | 이후 |
+| ④ 확장 | `device_snmp_instance` 등 | instanceId, unit_id … | [DEVICE_SNMP_INSTANCE_API](./DEVICE_SNMP_INSTANCE_API.md) 등 |
 
 ### 1.1 이번 범위
 
 | 포함 | 미포함 (이후) |
 |------|----------------|
-| `device_protocol_endpoint` CRUD | `device_endpoint_snmp` / `_modbus` / `_mqtt` |
+| `device_protocol_endpoint` CRUD | `device_snmp_point` (SRC형 OID) |
 | Device 자식 리소스 API | Device `POST`/`PUT` nested `endpoints[]` |
-| host/port/enabled | IP 형식(정규식) 엄격 검증 |
-| | MQTT·Modbus 전용 API |
+| host/port/enabled | community/version DB 저장 |
+| | [DEVICE_SNMP_INSTANCE_API](./DEVICE_SNMP_INSTANCE_API.md) — ⬜ 예정 |
 
 endpoint는 Device 등록 시 **필수가 아닙니다.** 장비만 먼저 등록하고 나중에 endpoint를 붙일 수 있습니다. (location의 `UNASSIGNED`와 같은 선등록 패턴)
 

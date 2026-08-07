@@ -18,4 +18,10 @@ public interface DeviceModelSnmpPointSpringDataRepository extends JpaRepository<
     boolean existsByModelProtocolIdAndName(Integer modelProtocolId, String name);
 
     boolean existsByModelProtocolIdAndNameAndIdNot(Integer modelProtocolId, String name, Integer id);
+
+    boolean existsByModelProtocolIdAndOid(Integer modelProtocolId, String oid);
+
+    boolean existsByModelProtocolIdAndOidAndIdNot(Integer modelProtocolId, String oid, Integer id);
+
+    boolean existsByModelProtocolIdAndRequiresInstanceTrue(Integer modelProtocolId);
 }

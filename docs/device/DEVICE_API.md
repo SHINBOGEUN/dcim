@@ -67,7 +67,7 @@ location_node (1) ──< devices (N)   ※ location_node_code NOT NULL
 | 테이블 | 용도 | 상태 |
 |--------|------|------|
 | `device_protocol_endpoint` | host, port (프로토콜 공통) | ✅ [DEVICE_ENDPOINT_API](./DEVICE_ENDPOINT_API.md) |
-| `device_endpoint_snmp` | community, instanceId, version | ⬜ 예정 |
+| `device_snmp_instance` | SNMP `{instanceId}` 치환 (endpoint 1:1) | ⬜ [DEVICE_SNMP_INSTANCE_API](./DEVICE_SNMP_INSTANCE_API.md) |
 | `device_endpoint_modbus` | unit_id, timeout_ms | ⬜ 예정 |
 | `devices.parent_device_id` | 장비 계층 (자기참조) | ⬜ 예정 |
 
@@ -326,7 +326,8 @@ erDiagram
 | Application | `DeviceQueryService` CRUD ✅ |
 | API | 등록·수정·목록·단건·삭제 ✅ |
 | protocol endpoint | ✅ 공통 전송층 ([DEVICE_ENDPOINT_API](./DEVICE_ENDPOINT_API.md)) |
-| protocol 확장 | — snmp/modbus 미구현 |
+| snmp instance | ⬜ ([DEVICE_SNMP_INSTANCE_API](./DEVICE_SNMP_INSTANCE_API.md)) |
+| protocol 확장 | — modbus device층 미구현 |
 | hierarchy | — 미구현 |
 
 ---
