@@ -9,13 +9,26 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import net.vivans.dcim.shared.persistence.BaseEntity;
 
 @Entity
-@Table(name = "device_model_snmp_point")
+@Table(
+        name = "device_model_snmp_point",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_device_model_snmp_point_protocol_name",
+                        columnNames = {"model_protocol_id", "name"}
+                ),
+                @UniqueConstraint(
+                        name = "uk_device_model_snmp_point_protocol_oid",
+                        columnNames = {"model_protocol_id", "oid"}
+                )
+        }
+)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class DeviceModelSnmpPoint extends BaseEntity {

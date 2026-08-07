@@ -479,6 +479,142 @@ class DeviceModelSnmpPointControllerIntegrationTest {
                 .andExpect(jsonPath("$.error").value("protocol must be snmp"));
     }
 
+    @Test
+    void createSnmpPoint_whenOidAlreadyExists_returnsBadRequest() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "snmp-point-dup-oid", "password123");
+        Integer deviceTypeId = createModelType(accessToken);
+        Integer groupId = createCodeGroup(accessToken, "PROTOCOL_TYPE", "Protocol Type");
+        Integer snmpId = createCommonCode(accessToken, groupId, "snmp", "SNMP", 1);
+
+        String modelResponse = mockMvc.perform(post("/api/manager/device-models")
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "AP8959-DUP-OID",
+                                  "manufacturer": "APC",
+                                  "deviceTypeId": %d,
+                                  "protocols": [
+                                    { "protocolTypeId": %d }
+                                  ]
+                                }
+                                """.formatted(deviceTypeId, snmpId)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        int modelId = objectMapper.readTree(modelResponse).path("data").path("id").asInt();
+        int protocolId = objectMapper.readTree(modelResponse).path("data").path("protocols").get(0).path("id").asInt();
+
+        mockMvc.perform(post("/api/manager/device-models/{modelId}/protocols/{protocolId}/snmp-points", modelId, protocolId)
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "WATT",
+                                  "oid": "1.3.6.1.4.1.12345.{instanceId}.10.1.0",
+                                  "requiresInstance": true,
+                                  "unit": "w"
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/manager/device-models/{modelId}/protocols/{protocolId}/snmp-points", modelId, protocolId)
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "KWH",
+                                  "oid": "1.3.6.1.4.1.12345.{instanceId}.10.1.0",
+                                  "requiresInstance": true,
+                                  "unit": "kwh"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("point oid already exists for this protocol"));
+    }
+
+    @Test
+    void updateSnmpPoint_whenOidAlreadyExists_returnsBadRequest() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "snmp-point-upd-dup-oid", "password123");
+        Integer deviceTypeId = createModelType(accessToken);
+        Integer groupId = createCodeGroup(accessToken, "PROTOCOL_TYPE", "Protocol Type");
+        Integer snmpId = createCommonCode(accessToken, groupId, "snmp", "SNMP", 1);
+
+        String modelResponse = mockMvc.perform(post("/api/manager/device-models")
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "AP8959-UPD-DUP-OID",
+                                  "manufacturer": "APC",
+                                  "deviceTypeId": %d,
+                                  "protocols": [
+                                    { "protocolTypeId": %d }
+                                  ]
+                                }
+                                """.formatted(deviceTypeId, snmpId)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        int modelId = objectMapper.readTree(modelResponse).path("data").path("id").asInt();
+        int protocolId = objectMapper.readTree(modelResponse).path("data").path("protocols").get(0).path("id").asInt();
+
+        mockMvc.perform(post("/api/manager/device-models/{modelId}/protocols/{protocolId}/snmp-points", modelId, protocolId)
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "WATT",
+                                  "oid": "1.3.6.1.4.1.12345.{instanceId}.10.1.0",
+                                  "requiresInstance": true
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        String secondResponse = mockMvc.perform(post(
+                        "/api/manager/device-models/{modelId}/protocols/{protocolId}/snmp-points",
+                        modelId,
+                        protocolId
+                )
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "KWH",
+                                  "oid": "1.3.6.1.4.1.12345.{instanceId}.10.2.0",
+                                  "requiresInstance": true
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        int pointId = objectMapper.readTree(secondResponse).path("data").path("id").asInt();
+
+        mockMvc.perform(put(
+                        "/api/manager/device-models/{modelId}/protocols/{protocolId}/snmp-points/{pointId}",
+                        modelId,
+                        protocolId,
+                        pointId
+                )
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "KWH",
+                                  "oid": "1.3.6.1.4.1.12345.{instanceId}.10.1.0",
+                                  "requiresInstance": true
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("point oid already exists for this protocol"));
+    }
+
     private Integer createModelType(String accessToken) throws Exception {
         Integer groupId = createCodeGroup(accessToken, "MODEL_TYPE", "Model Type");
         return createCommonCode(accessToken, groupId, "CDU", "CDU", 1);

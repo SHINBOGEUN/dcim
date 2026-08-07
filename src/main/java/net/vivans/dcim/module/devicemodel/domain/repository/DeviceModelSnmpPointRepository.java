@@ -17,6 +17,10 @@ public interface DeviceModelSnmpPointRepository {
 
     boolean existsByModelProtocolIdAndNameAndIdNot(Integer modelProtocolId, String name, Integer id);
 
+    boolean existsByModelProtocolIdAndOid(Integer modelProtocolId, String oid);
+
+    boolean existsByModelProtocolIdAndOidAndIdNot(Integer modelProtocolId, String oid, Integer id);
+
     boolean existsByModelProtocolIdAndRequiresInstanceTrue(Integer modelProtocolId);
 
     void delete(DeviceModelSnmpPoint modelSnmpPoint);

@@ -70,7 +70,7 @@ SNMP `community`, `version`은 **DB·API에 두지 않습니다.**
 
 ## 2. 테이블 — `device_snmp_instance`
 
-**구현 상태:** ⬜ DDL만 (V011) / API 미구현
+**구현 상태:** ✅ DDL (V011) / POST·GET 구현 · PUT·DELETE 예정
 
 | 컬럼 | 타입 | NULL | 키 | 설명 |
 |------|------|------|-----|------|
@@ -164,7 +164,7 @@ erDiagram
 
 ### 5.1 단건 — `GET /api/manager/devices/{deviceId}/endpoints/{endpointId}/snmp-instance`
 
-**구현 상태:** ⬜ 예정
+**구현 상태:** ✅
 
 | 조건 | HTTP | 동작 |
 |------|------|------|
@@ -202,7 +202,7 @@ erDiagram
 
 | Method | Path | 설명 | 상태 |
 |--------|------|------|------|
-| `GET` | `.../endpoints/{endpointId}/snmp-instance` | 단건 조회 | ⬜ |
+| `GET` | `.../endpoints/{endpointId}/snmp-instance` | 단건 조회 | ✅ |
 | `POST` | `.../endpoints/{endpointId}/snmp-instance` | 등록 | ✅ |
 | `PUT` | `.../endpoints/{endpointId}/snmp-instance` | 수정 | ⬜ |
 | `DELETE` | `.../endpoints/{endpointId}/snmp-instance` | 삭제 | ⬜ |

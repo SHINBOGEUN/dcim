@@ -62,7 +62,8 @@ else:
 | 다른 모델과 동일 name | PDU 3상 `V`, PDU 단상 `V` | **다른 모델**이면 중복 허용 |
 
 - **같은 모델·같은 SNMP protocol** 안에서만 `name` 유일 (UK)
-- 모델 간 `V` 중복은 정상 (서로 다른 `model_protocol_id`)
+- **같은 모델·같은 SNMP protocol** 안에서 `oid`도 유일 (UK, V012)
+- 모델 간 `V` / 동일 OID 중복은 정상 (서로 다른 `model_protocol_id`)
 
 ### 1.3 boolean 컬럼 규칙 (프로젝트 공통)
 
@@ -107,7 +108,7 @@ device.instanceId = 3   ← `device_endpoint_snmp.instance_id` (예정)에 저�
 | `protocolId` | 해당 모델 소속 `device_model_protocol.id` |
 | 프로토콜 타입 | **SNMP만** 허용 (`protocolCode = snmp`) |
 | `name` | 필수. `(model_protocol_id, name)` UK |
-| `oid` | 필수. SNMP OID 문자열 |
+| `oid` | 필수. `(model_protocol_id, oid)` UK — 동일 protocol 내 OID 중복 불가 |
 | `requiresInstance = true` | `oid`에 `{instanceId}` 포함 필수 |
 | `requiresInstance = false` | `oid`에 placeholder 없어야 함 |
 | 목록 정렬 | `id` 오름차순 |
@@ -134,14 +135,15 @@ device.instanceId = 3   ← `device_endpoint_snmp.instance_id` (예정)에 저�
 | `id` | INT | N | PK | AUTO_INCREMENT | point ID |
 | `model_protocol_id` | INT | N | FK | | `device_model_protocol.id` |
 | `name` | VARCHAR(255) | N | UK* | | 식별자·표시명 (`V`, `전압`, `PRI-FLOW`) |
-| `oid` | VARCHAR(512) | N | | | OID 또는 OID 템플릿 |
+| `oid` | VARCHAR(512) | N | UK** | | OID 또는 OID 템플릿 |
 | `requires_instance` | TINYINT(1) | N | | `0` | `{instanceId}` 치환 필요 여부 (boolean) |
 | `unit` | VARCHAR(50) | Y | | | 단위 (`V`, `A`, `L/min`) |
 | `enabled` | TINYINT(1) | N | | `1` | 사용 여부 (boolean) |
 | `created_dt` | TIMESTAMP(6) | Y | | | |
 | `updated_dt` | TIMESTAMP(6) | Y | | | |
 
-\* UK: `(model_protocol_id, name)`
+\* UK: `(model_protocol_id, name)`  
+\*\* UK: `(model_protocol_id, oid)` — V012
 
 **FK 제약**
 
@@ -185,7 +187,7 @@ device_model <- device_model_protocol -> common_code (snmp)
 | 필드 | 필수 | 타입 | 설명 |
 |------|------|------|------|
 | `name` | O | string | 식별자·표시명. 동일 protocol 내 유일 |
-| `oid` | O | string | OID 또는 `{instanceId}` 포함 템플릿 |
+| `oid` | O | string | OID 또는 `{instanceId}` 포함 템플릿. 동일 protocol 내 유일 |
 | `requiresInstance` | X | boolean | 기본 `false`. `true`면 `oid`에 `{instanceId}` 필수 |
 | `unit` | X | string | 단위 |
 | `enabled` | X | boolean | 기본 `true` |
@@ -216,6 +218,7 @@ device_model <- device_model_protocol -> common_code (snmp)
 | protocol 없음 또는 소속 불일치 | 404 | `DeviceModelProtocol not found: {protocolId}` |
 | SNMP가 아님 | 400 | `protocol must be snmp` |
 | name 중복 | 400 | `point name already exists for this protocol` |
+| oid 중복 | 400 | `point oid already exists for this protocol` |
 | requiresInstance=true인데 placeholder 없음 | 400 | `oid must contain {instanceId}` |
 | requiresInstance=false인데 placeholder 있음 | 400 | `oid must not contain {instanceId}` |
 | oid 형식 오류 | 400 | `invalid oid format` |

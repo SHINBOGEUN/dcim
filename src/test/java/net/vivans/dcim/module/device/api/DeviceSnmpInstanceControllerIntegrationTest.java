@@ -191,6 +191,80 @@ class DeviceSnmpInstanceControllerIntegrationTest {
                 .andExpect(jsonPath("$.error").value("Invalid value for parameter 'instanceId'"));
     }
 
+    @Test
+    void getSnmpInstance_returnsInstance() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "snmp-instance-get", "password123");
+        Integer snmpTypeId = snmpProtocolTypeId(accessToken);
+        Integer modelId = createDeviceModel(accessToken, "AP8959-GET-INST", "APC", snmpTypeId);
+        int protocolId = firstProtocolId(accessToken, modelId);
+        createSnmpPoint(accessToken, modelId, protocolId, "V", "1.3.6.1.4.1.318.{instanceId}.3", true);
+        int deviceId = createDevice(accessToken, modelId, "PDU-get-inst");
+        int endpointId = createEndpoint(accessToken, deviceId, snmpTypeId, "192.168.1.10", 161);
+
+        mockMvc.perform(post(
+                        "/api/manager/devices/{deviceId}/endpoints/{endpointId}/snmp-instance",
+                        deviceId,
+                        endpointId
+                )
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"instanceId": 2}
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get(
+                        "/api/manager/devices/{deviceId}/endpoints/{endpointId}/snmp-instance",
+                        deviceId,
+                        endpointId
+                )
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.endpointId").value(endpointId))
+                .andExpect(jsonPath("$.data.deviceId").value(deviceId))
+                .andExpect(jsonPath("$.data.instanceId").value(2));
+    }
+
+    @Test
+    void getSnmpInstance_whenNotRegistered_returnsNotFound() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "snmp-instance-get-nf", "password123");
+        Integer snmpTypeId = snmpProtocolTypeId(accessToken);
+        Integer modelId = createDeviceModel(accessToken, "AP8959-GET-NF", "APC", snmpTypeId);
+        int protocolId = firstProtocolId(accessToken, modelId);
+        createSnmpPoint(accessToken, modelId, protocolId, "V", "1.3.6.1.4.1.318.{instanceId}.3", true);
+        int deviceId = createDevice(accessToken, modelId, "PDU-get-nf");
+        int endpointId = createEndpoint(accessToken, deviceId, snmpTypeId, "192.168.1.10", 161);
+
+        mockMvc.perform(get(
+                        "/api/manager/devices/{deviceId}/endpoints/{endpointId}/snmp-instance",
+                        deviceId,
+                        endpointId
+                )
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error")
+                        .value("DeviceSnmpInstance not found for endpoint: " + endpointId));
+    }
+
+    @Test
+    void getSnmpInstance_whenEndpointNotFound_returnsNotFound() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "snmp-instance-get-ep-nf", "password123");
+        Integer snmpTypeId = snmpProtocolTypeId(accessToken);
+        Integer modelId = createDeviceModel(accessToken, "AP8959-GET-EP-NF", "APC", snmpTypeId);
+        int protocolId = firstProtocolId(accessToken, modelId);
+        createSnmpPoint(accessToken, modelId, protocolId, "V", "1.3.6.1.4.1.318.{instanceId}.3", true);
+        int deviceId = createDevice(accessToken, modelId, "PDU-get-ep-nf");
+
+        mockMvc.perform(get(
+                        "/api/manager/devices/{deviceId}/endpoints/{endpointId}/snmp-instance",
+                        deviceId,
+                        999999
+                )
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("DeviceProtocolEndpoint not found: 999999"));
+    }
+
     private Integer snmpProtocolTypeId(String accessToken) throws Exception {
         Integer groupId = findOrCreateCodeGroup(accessToken, "PROTOCOL_TYPE", "Protocol Type");
         return findOrCreateCommonCode(accessToken, groupId, "snmp", "SNMP", 1);

@@ -56,6 +56,9 @@ public class DeviceModelSnmpPointQueryService {
         if (deviceModelSnmpPointRepository.existsByModelProtocolIdAndName(protocolId, request.name())) {
             throw new IllegalArgumentException("point name already exists for this protocol");
         }
+        if (deviceModelSnmpPointRepository.existsByModelProtocolIdAndOid(protocolId, request.oid())) {
+            throw new IllegalArgumentException("point oid already exists for this protocol");
+        }
 
         boolean requiresInstance = Boolean.TRUE.equals(request.requiresInstance());
         boolean enabled = request.enabled() == null || request.enabled();
@@ -85,6 +88,10 @@ public class DeviceModelSnmpPointQueryService {
         if (deviceModelSnmpPointRepository.existsByModelProtocolIdAndNameAndIdNot(
                 protocolId, request.name(), pointId)) {
             throw new IllegalArgumentException("point name already exists for this protocol");
+        }
+        if (deviceModelSnmpPointRepository.existsByModelProtocolIdAndOidAndIdNot(
+                protocolId, request.oid(), pointId)) {
+            throw new IllegalArgumentException("point oid already exists for this protocol");
         }
 
         boolean requiresInstance = Boolean.TRUE.equals(request.requiresInstance());
