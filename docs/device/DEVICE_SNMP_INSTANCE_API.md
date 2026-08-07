@@ -70,7 +70,7 @@ SNMP `community`, `version`은 **DB·API에 두지 않습니다.**
 
 ## 2. 테이블 — `device_snmp_instance`
 
-**구현 상태:** ✅ DDL (V011) / POST·GET 구현 · PUT·DELETE 예정
+**구현 상태:** ✅ DDL (V011) / CRUD 구현 완료
 
 | 컬럼 | 타입 | NULL | 키 | 설명 |
 |------|------|------|-----|------|
@@ -149,7 +149,7 @@ erDiagram
 
 ### 4.1 수정 — `PUT /api/manager/devices/{deviceId}/endpoints/{endpointId}/snmp-instance`
 
-**구현 상태:** ⬜ 예정
+**구현 상태:** ✅
 
 요청 body는 등록과 동일 (`instanceId` 전체 교체).
 
@@ -180,7 +180,7 @@ erDiagram
 
 ### 6.1 삭제 — `DELETE /api/manager/devices/{deviceId}/endpoints/{endpointId}/snmp-instance`
 
-**구현 상태:** ⬜ 예정
+**구현 상태:** ✅
 
 | 조건 | HTTP | 동작 |
 |------|------|------|
@@ -204,8 +204,8 @@ erDiagram
 |--------|------|------|------|
 | `GET` | `.../endpoints/{endpointId}/snmp-instance` | 단건 조회 | ✅ |
 | `POST` | `.../endpoints/{endpointId}/snmp-instance` | 등록 | ✅ |
-| `PUT` | `.../endpoints/{endpointId}/snmp-instance` | 수정 | ⬜ |
-| `DELETE` | `.../endpoints/{endpointId}/snmp-instance` | 삭제 | ⬜ |
+| `PUT` | `.../endpoints/{endpointId}/snmp-instance` | 수정 | ✅ |
+| `DELETE` | `.../endpoints/{endpointId}/snmp-instance` | 삭제 | ✅ |
 
 목록 API는 **없음** (endpoint당 0~1행).
 

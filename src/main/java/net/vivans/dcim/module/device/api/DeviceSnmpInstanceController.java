@@ -10,9 +10,11 @@ import net.vivans.dcim.module.device.api.dto.DeviceSnmpInstanceResponse;
 import net.vivans.dcim.module.device.application.DeviceSnmpInstanceQueryService;
 import net.vivans.dcim.shared.api.ApiResponse;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -44,6 +46,30 @@ public class DeviceSnmpInstanceController {
             @Parameter(description = "엔드포인트 ID") @PathVariable Integer endpointId,
             @Valid @RequestBody DeviceSnmpInstanceCreateRequest request
     ) {
-        return ResponseEntity.ok(ApiResponse.ok(deviceSnmpInstanceQueryService.createSnmpInstance(deviceId, endpointId, request)));
+        return ResponseEntity.ok(ApiResponse.ok(
+                deviceSnmpInstanceQueryService.createSnmpInstance(deviceId, endpointId, request)));
+    }
+
+    @PutMapping
+    @Operation(summary = "SNMP instance 수정 API",
+            description = "instanceId 전체 교체. 미등록이면 404.")
+    public ResponseEntity<ApiResponse<DeviceSnmpInstanceResponse>> updateSnmpInstance(
+            @Parameter(description = "장비 ID") @PathVariable Integer deviceId,
+            @Parameter(description = "엔드포인트 ID") @PathVariable Integer endpointId,
+            @Valid @RequestBody DeviceSnmpInstanceCreateRequest request
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(
+                deviceSnmpInstanceQueryService.updateSnmpInstance(deviceId, endpointId, request)));
+    }
+
+    @DeleteMapping
+    @Operation(summary = "SNMP instance 삭제 API",
+            description = "endpoint의 instance 행 삭제. 미등록이면 404.")
+    public ResponseEntity<ApiResponse<Integer>> deleteSnmpInstance(
+            @Parameter(description = "장비 ID") @PathVariable Integer deviceId,
+            @Parameter(description = "엔드포인트 ID") @PathVariable Integer endpointId
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(
+                deviceSnmpInstanceQueryService.deleteSnmpInstance(deviceId, endpointId)));
     }
 }

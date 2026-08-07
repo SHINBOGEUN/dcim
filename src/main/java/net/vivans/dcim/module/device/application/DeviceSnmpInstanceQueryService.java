@@ -59,6 +59,31 @@ public class DeviceSnmpInstanceQueryService {
         return DeviceSnmpInstanceResponse.from(deviceSnmpInstanceRepository.save(snmpInstance));
     }
 
+    @Transactional
+    public DeviceSnmpInstanceResponse updateSnmpInstance(
+            Integer deviceId,
+            Integer endpointId,
+            DeviceSnmpInstanceCreateRequest request
+    ) {
+        findDevice(deviceId);
+        DeviceProtocolEndpoint endpoint = findEndpoint(endpointId, deviceId);
+        validateSnmpEndpoint(endpoint);
+        validateModelHasRequiresInstancePoint(endpoint.getDevice());
+
+        DeviceSnmpInstance snmpInstance = findSnmpInstance(endpointId);
+        snmpInstance.update(request.instanceId());
+        return DeviceSnmpInstanceResponse.from(deviceSnmpInstanceRepository.save(snmpInstance));
+    }
+
+    @Transactional
+    public Integer deleteSnmpInstance(Integer deviceId, Integer endpointId) {
+        findDevice(deviceId);
+        findEndpoint(endpointId, deviceId);
+        DeviceSnmpInstance snmpInstance = findSnmpInstance(endpointId);
+        deviceSnmpInstanceRepository.delete(snmpInstance);
+        return endpointId;
+    }
+
     private DeviceSnmpInstance findSnmpInstance(Integer endpointId) {
         return deviceSnmpInstanceRepository.findByEndpointId(endpointId)
                 .orElseThrow(() -> new EntityNotFoundException(

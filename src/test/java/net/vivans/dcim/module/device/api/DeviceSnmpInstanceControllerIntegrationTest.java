@@ -14,8 +14,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import static net.vivans.dcim.support.AuthTestSupport.bearerToken;
 import static net.vivans.dcim.support.AuthTestSupport.loginAndGetAccessToken;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -263,6 +265,130 @@ class DeviceSnmpInstanceControllerIntegrationTest {
                         .header("Authorization", bearerToken(accessToken)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("DeviceProtocolEndpoint not found: 999999"));
+    }
+
+    @Test
+    void updateSnmpInstance_returnsUpdated() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "snmp-instance-put", "password123");
+        Integer snmpTypeId = snmpProtocolTypeId(accessToken);
+        Integer modelId = createDeviceModel(accessToken, "AP8959-PUT-INST", "APC", snmpTypeId);
+        int protocolId = firstProtocolId(accessToken, modelId);
+        createSnmpPoint(accessToken, modelId, protocolId, "V", "1.3.6.1.4.1.318.{instanceId}.3", true);
+        int deviceId = createDevice(accessToken, modelId, "PDU-put-inst");
+        int endpointId = createEndpoint(accessToken, deviceId, snmpTypeId, "192.168.1.10", 161);
+
+        mockMvc.perform(post(
+                        "/api/manager/devices/{deviceId}/endpoints/{endpointId}/snmp-instance",
+                        deviceId,
+                        endpointId
+                )
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"instanceId": 1}
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(put(
+                        "/api/manager/devices/{deviceId}/endpoints/{endpointId}/snmp-instance",
+                        deviceId,
+                        endpointId
+                )
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"instanceId": 11}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.endpointId").value(endpointId))
+                .andExpect(jsonPath("$.data.deviceId").value(deviceId))
+                .andExpect(jsonPath("$.data.instanceId").value(11));
+    }
+
+    @Test
+    void updateSnmpInstance_whenNotRegistered_returnsNotFound() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "snmp-instance-put-nf", "password123");
+        Integer snmpTypeId = snmpProtocolTypeId(accessToken);
+        Integer modelId = createDeviceModel(accessToken, "AP8959-PUT-NF", "APC", snmpTypeId);
+        int protocolId = firstProtocolId(accessToken, modelId);
+        createSnmpPoint(accessToken, modelId, protocolId, "V", "1.3.6.1.4.1.318.{instanceId}.3", true);
+        int deviceId = createDevice(accessToken, modelId, "PDU-put-nf");
+        int endpointId = createEndpoint(accessToken, deviceId, snmpTypeId, "192.168.1.10", 161);
+
+        mockMvc.perform(put(
+                        "/api/manager/devices/{deviceId}/endpoints/{endpointId}/snmp-instance",
+                        deviceId,
+                        endpointId
+                )
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"instanceId": 2}
+                                """))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error")
+                        .value("DeviceSnmpInstance not found for endpoint: " + endpointId));
+    }
+
+    @Test
+    void deleteSnmpInstance_removesInstance() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "snmp-instance-del", "password123");
+        Integer snmpTypeId = snmpProtocolTypeId(accessToken);
+        Integer modelId = createDeviceModel(accessToken, "AP8959-DEL-INST", "APC", snmpTypeId);
+        int protocolId = firstProtocolId(accessToken, modelId);
+        createSnmpPoint(accessToken, modelId, protocolId, "V", "1.3.6.1.4.1.318.{instanceId}.3", true);
+        int deviceId = createDevice(accessToken, modelId, "PDU-del-inst");
+        int endpointId = createEndpoint(accessToken, deviceId, snmpTypeId, "192.168.1.10", 161);
+
+        mockMvc.perform(post(
+                        "/api/manager/devices/{deviceId}/endpoints/{endpointId}/snmp-instance",
+                        deviceId,
+                        endpointId
+                )
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"instanceId": 1}
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(delete(
+                        "/api/manager/devices/{deviceId}/endpoints/{endpointId}/snmp-instance",
+                        deviceId,
+                        endpointId
+                )
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").value(endpointId));
+
+        mockMvc.perform(get(
+                        "/api/manager/devices/{deviceId}/endpoints/{endpointId}/snmp-instance",
+                        deviceId,
+                        endpointId
+                )
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void deleteSnmpInstance_whenNotRegistered_returnsNotFound() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, "snmp-instance-del-nf", "password123");
+        Integer snmpTypeId = snmpProtocolTypeId(accessToken);
+        Integer modelId = createDeviceModel(accessToken, "AP8959-DEL-NF", "APC", snmpTypeId);
+        int protocolId = firstProtocolId(accessToken, modelId);
+        createSnmpPoint(accessToken, modelId, protocolId, "V", "1.3.6.1.4.1.318.{instanceId}.3", true);
+        int deviceId = createDevice(accessToken, modelId, "PDU-del-nf");
+        int endpointId = createEndpoint(accessToken, deviceId, snmpTypeId, "192.168.1.10", 161);
+
+        mockMvc.perform(delete(
+                        "/api/manager/devices/{deviceId}/endpoints/{endpointId}/snmp-instance",
+                        deviceId,
+                        endpointId
+                )
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error")
+                        .value("DeviceSnmpInstance not found for endpoint: " + endpointId));
     }
 
     private Integer snmpProtocolTypeId(String accessToken) throws Exception {
