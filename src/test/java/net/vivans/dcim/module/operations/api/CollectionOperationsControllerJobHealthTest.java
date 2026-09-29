@@ -3,6 +3,8 @@ package net.vivans.dcim.module.operations.api;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import net.vivans.dcim.module.identity.domain.repository.UserRepository;
+import net.vivans.dcim.module.common.domain.repository.CodeGroupRepository;
+import net.vivans.dcim.module.common.domain.repository.CommonCodeRepository;
 import net.vivans.dcim.bootstrap.ManagerServerApplication;
 import net.vivans.dcim.module.collectortask.domain.model.CollectionTask;
 import net.vivans.dcim.module.collectortask.domain.model.CollectionTaskGroup;
@@ -25,6 +27,7 @@ import java.util.NoSuchElementException;
 
 import static net.vivans.dcim.support.AuthTestSupport.bearerToken;
 import static net.vivans.dcim.support.AuthTestSupport.loginAndGetAccessToken;
+import static net.vivans.dcim.support.UnitCodeTestSupport.unitCodeId;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -51,6 +54,12 @@ class CollectionOperationsControllerJobHealthTest {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private CodeGroupRepository codeGroupRepository;
+
+    @Autowired
+    private CommonCodeRepository commonCodeRepository;
 
     @Autowired
     private CollectionTaskRepository collectionTaskRepository;
@@ -270,10 +279,11 @@ class CollectionOperationsControllerJobHealthTest {
                                   "name": "%s",
                                   "oid": "%s",
                                   "requiresInstance": %s,
-                                  "unit": "%s",
+                                  "unitCodeId": %d,
                                   "enabled": true
                                 }
-                                """.formatted(pointName, oid, requiresInstance, unit)))
+                                """.formatted(pointName, oid, requiresInstance,
+                                        unitCodeId(unit, codeGroupRepository, commonCodeRepository))))
                 .andExpect(status().isOk());
 
         return modelId;

@@ -3,6 +3,8 @@ package net.vivans.dcim.module.collectortask.api;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import net.vivans.dcim.module.identity.domain.repository.UserRepository;
+import net.vivans.dcim.module.common.domain.repository.CodeGroupRepository;
+import net.vivans.dcim.module.common.domain.repository.CommonCodeRepository;
 import net.vivans.dcim.bootstrap.ManagerServerApplication;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import static net.vivans.dcim.support.AuthTestSupport.bearerToken;
 import static net.vivans.dcim.support.AuthTestSupport.loginAndGetAccessToken;
+import static net.vivans.dcim.support.UnitCodeTestSupport.unitCodeId;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.not;
@@ -40,6 +43,12 @@ class CollectionTaskControllerIntegrationTest {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private CodeGroupRepository codeGroupRepository;
+
+    @Autowired
+    private CommonCodeRepository commonCodeRepository;
 
     @Test
     void createTask_withPeriodGroups_generatesSpecPerGroup() throws Exception {
@@ -764,10 +773,11 @@ class CollectionTaskControllerIntegrationTest {
                                   "name": "%s",
                                   "oid": "%s",
                                   "requiresInstance": %s,
-                                  "unit": "%s",
+                                  "unitCodeId": %d,
                                   "enabled": true
                                 }
-                                """.formatted(pointName, oid, requiresInstance, unit)))
+                                """.formatted(pointName, oid, requiresInstance,
+                                        unitCodeId(unit, codeGroupRepository, commonCodeRepository))))
                 .andExpect(status().isOk());
 
         return modelId;

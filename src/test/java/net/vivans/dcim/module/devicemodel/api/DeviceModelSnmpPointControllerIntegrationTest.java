@@ -2,6 +2,8 @@ package net.vivans.dcim.module.devicemodel.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import net.vivans.dcim.module.identity.domain.repository.UserRepository;
+import net.vivans.dcim.module.common.domain.repository.CodeGroupRepository;
+import net.vivans.dcim.module.common.domain.repository.CommonCodeRepository;
 import net.vivans.dcim.bootstrap.ManagerServerApplication;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import static net.vivans.dcim.support.AuthTestSupport.bearerToken;
 import static net.vivans.dcim.support.AuthTestSupport.loginAndGetAccessToken;
+import static net.vivans.dcim.support.UnitCodeTestSupport.unitCodeId;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -37,10 +40,16 @@ class DeviceModelSnmpPointControllerIntegrationTest {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private CodeGroupRepository codeGroupRepository;
+
+    @Autowired
+    private CommonCodeRepository commonCodeRepository;
+
     @Test
     void createSnmpPoint_returnsCreated() throws Exception {
         String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, userRepository, "snmp-point-create-user", "password123");
-        Integer unitCodeId = createCommonCode(accessToken, createCodeGroup(accessToken, "UNIT", "Unit"), "L_PER_MIN", "L/min", 1);
+        Integer unitCodeId = unitCodeId("L/min", codeGroupRepository, commonCodeRepository);
         Integer groupId = createCodeGroup(accessToken, "PROTOCOL_TYPE", "Protocol Type");
         Integer snmpId = createCommonCode(accessToken, groupId, "snmp", "SNMP", 1);
         Integer deviceTypeId = createModelType(accessToken);
@@ -150,7 +159,7 @@ class DeviceModelSnmpPointControllerIntegrationTest {
     @Test
     void getSnmpPoint_returnsOne() throws Exception {
         String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, userRepository, "snmp-point-get-user", "password123");
-        Integer unitCodeId = createCommonCode(accessToken, createCodeGroup(accessToken, "UNIT", "Unit"), "L_PER_MIN", "L/min", 1);
+        Integer unitCodeId = unitCodeId("L/min", codeGroupRepository, commonCodeRepository);
         Integer groupId = createCodeGroup(accessToken, "PROTOCOL_TYPE", "Protocol Type");
         Integer snmpId = createCommonCode(accessToken, groupId, "snmp", "SNMP", 1);
         Integer deviceTypeId = createModelType(accessToken);
@@ -245,6 +254,7 @@ class DeviceModelSnmpPointControllerIntegrationTest {
     @Test
     void updateSnmpPoint_returnsUpdated() throws Exception {
         String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, userRepository, "snmp-point-update-user", "password123");
+        Integer flowUnitCodeId = unitCodeId("L/min", codeGroupRepository, commonCodeRepository);
         Integer groupId = createCodeGroup(accessToken, "PROTOCOL_TYPE", "Protocol Type");
         Integer snmpId = createCommonCode(accessToken, groupId, "snmp", "SNMP", 1);
         Integer deviceTypeId = createModelType(accessToken);
@@ -279,10 +289,10 @@ class DeviceModelSnmpPointControllerIntegrationTest {
                                   "name": "PRI-FLOW",
                                   "oid": "1.3.6.1.4.1.12345.{instanceId}.10.1.0",
                                   "requiresInstance": true,
-                                  "unit": "L/min",
+                                  "unitCodeId": %d,
                                   "enabled": true
                                 }
-                                """))
+                                """.formatted(flowUnitCodeId)))
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse()
@@ -300,10 +310,10 @@ class DeviceModelSnmpPointControllerIntegrationTest {
                                   "name": "SEC-FLOW",
                                   "oid": "1.3.6.1.4.1.12345.10.2.0",
                                   "requiresInstance": false,
-                                  "unit": "L/min",
+                                  "unitCodeId": %d,
                                   "enabled": false
                                 }
-                                """))
+                                """.formatted(flowUnitCodeId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.id").value(pointId))
                 .andExpect(jsonPath("$.data.name").value("SEC-FLOW"))
@@ -492,6 +502,8 @@ class DeviceModelSnmpPointControllerIntegrationTest {
     @Test
     void createSnmpPoint_whenOidAlreadyExists_returnsBadRequest() throws Exception {
         String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, userRepository, "snmp-point-dup-oid", "password123");
+        Integer wattUnitCodeId = unitCodeId("W", codeGroupRepository, commonCodeRepository);
+        Integer kwhUnitCodeId = unitCodeId("kWh", codeGroupRepository, commonCodeRepository);
         Integer deviceTypeId = createModelType(accessToken);
         Integer groupId = createCodeGroup(accessToken, "PROTOCOL_TYPE", "Protocol Type");
         Integer snmpId = createCommonCode(accessToken, groupId, "snmp", "SNMP", 1);
@@ -525,9 +537,9 @@ class DeviceModelSnmpPointControllerIntegrationTest {
                                   "name": "WATT",
                                   "oid": "1.3.6.1.4.1.12345.{instanceId}.10.1.0",
                                   "requiresInstance": true,
-                                  "unit": "w"
+                                  "unitCodeId": %d
                                 }
-                                """))
+                                """.formatted(wattUnitCodeId)))
                 .andExpect(status().isOk());
 
         mockMvc.perform(post("/api/manager/device-models/{modelId}/protocols/{protocolId}/snmp-points", modelId, protocolId)
@@ -538,9 +550,9 @@ class DeviceModelSnmpPointControllerIntegrationTest {
                                   "name": "KWH",
                                   "oid": "1.3.6.1.4.1.12345.{instanceId}.10.1.0",
                                   "requiresInstance": true,
-                                  "unit": "kwh"
+                                  "unitCodeId": %d
                                 }
-                                """))
+                                """.formatted(kwhUnitCodeId)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("point oid already exists for this protocol"));
     }
@@ -628,6 +640,8 @@ class DeviceModelSnmpPointControllerIntegrationTest {
     @Test
     void createSnmpPointsBulk_returnsCreatedList() throws Exception {
         String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, userRepository, "snmp-point-bulk-user", "password123");
+        Integer voltUnitCodeId = unitCodeId("V", codeGroupRepository, commonCodeRepository);
+        Integer ampUnitCodeId = unitCodeId("A", codeGroupRepository, commonCodeRepository);
         Integer groupId = createCodeGroup(accessToken, "PROTOCOL_TYPE", "Protocol Type");
         Integer snmpId = createCommonCode(accessToken, groupId, "snmp", "SNMP", 1);
         Integer deviceTypeId = createModelType(accessToken);
@@ -662,17 +676,17 @@ class DeviceModelSnmpPointControllerIntegrationTest {
                                     {
                                       "name": "V",
                                       "oid": "1.3.6.1.4.1.12345.1.1.0",
-                                      "unit": "V",
+                                      "unitCodeId": %d,
                                       "enabled": true
                                     },
                                     {
                                       "name": "A",
                                       "oid": "1.3.6.1.4.1.12345.1.2.0",
-                                      "unit": "A"
+                                      "unitCodeId": %d
                                     }
                                   ]
                                 }
-                                """))
+                                """.formatted(voltUnitCodeId, ampUnitCodeId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data", hasSize(2)))
                 .andExpect(jsonPath("$.data[0].name").value("V"))

@@ -3,6 +3,8 @@ package net.vivans.dcim.module.device.api;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import net.vivans.dcim.module.identity.domain.repository.UserRepository;
+import net.vivans.dcim.module.common.domain.repository.CodeGroupRepository;
+import net.vivans.dcim.module.common.domain.repository.CommonCodeRepository;
 import net.vivans.dcim.bootstrap.ManagerServerApplication;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import static net.vivans.dcim.support.AuthTestSupport.bearerToken;
 import static net.vivans.dcim.support.AuthTestSupport.loginAndGetAccessToken;
+import static net.vivans.dcim.support.UnitCodeTestSupport.unitCodeId;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -38,6 +41,12 @@ class PageWidgetControllerIntegrationTest {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private CodeGroupRepository codeGroupRepository;
+
+    @Autowired
+    private CommonCodeRepository commonCodeRepository;
 
     @Test
     void createAndListWidgets_filtersByPageCode() throws Exception {
@@ -427,8 +436,8 @@ class PageWidgetControllerIntegrationTest {
                         .header("Authorization", bearerToken(accessToken))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"dataPointTypeId":%d,"name":"TOTAL_WT","oid":".1.3.6.1.4.1.9999.1","unit":"W","enabled":true}
-                                """.formatted(powerTypeId)))
+                                {"dataPointTypeId":%d,"name":"TOTAL_WT","oid":".1.3.6.1.4.1.9999.1","unitCodeId":%d,"enabled":true}
+                                """.formatted(powerTypeId, unitCodeId("W", codeGroupRepository, commonCodeRepository))))
                 .andExpect(status().isOk());
 
         Integer locationGroupId = findOrCreateCodeGroup(accessToken, "LOCATION_TYPE", "Location Type");
