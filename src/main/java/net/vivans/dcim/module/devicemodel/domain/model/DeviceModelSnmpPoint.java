@@ -58,8 +58,9 @@ public class DeviceModelSnmpPoint extends BaseEntity {
     @Column(name = "requires_instance", nullable = false)
     private boolean requiresInstance;
 
-    @Column(length = 50)
-    private String unit;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "unit_code_id")
+    private CommonCode unitCode;
 
     /** 원시값 배율. null이면 collector가 1.0으로 취급 */
     private Double scale;
@@ -72,7 +73,7 @@ public class DeviceModelSnmpPoint extends BaseEntity {
             String name,
             String oid,
             boolean requiresInstance,
-            String unit,
+            CommonCode unitCode,
             Double scale,
             boolean enabled
     ) {
@@ -84,7 +85,7 @@ public class DeviceModelSnmpPoint extends BaseEntity {
         this.name = name;
         this.oid = oid;
         this.requiresInstance = requiresInstance;
-        this.unit = unit;
+        this.unitCode = unitCode;
         this.scale = scale;
         this.enabled = enabled;
     }
@@ -94,17 +95,17 @@ public class DeviceModelSnmpPoint extends BaseEntity {
             String name,
             String oid,
             boolean requiresInstance,
-            String unit,
+            CommonCode unitCode,
             Double scale,
             boolean enabled
     ) {
-        return new DeviceModelSnmpPoint(modelProtocol, name, oid, requiresInstance, unit, scale, enabled);
+        return new DeviceModelSnmpPoint(modelProtocol, name, oid, requiresInstance, unitCode, scale, enabled);
     }
 
     public static DeviceModelSnmpPoint create(
             DeviceModelProtocol modelProtocol, String name, String oid, boolean requiresInstance,
-            String unit, Double scale, boolean enabled, CommonCode dataPointType) {
-        DeviceModelSnmpPoint point = new DeviceModelSnmpPoint(modelProtocol, name, oid, requiresInstance, unit, scale, enabled);
+            CommonCode unitCode, Double scale, boolean enabled, CommonCode dataPointType) {
+        DeviceModelSnmpPoint point = new DeviceModelSnmpPoint(modelProtocol, name, oid, requiresInstance, unitCode, scale, enabled);
         point.dataPointType = dataPointType;
         return point;
     }
@@ -113,7 +114,7 @@ public class DeviceModelSnmpPoint extends BaseEntity {
             String name,
             String oid,
             boolean requiresInstance,
-            String unit,
+            CommonCode unitCode,
             Double scale,
             boolean enabled
     ) {
@@ -123,15 +124,19 @@ public class DeviceModelSnmpPoint extends BaseEntity {
         this.name = name;
         this.oid = oid;
         this.requiresInstance = requiresInstance;
-        this.unit = unit;
+        this.unitCode = unitCode;
         this.scale = scale;
         this.enabled = enabled;
     }
 
-    public void update(String name, String oid, boolean requiresInstance, String unit, Double scale,
+    public void update(String name, String oid, boolean requiresInstance, CommonCode unitCode, Double scale,
                        boolean enabled, CommonCode dataPointType) {
-        update(name, oid, requiresInstance, unit, scale, enabled);
+        update(name, oid, requiresInstance, unitCode, scale, enabled);
         this.dataPointType = dataPointType;
+    }
+
+    public String getUnit() {
+        return unitCode == null ? null : unitCode.getName();
     }
 
     public String resolveOid(Integer instanceId) {

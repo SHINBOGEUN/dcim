@@ -16,7 +16,7 @@ class DeviceModelSnmpPointTest {
                 "V",
                 "1.3.6.1.4.1.12345.10.1.0",
                 false,
-                "V",
+                unitCode("V"),
                 0.1,
                 true
         );
@@ -36,7 +36,7 @@ class DeviceModelSnmpPointTest {
                 "PRI-FLOW",
                 "1.3.6.1.4.1.12345.{instanceId}.10.1.0",
                 true,
-                "L/min",
+                unitCode("L/min"),
                 null,
                 true
         );
@@ -128,7 +128,7 @@ class DeviceModelSnmpPointTest {
                 "V",
                 "1.3.6.1.4.1.12345.10.1.0",
                 false,
-                "V",
+                unitCode("V"),
                 Double.NaN,
                 true
         ))
@@ -162,7 +162,7 @@ class DeviceModelSnmpPointTest {
                 "temp",
                 "1.3.6.1.4.1.12345.10.1.0",
                 false,
-                "C",
+                unitCode("°C"),
                 null,
                 true
         );
@@ -178,7 +178,7 @@ class DeviceModelSnmpPointTest {
                 "V",
                 "1.3.6.1.4.1.318.1.1.26.8.3.3.1.2.1.{instanceId}.3",
                 true,
-                "V",
+                unitCode("V"),
                 null,
                 true
         );
@@ -194,7 +194,7 @@ class DeviceModelSnmpPointTest {
                 "V",
                 "1.3.6.1.4.1.12345.10.1.0",
                 false,
-                "V",
+                unitCode("V"),
                 1.0,
                 true
         );
@@ -203,7 +203,7 @@ class DeviceModelSnmpPointTest {
                 "A",
                 "1.3.6.1.4.1.12345.{instanceId}.10.2.0",
                 true,
-                "A",
+                unitCode("A"),
                 0.01,
                 false
         );
@@ -213,6 +213,11 @@ class DeviceModelSnmpPointTest {
         assertThat(point.getUnit()).isEqualTo("A");
         assertThat(point.getScale()).isEqualTo(0.01);
         assertThat(point.isEnabled()).isFalse();
+    }
+
+    private CommonCode unitCode(String symbol) {
+        CodeGroup group = CodeGroup.createCodeGroup("UNIT", "측정 단위");
+        return CommonCode.createCommonCode(group, symbol, symbol, 1);
     }
 
     private DeviceModelProtocol snmpProtocol() {

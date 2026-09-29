@@ -67,6 +67,7 @@ mysql -h HOST -P PORT -u dcim -p dcim < sql/schema/42_device_asset_document.sql
 | `PROTOCOL_TYPE` | snmp, modbus, mqtt | endpoint·수집 Task 불가 |
 | `DEVICE_PAGE` | ENVIRONMENT, COOLING, …, dashboard | 페이지 위젯 불가 |
 | `DATA_POINT_TYPE` | POWER, ENERGY, TEMPERATURE, … | 모델 포인트 등록 불가 |
+| `UNIT` | W, KWH, V, A, CELSIUS, PERCENT, … | SNMP·LoRa 단위 선택 불가 (단위 없는 포인트는 NULL) |
 | `ASSET_STATUS` | ACTIVE, MAINTENANCE, FAULT, INACTIVE, RETIRED | 자산 상태 관리 불가 |
 | `location_node` | UNASSIGNED | 장비 등록 FK 실패 |
 

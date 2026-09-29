@@ -55,8 +55,8 @@ class QueryLastControllerIntegrationTest {
     void getLast_returnsLatestValuesForWidgetDevices() throws Exception {
         String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, userRepository, "query-last-user", "password123");
         devicePageCodeId(accessToken, "dashboard", "dashboard", 1);
-        CreatedDevice deviceA = createDeviceWithPoints(accessToken, "Q-Last-A", Map.of("V", "V", "temp", "C"));
-        CreatedDevice deviceB = createDeviceWithPoints(accessToken, "Q-Last-B", Map.of("V", "V", "temp", "C"));
+        CreatedDevice deviceA = createDeviceWithPoints(accessToken, "Q-Last-A", Map.of("V", "V", "temp", "°C"));
+        CreatedDevice deviceB = createDeviceWithPoints(accessToken, "Q-Last-B", Map.of("V", "V", "temp", "°C"));
         int widgetId = createLastWidget(
                 accessToken, "dashboard", "칠러", List.of(deviceA.deviceId(), deviceB.deviceId()), List.of("V", "temp"));
 
@@ -81,7 +81,7 @@ class QueryLastControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.devices[0].points[0].value").value(219.0))
                 .andExpect(jsonPath("$.data.devices[1].deviceId").value(deviceB.deviceId()))
                 .andExpect(jsonPath("$.data.devices[1].points[0].pointName").value("temp"))
-                .andExpect(jsonPath("$.data.devices[1].points[0].unit").value("C"));
+                .andExpect(jsonPath("$.data.devices[1].points[0].unit").value("°C"));
     }
 
     @Test
@@ -211,7 +211,10 @@ class QueryLastControllerIntegrationTest {
         int protocolId = modelNode.path("protocols").get(0).path("id").asInt();
 
         int oidSuffix = 1;
+        Integer unitGroupId = findOrCreateCodeGroup(accessToken, "UNIT", "Unit");
         for (Map.Entry<String, String> entry : pointUnits.entrySet()) {
+            String unitCode = "°C".equals(entry.getValue()) ? "CELSIUS" : entry.getValue();
+            Integer unitCodeId = findOrCreateCommonCode(accessToken, unitGroupId, unitCode, entry.getValue(), 1);
             mockMvc.perform(post("/api/manager/device-models/{modelId}/protocols/{protocolId}/snmp-points",
                             modelId, protocolId)
                             .header("Authorization", bearerToken(accessToken))
@@ -221,10 +224,10 @@ class QueryLastControllerIntegrationTest {
                                       "name": "%s",
                                       "oid": "1.3.6.1.4.1.318.1.1.26.8.3.3.1.2.1.10.%d.0",
                                       "requiresInstance": false,
-                                      "unit": "%s",
+                                      "unitCodeId": %d,
                                       "enabled": true
                                     }
-                                    """.formatted(entry.getKey(), oidSuffix++, entry.getValue())))
+                                    """.formatted(entry.getKey(), oidSuffix++, unitCodeId)))
                     .andExpect(status().isOk());
         }
 

@@ -274,7 +274,7 @@ class LoraCollectionStatusServiceTest {
         CodeGroup group = CodeGroup.createCodeGroup("DATA_POINT_TYPE", "데이터 포인트 유형");
         CommonCode dataPointType = CommonCode.createCommonCode(group, "TEMPERATURE", "온도", 1);
         DeviceModelLoraPoint point = DeviceModelLoraPoint.create(
-                deviceModel, "object.TempC_SHT", "TEMPERATURE", dataPointType, "C", 1.0, null, true);
+                deviceModel, "object.TempC_SHT", "TEMPERATURE", dataPointType, null, 1.0, null, true);
         return List.of(point);
     }
 

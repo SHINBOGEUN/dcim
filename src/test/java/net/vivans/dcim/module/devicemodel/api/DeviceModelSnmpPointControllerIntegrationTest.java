@@ -40,6 +40,7 @@ class DeviceModelSnmpPointControllerIntegrationTest {
     @Test
     void createSnmpPoint_returnsCreated() throws Exception {
         String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, userRepository, "snmp-point-create-user", "password123");
+        Integer unitCodeId = createCommonCode(accessToken, createCodeGroup(accessToken, "UNIT", "Unit"), "L_PER_MIN", "L/min", 1);
         Integer groupId = createCodeGroup(accessToken, "PROTOCOL_TYPE", "Protocol Type");
         Integer snmpId = createCommonCode(accessToken, groupId, "snmp", "SNMP", 1);
         Integer deviceTypeId = createModelType(accessToken);
@@ -72,16 +73,17 @@ class DeviceModelSnmpPointControllerIntegrationTest {
                                   "name": "PRI-FLOW",
                                   "oid": "1.3.6.1.4.1.12345.{instanceId}.10.1.0",
                                   "requiresInstance": true,
-                                  "unit": "L/min",
+                                  "unitCodeId": %d,
                                   "scale": 0.1,
                                   "enabled": true
                                 }
-                                """))
+                                """.formatted(unitCodeId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.name").value("PRI-FLOW"))
                 .andExpect(jsonPath("$.data.modelId").value(modelId))
                 .andExpect(jsonPath("$.data.protocolId").value(protocolId))
                 .andExpect(jsonPath("$.data.requiresInstance").value(true))
+                .andExpect(jsonPath("$.data.unitCodeId").value(unitCodeId))
                 .andExpect(jsonPath("$.data.unit").value("L/min"))
                 .andExpect(jsonPath("$.data.scale").value(0.1));
     }
@@ -148,6 +150,7 @@ class DeviceModelSnmpPointControllerIntegrationTest {
     @Test
     void getSnmpPoint_returnsOne() throws Exception {
         String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, userRepository, "snmp-point-get-user", "password123");
+        Integer unitCodeId = createCommonCode(accessToken, createCodeGroup(accessToken, "UNIT", "Unit"), "L_PER_MIN", "L/min", 1);
         Integer groupId = createCodeGroup(accessToken, "PROTOCOL_TYPE", "Protocol Type");
         Integer snmpId = createCommonCode(accessToken, groupId, "snmp", "SNMP", 1);
         Integer deviceTypeId = createModelType(accessToken);
@@ -181,9 +184,9 @@ class DeviceModelSnmpPointControllerIntegrationTest {
                                 {
                                   "name": "PRI-FLOW",
                                   "oid": "1.3.6.1.4.1.12345.10.1.0",
-                                  "unit": "L/min"
+                                  "unitCodeId": %d
                                 }
-                                """))
+                                """.formatted(unitCodeId)))
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse()
@@ -200,6 +203,7 @@ class DeviceModelSnmpPointControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.name").value("PRI-FLOW"))
                 .andExpect(jsonPath("$.data.modelId").value(modelId))
                 .andExpect(jsonPath("$.data.protocolId").value(protocolId))
+                .andExpect(jsonPath("$.data.unitCodeId").value(unitCodeId))
                 .andExpect(jsonPath("$.data.unit").value("L/min"));
     }
 
