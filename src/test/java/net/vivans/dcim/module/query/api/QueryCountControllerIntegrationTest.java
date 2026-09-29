@@ -3,6 +3,8 @@ package net.vivans.dcim.module.query.api;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import net.vivans.dcim.module.identity.domain.repository.UserRepository;
+import net.vivans.dcim.module.common.domain.repository.CodeGroupRepository;
+import net.vivans.dcim.module.common.domain.repository.CommonCodeRepository;
 import net.vivans.dcim.bootstrap.ManagerServerApplication;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +19,7 @@ import java.util.List;
 
 import static net.vivans.dcim.support.AuthTestSupport.bearerToken;
 import static net.vivans.dcim.support.AuthTestSupport.loginAndGetAccessToken;
+import static net.vivans.dcim.support.UnitCodeTestSupport.unitCodeId;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -37,6 +40,12 @@ class QueryCountControllerIntegrationTest {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private CodeGroupRepository codeGroupRepository;
+
+    @Autowired
+    private CommonCodeRepository commonCodeRepository;
 
     @Test
     void getCount_returnsTotalAndByModel() throws Exception {
@@ -229,10 +238,11 @@ class QueryCountControllerIntegrationTest {
                                   "name": "V",
                                   "oid": "1.3.6.1.4.1.318.1.1.26.8.3.3.1.2.1.10.%d.0",
                                   "requiresInstance": false,
-                                  "unit": "V",
+                                  "unitCodeId": %d,
                                   "enabled": true
                                 }
-                                """.formatted(Math.abs(modelName.hashCode() % 900) + 100)))
+                                """.formatted(Math.abs(modelName.hashCode() % 900) + 100,
+                                        unitCodeId("V", codeGroupRepository, commonCodeRepository))))
                 .andExpect(status().isOk());
         return modelId;
     }

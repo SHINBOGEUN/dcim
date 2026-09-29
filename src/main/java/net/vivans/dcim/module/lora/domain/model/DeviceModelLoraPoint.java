@@ -56,8 +56,9 @@ public class DeviceModelLoraPoint extends BaseEntity {
     @JoinColumn(name = "data_point_type_id", nullable = false)
     private CommonCode dataPointType;
 
-    @Column(length = 50)
-    private String unit;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "unit_code_id")
+    private CommonCode unitCode;
 
     private Double scale;
 
@@ -69,7 +70,7 @@ public class DeviceModelLoraPoint extends BaseEntity {
 
     private DeviceModelLoraPoint(
             DeviceModel deviceModel, String payloadField, String pointName, CommonCode dataPointType,
-            String unit, Double scale, String valueMap, boolean enabled
+            CommonCode unitCode, Double scale, String valueMap, boolean enabled
     ) {
         validateDeviceModel(deviceModel);
         validatePayloadField(payloadField);
@@ -79,7 +80,7 @@ public class DeviceModelLoraPoint extends BaseEntity {
         this.payloadField = payloadField.trim();
         this.pointName = pointName.trim();
         this.dataPointType = dataPointType;
-        this.unit = unit;
+        this.unitCode = unitCode;
         this.scale = scale;
         this.valueMap = valueMap;
         this.enabled = enabled;
@@ -87,14 +88,14 @@ public class DeviceModelLoraPoint extends BaseEntity {
 
     public static DeviceModelLoraPoint create(
             DeviceModel deviceModel, String payloadField, String pointName, CommonCode dataPointType,
-            String unit, Double scale, String valueMap, boolean enabled
+            CommonCode unitCode, Double scale, String valueMap, boolean enabled
     ) {
-        return new DeviceModelLoraPoint(deviceModel, payloadField, pointName, dataPointType, unit, scale, valueMap, enabled);
+        return new DeviceModelLoraPoint(deviceModel, payloadField, pointName, dataPointType, unitCode, scale, valueMap, enabled);
     }
 
     public void update(
             String payloadField, String pointName, CommonCode dataPointType,
-            String unit, Double scale, String valueMap, boolean enabled
+            CommonCode unitCode, Double scale, String valueMap, boolean enabled
     ) {
         validatePayloadField(payloadField);
         validatePointName(pointName);
@@ -102,10 +103,14 @@ public class DeviceModelLoraPoint extends BaseEntity {
         this.payloadField = payloadField.trim();
         this.pointName = pointName.trim();
         this.dataPointType = dataPointType;
-        this.unit = unit;
+        this.unitCode = unitCode;
         this.scale = scale;
         this.valueMap = valueMap;
         this.enabled = enabled;
+    }
+
+    public String getUnit() {
+        return unitCode == null ? null : unitCode.getName();
     }
 
     private static void validateDeviceModel(DeviceModel deviceModel) {

@@ -13,6 +13,7 @@ import net.vivans.dcim.module.devicemodel.domain.repository.DeviceModelRepositor
 import net.vivans.dcim.module.devicemodel.domain.repository.DeviceModelSnmpPointRepository;
 import net.vivans.dcim.module.common.domain.model.CommonCode;
 import net.vivans.dcim.module.common.domain.repository.CommonCodeRepository;
+import net.vivans.dcim.module.common.application.UnitCodeResolver;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +31,7 @@ public class DeviceModelSnmpPointQueryService {
     private final DeviceModelSnmpPointRepository deviceModelSnmpPointRepository;
     private final CollectionScriptSyncService collectionScriptSyncService;
     private final CommonCodeRepository commonCodeRepository;
+    private final UnitCodeResolver unitCodeResolver;
 
     public List<DeviceModelSnmpPointResponse> getDeviceModelSnmpPoints(Integer modelId, Integer protocolId) {
         findSnmpProtocol(modelId, protocolId);
@@ -107,7 +109,7 @@ public class DeviceModelSnmpPointQueryService {
         boolean requiresInstance = Boolean.TRUE.equals(request.requiresInstance());
         boolean enabled = request.enabled() == null || request.enabled();
 
-        point.update(request.name(), request.oid(), requiresInstance, request.unit(), request.scale(), enabled,
+        point.update(request.name(), request.oid(), requiresInstance, unitCodeResolver.resolve(request.unitCodeId()), request.scale(), enabled,
                 resolveDataPointType(request.dataPointTypeId()));
 
         DeviceModelSnmpPoint saved = deviceModelSnmpPointRepository.save(point);
@@ -172,7 +174,7 @@ public class DeviceModelSnmpPointQueryService {
                 request.name(),
                 request.oid(),
                 requiresInstance,
-                request.unit(),
+                unitCodeResolver.resolve(request.unitCodeId()),
                 request.scale(),
                 enabled,
                 resolveDataPointType(request.dataPointTypeId())

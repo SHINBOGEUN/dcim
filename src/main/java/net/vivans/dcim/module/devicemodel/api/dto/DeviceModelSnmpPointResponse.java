@@ -11,6 +11,7 @@ public record DeviceModelSnmpPointResponse(
         String name,
         String oid,
         boolean requiresInstance,
+        Integer unitCodeId,
         String unit,
         Double scale,
         boolean enabled
@@ -26,6 +27,7 @@ public record DeviceModelSnmpPointResponse(
                 point.getName(),
                 point.getOid(),
                 point.isRequiresInstance(),
+                point.getUnitCode() == null ? null : point.getUnitCode().getId(),
                 point.getUnit(),
                 point.getScale(),
                 point.isEnabled()

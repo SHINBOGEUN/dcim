@@ -2082,7 +2082,7 @@
                 <input id="mpEditName" />
               </label>
               <label class="field">단위
-                <input id="mpEditUnit" placeholder="W" />
+                <select id="mpEditUnit"></select>
               </label>
               <label class="field">데이터 유형
                 <select id="mpEditDataPointTypeId"></select>
@@ -2373,7 +2373,7 @@
                 <select id="loraMpDataPointTypeId"></select>
               </label>
               <label class="field">단위
-                <input id="loraMpUnit" placeholder="예: C" />
+                <select id="loraMpUnit"></select>
               </label>
               <label class="field">scale
                 <input id="loraMpScale" class="mono" type="number" step="any" placeholder="비우면 1" />
@@ -2877,6 +2877,9 @@
       }
       fillPathSelects();
       fillModelFormSelects();
+      fillUnitSelect($("mpEditUnit"), $("mpEditUnit").value);
+      fillUnitSelect($("loraMpUnit"), $("loraMpUnit").value);
+      $("mpRows").querySelectorAll(".mp-unit").forEach((select) => fillUnitSelect(select, select.value));
       renderCodeGroups();
     }
 
@@ -3479,13 +3482,20 @@
       select.value = selectedId == null ? (unclassified ? String(unclassified.id) : "") : String(selectedId);
     }
 
+    function fillUnitSelect(select, selectedId) {
+      const units = state.codes.UNIT || [];
+      select.innerHTML = `<option value="">단위 없음</option>` + units.map((code) =>
+        `<option value="${code.id}">${esc(code.name)} (${esc(code.code)})</option>`).join("");
+      select.value = selectedId == null ? "" : String(selectedId);
+    }
+
     function clearMpEdit() {
       state.mpEditPointId = null;
       $("mpEditBox").style.display = "none";
       $("mpEditId").textContent = "";
       $("mpEditName").value = "";
       $("mpEditOid").value = "";
-      $("mpEditUnit").value = "";
+      fillUnitSelect($("mpEditUnit"));
       $("mpEditDataPointTypeId").value = "";
       fillDataPointTypeSelect($("mpEditDataPointTypeId"));
       $("mpEditScale").value = "";
@@ -3499,7 +3509,7 @@
       $("mpEditId").textContent = `#${point.id}`;
       $("mpEditName").value = point.name || "";
       $("mpEditOid").value = point.oid || "";
-      $("mpEditUnit").value = point.unit || "";
+      fillUnitSelect($("mpEditUnit"), point.unitCodeId);
       fillDataPointTypeSelect($("mpEditDataPointTypeId"), point.dataPointTypeId);
       $("mpEditScale").value = point.scale == null ? "" : String(point.scale);
       $("mpEditInst").value = point.requiresInstance ? "true" : "false";
@@ -3526,7 +3536,7 @@
           body: JSON.stringify({
             name,
             oid,
-            unit: $("mpEditUnit").value.trim() || null,
+            unitCodeId: Number($("mpEditUnit").value) || null,
             scale,
             requiresInstance: $("mpEditInst").value === "true",
             enabled: $("mpEditEnabled").value === "true",
@@ -3543,7 +3553,7 @@
       return `<tr class="mp-row">
         <td><input class="mp-name" placeholder="TOTAL_WT" style="width:100%" /></td>
         <td><input class="mp-oid mono" placeholder="1.3.6.1… 또는 {instanceId}" style="width:100%" /></td>
-        <td><input class="mp-unit" placeholder="W" style="width:100%" /></td>
+        <td><select class="mp-unit" style="width:100%"></select></td>
         <td><select class="mp-data-point-type" style="width:100%"></select></td>
         <td><input class="mp-scale mono" type="number" step="any" placeholder="1" style="width:100%" title="raw × scale (비우면 1)" /></td>
         <td class="col-inst" style="text-align:center"><input type="checkbox" class="mp-inst" title="requiresInstance" /></td>
@@ -3575,12 +3585,14 @@
         body.insertAdjacentHTML("beforeend", mpRowHtml());
       }
       body.querySelectorAll(".mp-data-point-type").forEach((select) => fillDataPointTypeSelect(select));
+      body.querySelectorAll(".mp-unit").forEach((select) => fillUnitSelect(select));
       body.querySelectorAll(".mp-row").forEach(bindMpRowDelete);
     }
 
     $("mpAddRow").onclick = () => {
       $("mpRows").insertAdjacentHTML("beforeend", mpRowHtml());
       fillDataPointTypeSelect($("mpRows").lastElementChild.querySelector(".mp-data-point-type"));
+      fillUnitSelect($("mpRows").lastElementChild.querySelector(".mp-unit"));
       bindMpRowDelete($("mpRows").lastElementChild);
     };
 
@@ -3593,7 +3605,7 @@
         return {
           name: tr.querySelector(".mp-name").value.trim(),
           oid: tr.querySelector(".mp-oid").value.trim(),
-          unit: tr.querySelector(".mp-unit").value.trim() || null,
+          unitCodeId: Number(tr.querySelector(".mp-unit").value) || null,
           dataPointTypeId: Number(tr.querySelector(".mp-data-point-type").value) || null,
           scale: scaleRaw === "" ? null : Number(scaleRaw),
           requiresInstance: tr.querySelector(".mp-inst").checked,
@@ -8590,7 +8602,7 @@
           $("loraMpPayloadField").value = p.payloadField || "";
           $("loraMpPointName").value = p.pointName || "";
           fillDataPointTypeSelect($("loraMpDataPointTypeId"), p.dataPointTypeId);
-          $("loraMpUnit").value = p.unit || "";
+          fillUnitSelect($("loraMpUnit"), p.unitCodeId);
           $("loraMpScale").value = p.scale ?? "";
           $("loraMpValueMap").value = p.valueMap || "";
           $("loraMpEnabled").value = String(p.enabled);
@@ -8617,7 +8629,7 @@
       $("loraMpPayloadField").value = "";
       $("loraMpPointName").value = "";
       fillDataPointTypeSelect($("loraMpDataPointTypeId"));
-      $("loraMpUnit").value = "";
+      fillUnitSelect($("loraMpUnit"));
       $("loraMpScale").value = "";
       $("loraMpValueMap").value = "";
       $("loraMpEnabled").value = "true";
@@ -8733,7 +8745,7 @@
         payloadField,
         pointName,
         dataPointTypeId: $("loraMpDataPointTypeId").value ? Number($("loraMpDataPointTypeId").value) : null,
-        unit: $("loraMpUnit").value.trim() || null,
+        unitCodeId: Number($("loraMpUnit").value) || null,
         scale: scaleRaw === "" ? null : Number(scaleRaw),
         valueMap: valueMapRaw || null,
         enabled: $("loraMpEnabled").value === "true",
