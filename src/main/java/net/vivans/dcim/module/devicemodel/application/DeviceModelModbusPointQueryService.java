@@ -2,6 +2,7 @@ package net.vivans.dcim.module.devicemodel.application;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import net.vivans.dcim.module.collectortask.application.CollectionScriptSyncService;
 import net.vivans.dcim.module.devicemodel.api.dto.DeviceModelModbusPointCreateRequest;
 import net.vivans.dcim.module.devicemodel.api.dto.DeviceModelModbusPointResponse;
 import net.vivans.dcim.module.devicemodel.domain.model.DeviceModel;
@@ -22,6 +23,7 @@ public class DeviceModelModbusPointQueryService {
 
     private final DeviceModelRepository deviceModelRepository;
     private final DeviceModelModbusPointRepository deviceModelModbusPointRepository;
+    private final CollectionScriptSyncService collectionScriptSyncService;
 
     public List<DeviceModelModbusPointResponse> getDeviceModelModbusPoints(Integer modelId, Integer protocolId) {
         findModbusProtocol(modelId, protocolId);
@@ -69,11 +71,14 @@ public class DeviceModelModbusPointQueryService {
                 request.address(),
                 requiresInstance,
                 request.scale(),
+                request.offset(),
                 request.unit(),
                 enabled
         );
 
-        return DeviceModelModbusPointResponse.from(deviceModelModbusPointRepository.save(point));
+        DeviceModelModbusPoint saved = deviceModelModbusPointRepository.save(point);
+        collectionScriptSyncService.regenerateByModelId(modelId);
+        return DeviceModelModbusPointResponse.from(saved);
     }
 
     @Transactional
@@ -102,11 +107,14 @@ public class DeviceModelModbusPointQueryService {
                 request.address(),
                 requiresInstance,
                 request.scale(),
+                request.offset(),
                 request.unit(),
                 enabled
         );
 
-        return DeviceModelModbusPointResponse.from(deviceModelModbusPointRepository.save(point));
+        DeviceModelModbusPoint saved = deviceModelModbusPointRepository.save(point);
+        collectionScriptSyncService.regenerateByModelId(modelId);
+        return DeviceModelModbusPointResponse.from(saved);
     }
 
     @Transactional
@@ -114,6 +122,7 @@ public class DeviceModelModbusPointQueryService {
         findModbusProtocol(modelId, protocolId);
         DeviceModelModbusPoint point = findModbusPoint(pointId, protocolId);
         deviceModelModbusPointRepository.delete(point);
+        collectionScriptSyncService.regenerateByModelId(modelId);
         return pointId;
     }
 

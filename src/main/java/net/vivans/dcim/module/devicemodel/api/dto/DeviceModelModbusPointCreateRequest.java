@@ -33,6 +33,9 @@ public record DeviceModelModbusPointCreateRequest(
         @Schema(description = "원시값에 곱할 배율 (null이면 1)", example = "1000")
         Double scale,
 
+        @Schema(description = "배율 적용 후 더할 값 (null이면 0). 최종값 = raw × scale + offset", example = "-50")
+        Double offset,
+
         @Schema(description = "단위", example = "W")
         String unit,
 

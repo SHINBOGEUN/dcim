@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS `device_model_modbus_point` (
   `address` int(11) DEFAULT NULL COMMENT '레지스터 주소 (0~65535). requires_instance=1이면 NULL',
   `requires_instance` tinyint(1) NOT NULL DEFAULT 0 COMMENT '주소를 인스턴스가 제공하는지 (0=false, 1=true)',
   `scale` double DEFAULT NULL COMMENT '원시값에 곱할 배율 (NULL이면 1)',
+  `value_offset` double DEFAULT NULL COMMENT '배율 적용 후 더할 값 (NULL이면 0)',
   `unit` varchar(50) DEFAULT NULL COMMENT '단위 (W, A, °C, % 등)',
   `enabled` tinyint(1) NOT NULL DEFAULT 1 COMMENT '사용 여부 (0=false, 1=true)',
   `created_dt` timestamp(6) NULL DEFAULT current_timestamp(6) COMMENT '생성 시각',
