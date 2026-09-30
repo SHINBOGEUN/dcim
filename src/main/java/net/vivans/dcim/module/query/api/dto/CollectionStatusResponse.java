@@ -9,7 +9,7 @@ public record CollectionStatusResponse(
         List<CollectionDeviceStatusResponse> devices
 ) {
     public record CollectionStatusSummary(
-            int totalCount, int normalCount, int staleCount, int missingCount,
+            int totalCount, int normalCount, int partialCount, int staleCount, int missingCount,
             int stoppedCount, int unregisteredCount, int disabledCount
     ) {}
 }

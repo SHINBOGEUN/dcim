@@ -9,6 +9,11 @@ public interface PointQuery {
 
     List<LastPoint> findLast(List<Integer> deviceIds, List<String> pointNames, Duration lookback);
 
+    default List<LastPoint> findLast(List<Integer> deviceIds, List<String> pointNames, Duration lookback,
+                                     String protocol) {
+        return findLast(deviceIds, pointNames, lookback);
+    }
+
     List<SeriesPoint> findSeries(
             List<Integer> deviceIds,
             List<String> pointNames,

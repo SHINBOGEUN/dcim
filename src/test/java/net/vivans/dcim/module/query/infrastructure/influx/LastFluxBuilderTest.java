@@ -36,4 +36,12 @@ class LastFluxBuilderTest {
         String quoted = LastFluxBuilder.quote("a\"b");
         assertThat(quoted).isEqualTo("\"a\\\"b\"");
     }
+
+    @Test
+    void limitsCollectionStatusToItsProtocol() {
+        String flux = LastFluxBuilder.buildLastQuery(
+                "dcim", "dcim_sensor", List.of(101), List.of("POWER"), Duration.ofHours(1), "modbus");
+
+        assertThat(flux).contains("r[\"protocol\"] == \"modbus\"");
+    }
 }

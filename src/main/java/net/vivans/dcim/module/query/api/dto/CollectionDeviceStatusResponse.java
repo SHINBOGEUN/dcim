@@ -15,5 +15,6 @@ public record CollectionDeviceStatusResponse(
         int expectedPointCount, int availablePointCount,
         List<LatestValue> latestValues
 ) {
-    public record LatestValue(String pointName, Double value, String unit, Instant collectedAt) {}
+    public record LatestValue(Integer targetDeviceId, String targetDeviceName,
+                              String pointName, Double value, String unit, Instant collectedAt) {}
 }
