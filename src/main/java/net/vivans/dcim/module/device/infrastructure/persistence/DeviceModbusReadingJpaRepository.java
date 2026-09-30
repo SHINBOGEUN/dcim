@@ -28,6 +28,11 @@ public class DeviceModbusReadingJpaRepository
     }
 
     @Override
+    public List<DeviceModbusReading> findAllByTargetDeviceIdOrderByIdAsc(Integer targetDeviceId) {
+        return springDataRepository.findAllByTargetDevice_IdOrderByIdAsc(targetDeviceId);
+    }
+
+    @Override
     public Optional<DeviceModbusReading> findByIdAndEndpointId(
             Integer id,
             Integer endpointId

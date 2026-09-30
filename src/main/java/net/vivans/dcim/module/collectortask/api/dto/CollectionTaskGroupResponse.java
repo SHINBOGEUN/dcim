@@ -1,6 +1,6 @@
 package net.vivans.dcim.module.collectortask.api.dto;
 
-import net.vivans.dcim.module.collectortask.application.CollectionGroupSpec;
+import net.vivans.dcim.module.collectortask.application.CollectionGroupPlan;
 import net.vivans.dcim.module.collectortask.application.CollectionGroupSpecService;
 import net.vivans.dcim.module.collectortask.domain.model.CollectionTaskDevice;
 import net.vivans.dcim.module.collectortask.domain.model.CollectionTaskGroup;
@@ -27,7 +27,7 @@ public record CollectionTaskGroupResponse(
      * 맞아야 하기 때문 (수집 상태 화면과 동일한 방식).
      */
     public static CollectionTaskGroupResponse from(CollectionTaskGroup group, CollectionGroupSpecService specService) {
-        CollectionGroupSpec spec = specService.generate(group);
+        CollectionGroupPlan spec = specService.generate(group);
         List<CollectionTaskDeviceResponse> devices = new ArrayList<>();
         for (CollectionTaskDevice mapping : group.getDevices()) {
             devices.add(CollectionTaskDeviceResponse.from(mapping, spec));

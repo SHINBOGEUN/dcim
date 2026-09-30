@@ -11,6 +11,8 @@ public interface DeviceModbusReadingRepository {
 
     List<DeviceModbusReading> findAllByEndpointIdOrderByIdAsc(Integer endpointId);
 
+    List<DeviceModbusReading> findAllByTargetDeviceIdOrderByIdAsc(Integer targetDeviceId);
+
     Optional<DeviceModbusReading> findByIdAndEndpointId(Integer id, Integer endpointId);
 
     boolean existsByEndpointIdAndUnitIdAndAddress(Integer endpointId, int unitId, int address);

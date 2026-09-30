@@ -7,12 +7,15 @@ import net.vivans.dcim.module.collectortask.domain.model.CollectionTaskGroup;
 import net.vivans.dcim.module.collectortask.domain.repository.CollectionTaskRepository;
 import net.vivans.dcim.module.device.domain.model.Device;
 import net.vivans.dcim.module.device.domain.repository.DeviceRepository;
+import net.vivans.dcim.module.device.domain.repository.DeviceModbusReadingRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -22,6 +25,7 @@ public class CollectionScriptSyncService {
     private final CollectionTaskRepository collectionTaskRepository;
     private final CollectionGroupSpecService collectionGroupSpecService;
     private final DeviceRepository deviceRepository;
+    private final DeviceModbusReadingRepository deviceModbusReadingRepository;
     private final CollectorSyncService collectorSyncService;
 
     @Transactional
@@ -33,6 +37,19 @@ public class CollectionScriptSyncService {
         for (CollectionTask task : tasks) {
             regenerateTask(task);
         }
+    }
+
+    /** 수집원과 다른 장비에 값을 저장하는 회선 매핑의 대상이 변경됐을 때 수집원 작업을 갱신한다. */
+    @Transactional
+    public void regenerateForMappedTarget(Integer targetDeviceId) {
+        if (targetDeviceId == null) {
+            return;
+        }
+        Set<Integer> sourceModelIds = deviceModbusReadingRepository
+                .findAllByTargetDeviceIdOrderByIdAsc(targetDeviceId).stream()
+                .map(reading -> reading.getEndpointModbus().getEndpoint().getDevice().getDeviceModel().getId())
+                .collect(Collectors.toSet());
+        sourceModelIds.forEach(this::regenerateByModelId);
     }
 
     @Transactional

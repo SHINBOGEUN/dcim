@@ -9,6 +9,7 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Component
@@ -21,6 +22,9 @@ public class CollectorJobClient {
             new ParameterizedTypeReference<>() {
             };
     private static final ParameterizedTypeReference<CollectorApiResponse<List<CollectorJobResponse>>> JOB_LIST_RESPONSE_TYPE =
+            new ParameterizedTypeReference<>() {
+            };
+    private static final ParameterizedTypeReference<CollectorApiResponse<CollectorModbusPreviewResponse>> MODBUS_PREVIEW_TYPE =
             new ParameterizedTypeReference<>() {
             };
 
@@ -136,6 +140,23 @@ public class CollectorJobClient {
                 .retrieve()
                 .body(JOB_LIST_RESPONSE_TYPE);
         return response == null || response.data() == null ? List.of() : response.data();
+    }
+
+    /** 일회성 물리 읽기. Collector에 job을 만들거나 MQTT로 발행하지 않는다. */
+    public CollectorModbusPreviewResponse previewModbus(Map<String, Object> request) {
+        if (!properties.isEnabled()) {
+            throw new IllegalStateException("collector service is disabled");
+        }
+        CollectorApiResponse<CollectorModbusPreviewResponse> response = restClient.post()
+                .uri("/api/modbus/read-preview")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(request)
+                .retrieve()
+                .body(MODBUS_PREVIEW_TYPE);
+        if (response == null || response.data() == null) {
+            throw new IllegalStateException("collector Modbus preview returned empty response");
+        }
+        return response.data();
     }
 
     private CollectorJobResponse requireData(CollectorApiResponse<CollectorJobResponse> response, String operation) {
