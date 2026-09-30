@@ -29,12 +29,19 @@ public class InfluxPointQuery implements PointQuery {
 
     @Override
     public List<LastPoint> findLast(List<Integer> deviceIds, List<String> pointNames, Duration lookback) {
+        return findLast(deviceIds, pointNames, lookback, null);
+    }
+
+    @Override
+    public List<LastPoint> findLast(List<Integer> deviceIds, List<String> pointNames, Duration lookback,
+                                    String protocol) {
         String flux = LastFluxBuilder.buildLastQuery(
                 properties.getBucket(),
                 properties.getMeasurement(),
                 deviceIds,
                 pointNames,
-                lookback
+                lookback,
+                protocol
         );
         try {
             return mapLast(query(flux));

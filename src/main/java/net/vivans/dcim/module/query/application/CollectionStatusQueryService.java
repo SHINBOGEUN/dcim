@@ -9,12 +9,12 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
-import net.vivans.dcim.module.collectortask.application.CollectionGroupOidSpec;
-import net.vivans.dcim.module.collectortask.application.CollectionGroupSpec;
+import net.vivans.dcim.module.collectortask.application.CollectionGroupPlan;
 import net.vivans.dcim.module.collectortask.application.CollectionGroupSpecService;
 import net.vivans.dcim.module.collectortask.domain.model.CollectionTask;
 import net.vivans.dcim.module.collectortask.domain.model.CollectionTaskDevice;
@@ -37,7 +37,7 @@ import org.springframework.transaction.annotation.Transactional;
  * 장비 등록·수집 작업·Influx 최신 데이터를 한 화면의 운영 상태로 결합한다.
  * <p>
  * 프로토콜별 분기를 두지 않는다. 수집 그룹이 실제로 수집할 point 목록과 실패 사유는
- * {@link CollectionGroupSpecService#generate}가 돌려주는 {@link CollectionGroupSpec}에서,
+ * {@link CollectionGroupSpecService#generate}가 돌려주는 {@link CollectionGroupPlan}에서,
  * 측정항목 단위는 {@link DeviceModelPointCatalog}에서 가져온다.
  */
 @Service
@@ -62,18 +62,24 @@ public class CollectionStatusQueryService {
         List<Device> devices = deviceRepository.findAll(null, null, null, null, null, null,
                 PageRequest.of(0, MAX_DEVICES, org.springframework.data.domain.Sort.by("id"))).getContent();
         Map<Integer, Registration> registrationByDeviceId = registrations();
-        Map<Integer, CollectionGroupSpec> specByGroupId = specsByGroup(registrationByDeviceId);
+        Map<Integer, CollectionGroupPlan> specByGroupId = specsByGroup(registrationByDeviceId);
         Map<Integer, Map<String, String>> unitsByModelId = deviceModelPointCatalog.unitsByModelId(modelIds(devices));
         Map<Integer, List<LastPoint>> lastPointsByDeviceId = latestPoints(devices, registrationByDeviceId,
                 specByGroupId, Duration.ofHours(resolvedLookbackHours));
+        Map<Integer, String> deviceNamesById = new HashMap<>();
+        for (Device device : devices) deviceNamesById.put(device.getId(), device.getName());
 
         List<CollectionDeviceStatusResponse> rows = new ArrayList<>();
         for (Device device : devices) {
             Registration registration = registrationByDeviceId.get(device.getId());
-            CollectionGroupSpec spec = registration == null ? null : specByGroupId.get(registration.group().getId());
+            CollectionGroupPlan spec = registration == null ? null : specByGroupId.get(registration.group().getId());
             List<LastPoint> latestPoints = lastPointsByDeviceId.getOrDefault(device.getId(), List.of());
-            Map<String, String> units = unitsByModelId.getOrDefault(device.getDeviceModel().getId(), Map.of());
-            rows.add(toResponse(device, registration, spec, latestPoints, units, now, resolvedLookbackHours));
+            Map<String, String> units = new HashMap<>(unitsByModelId.getOrDefault(device.getDeviceModel().getId(), Map.of()));
+            if (spec != null) {
+                units.putAll(spec.unitsForSource(device.getId()));
+            }
+            rows.add(toResponse(device, registration, spec, latestPoints, units,
+                    deviceNamesById, now, resolvedLookbackHours));
         }
         rows.sort(Comparator.comparing(CollectionDeviceStatusResponse::status)
                 .thenComparing(CollectionDeviceStatusResponse::deviceName));
@@ -103,8 +109,8 @@ public class CollectionStatusQueryService {
     }
 
     /** 등록된(활성 여부 무관) 그룹마다 spec을 한 번씩만 생성한다. */
-    private Map<Integer, CollectionGroupSpec> specsByGroup(Map<Integer, Registration> registrations) {
-        Map<Integer, CollectionGroupSpec> result = new HashMap<>();
+    private Map<Integer, CollectionGroupPlan> specsByGroup(Map<Integer, Registration> registrations) {
+        Map<Integer, CollectionGroupPlan> result = new HashMap<>();
         for (Registration registration : registrations.values()) {
             Integer groupId = registration.group().getId();
             result.computeIfAbsent(groupId, ignored -> collectionGroupSpecService.generate(registration.group()));
@@ -115,24 +121,41 @@ public class CollectionStatusQueryService {
     private Map<Integer, List<LastPoint>> latestPoints(
             List<Device> devices,
             Map<Integer, Registration> registrations,
-            Map<Integer, CollectionGroupSpec> specByGroupId,
+            Map<Integer, CollectionGroupPlan> specByGroupId,
             Duration lookback
     ) {
-        List<Integer> deviceIds = new ArrayList<>();
-        Set<String> pointNames = new LinkedHashSet<>();
+        Map<String, Map<Integer, Map<String, Set<Integer>>>> sourceIdsByProtocolAndStorageDevice = new HashMap<>();
         for (Device device : devices) {
             if (!device.isEnabled()) continue;
             Registration registration = registrations.get(device.getId());
             if (registration == null || !registration.active()) continue;
-            CollectionGroupSpec spec = specByGroupId.get(registration.group().getId());
-            if (spec == null || spec.oids().isEmpty()) continue;
-            deviceIds.add(device.getId());
-            for (CollectionGroupOidSpec oid : spec.oids()) pointNames.add(oid.name());
+            CollectionGroupPlan spec = specByGroupId.get(registration.group().getId());
+            if (spec == null) continue;
+            String protocol = registration.task().getScriptType().getCode().toLowerCase(Locale.ROOT);
+            Map<Integer, Map<String, Set<Integer>>> byStorageDevice =
+                    sourceIdsByProtocolAndStorageDevice.computeIfAbsent(protocol, ignored -> new HashMap<>());
+            for (CollectionGroupPlan.PointSource point : spec.pointsForSource(device.getId())) {
+                byStorageDevice
+                        .computeIfAbsent(point.storageDeviceId(), ignored -> new HashMap<>())
+                        .computeIfAbsent(point.pointName(), ignored -> new LinkedHashSet<>())
+                        .add(device.getId());
+            }
         }
-        if (deviceIds.isEmpty() || pointNames.isEmpty()) return Map.of();
+        if (sourceIdsByProtocolAndStorageDevice.isEmpty()) return Map.of();
         Map<Integer, List<LastPoint>> result = new HashMap<>();
-        for (LastPoint point : pointQuery.findLast(deviceIds, List.copyOf(pointNames), lookback)) {
-            result.computeIfAbsent(point.deviceId(), ignored -> new ArrayList<>()).add(point);
+        for (Map.Entry<String, Map<Integer, Map<String, Set<Integer>>>> protocolEntry
+                : sourceIdsByProtocolAndStorageDevice.entrySet()) {
+            Map<Integer, Map<String, Set<Integer>>> byStorageDevice = protocolEntry.getValue();
+            Set<String> pointNames = new LinkedHashSet<>();
+            byStorageDevice.values().forEach(names -> pointNames.addAll(names.keySet()));
+            for (LastPoint point : pointQuery.findLast(List.copyOf(byStorageDevice.keySet()),
+                    List.copyOf(pointNames), lookback, protocolEntry.getKey())) {
+                Set<Integer> sourceIds = byStorageDevice.getOrDefault(point.deviceId(), Map.of())
+                        .getOrDefault(point.pointName(), Set.of());
+                for (Integer sourceId : sourceIds) {
+                    result.computeIfAbsent(sourceId, ignored -> new ArrayList<>()).add(point);
+                }
+            }
         }
         return result;
     }
@@ -140,16 +163,16 @@ public class CollectionStatusQueryService {
     private CollectionDeviceStatusResponse toResponse(
             Device device,
             Registration registration,
-            CollectionGroupSpec spec,
+            CollectionGroupPlan spec,
             List<LastPoint> latestPoints,
             Map<String, String> unitByPointName,
+            Map<Integer, String> deviceNamesById,
             Instant now,
             int lookbackHours
     ) {
-        Set<String> expectedPointNames = new LinkedHashSet<>();
-        if (spec != null) {
-            for (CollectionGroupOidSpec oid : spec.oids()) expectedPointNames.add(oid.name());
-        }
+        List<CollectionGroupPlan.PointSource> expectedSources = spec == null
+                ? List.of() : spec.pointsForSource(device.getId());
+        Set<String> expectedPointNames = spec == null ? Set.of() : spec.pointNamesForSource(device.getId());
         List<LastPoint> devicePoints = latestPoints.stream()
                 .filter(point -> expectedPointNames.contains(point.pointName()))
                 .toList();
@@ -161,6 +184,23 @@ public class CollectionStatusQueryService {
         long failureAfterSeconds = failureAfterSeconds(interval, staleAfterSeconds);
         Instant latest = devicePoints.stream().map(LastPoint::time).max(Comparator.naturalOrder()).orElse(null);
         Long ageSeconds = latest == null ? null : Math.max(Duration.between(latest, now).getSeconds(), 0L);
+        Map<PointKey, LastPoint> lastByTargetAndName = new HashMap<>();
+        for (LastPoint point : devicePoints) {
+            lastByTargetAndName.put(new PointKey(point.deviceId(), point.pointName()), point);
+        }
+        int freshPointCount = 0;
+        List<String> missingOrStalePoints = new ArrayList<>();
+        for (CollectionGroupPlan.PointSource source : expectedSources) {
+            LastPoint point = lastByTargetAndName.get(new PointKey(source.storageDeviceId(), source.pointName()));
+            Long pointAgeSeconds = point == null ? null : Math.max(Duration.between(point.time(), now).getSeconds(), 0L);
+            if (pointAgeSeconds != null && pointAgeSeconds <= staleAfterSeconds) {
+                freshPointCount++;
+            } else {
+                String target = deviceNamesById.getOrDefault(source.storageDeviceId(), "#" + source.storageDeviceId());
+                missingOrStalePoints.add(target + " (#" + source.storageDeviceId() + ") / " + source.pointName()
+                        + (pointAgeSeconds == null ? " — 저장값 없음" : " — 마지막 값 " + formatElapsed(pointAgeSeconds) + " 전"));
+            }
+        }
 
         // 그룹 spec의 skipped 사유 중 '이 장비' 항목만 골라낸다. 그룹 내 다른 장비의 사유가
         // 이 장비 상태에 잘못 섞여 들어가지 않게 하기 위함이다.
@@ -186,7 +226,7 @@ public class CollectionStatusQueryService {
             status = "STOPPED";
             message = "비활성화됨";
             technicalDetail = !registration.task().isActive() ? "수집 작업이 중지되었습니다." : "수집 그룹이 중지되었습니다.";
-        } else if (spec == null || spec.oids().isEmpty()) {
+        } else if (spec == null || spec.pointsForSource(device.getId()).isEmpty() && !modelMismatch) {
             // 그룹에 수집 대상 포인트 자체가 없는 경우에만 설정 누락으로 즉시 판정한다.
             status = "NO_POINTS";
             boolean unsupported = spec != null && spec.skipped().stream().anyMatch(reason -> reason.contains(UNSUPPORTED_MARKER));
@@ -217,6 +257,12 @@ public class CollectionStatusQueryService {
                 technicalDetail = "마지막 저장값이 " + formatElapsed(ageSeconds) + " 전입니다."
                         + " 허용 지연 " + formatElapsed(staleAfterSeconds)
                         + "(수집 주기 " + formatElapsed(interval) + ")을 넘겼습니다.";
+            } else if (freshPointCount < expectedSources.size()) {
+                status = "PARTIAL";
+                message = "일부 측정항목 누락";
+                technicalDetail = "정상 최신값 " + freshPointCount + "/" + expectedSources.size()
+                        + "개 (허용 지연 " + formatElapsed(staleAfterSeconds) + "). "
+                        + String.join(" / ", missingOrStalePoints);
             } else {
                 status = "NORMAL";
                 message = "정상";
@@ -236,8 +282,8 @@ public class CollectionStatusQueryService {
 
         List<CollectionDeviceStatusResponse.LatestValue> values = devicePoints.stream()
                 .sorted(Comparator.comparing(LastPoint::time).reversed())
-                .limit(3)
                 .map(point -> new CollectionDeviceStatusResponse.LatestValue(
+                        point.deviceId(), deviceNamesById.getOrDefault(point.deviceId(), "#" + point.deviceId()),
                         point.pointName(), point.value(), unitByPointName.get(point.pointName()), point.time()))
                 .toList();
 
@@ -251,7 +297,7 @@ public class CollectionStatusQueryService {
                 registration == null ? null : registration.group().getId(), registration == null ? null : registration.group().getName(),
                 registration == null ? null : registration.group().getCronExpression(),
                 registration == null ? null : registration.group().getCollectorJobId(), intervalSeconds,
-                latest, ageSeconds, expectedPointNames.size(), devicePoints.size(), values);
+                latest, ageSeconds, expectedSources.size(), freshPointCount, values);
     }
 
     private long staleAfterSeconds(long intervalSeconds) {
@@ -304,10 +350,11 @@ public class CollectionStatusQueryService {
     }
 
     private static CollectionStatusResponse.CollectionStatusSummary summarize(List<CollectionDeviceStatusResponse> rows) {
-        int normal = 0, stale = 0, missing = 0, stopped = 0, unregistered = 0, disabled = 0;
+        int normal = 0, partial = 0, stale = 0, missing = 0, stopped = 0, unregistered = 0, disabled = 0;
         for (CollectionDeviceStatusResponse row : rows) {
             switch (row.status()) {
                 case "NORMAL" -> normal++;
+                case "PARTIAL" -> partial++;
                 case "STALE" -> stale++;
                 case "MISSING", "NO_POINTS", "MODEL_MISMATCH" -> missing++;
                 case "STOPPED" -> stopped++;
@@ -316,7 +363,10 @@ public class CollectionStatusQueryService {
                 default -> { }
             }
         }
-        return new CollectionStatusResponse.CollectionStatusSummary(rows.size(), normal, stale, missing, stopped, unregistered, disabled);
+        return new CollectionStatusResponse.CollectionStatusSummary(rows.size(), normal, partial, stale, missing, stopped, unregistered, disabled);
+    }
+
+    private record PointKey(Integer deviceId, String pointName) {
     }
 
     private record Registration(CollectionTask task, CollectionTaskGroup group) {

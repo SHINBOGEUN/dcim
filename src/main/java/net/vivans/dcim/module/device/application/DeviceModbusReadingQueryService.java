@@ -2,6 +2,7 @@ package net.vivans.dcim.module.device.application;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import net.vivans.dcim.module.collectortask.application.CollectionScriptSyncService;
 import net.vivans.dcim.module.device.api.dto.DeviceModbusReadingCreateRequest;
 import net.vivans.dcim.module.device.api.dto.DeviceModbusReadingResponse;
 import net.vivans.dcim.module.device.api.dto.DeviceModbusReadingUpdateRequest;
@@ -33,6 +34,7 @@ public class DeviceModbusReadingQueryService {
     private final DeviceEndpointModbusRepository endpointModbusRepository;
     private final DeviceModelModbusPointRepository pointRepository;
     private final DeviceModbusReadingRepository readingRepository;
+    private final CollectionScriptSyncService collectionScriptSyncService;
 
     public List<DeviceModbusReadingResponse> getReadings(Integer deviceId, Integer endpointId) {
         validateReadingSource(deviceId, endpointId);
@@ -46,11 +48,12 @@ public class DeviceModbusReadingQueryService {
         return DeviceModbusReadingResponse.from(findReading(readingId, endpointId));
     }
 
-    private void validateReadingSource(Integer deviceId, Integer endpointId) {
+    private DeviceProtocolEndpoint validateReadingSource(Integer deviceId, Integer endpointId) {
         findDevice(deviceId);
         DeviceProtocolEndpoint endpoint = findEndpoint(deviceId, endpointId);
         validateModbusEndpoint(endpoint);
         requireModbusConfig(endpointId);
+        return endpoint;
     }
 
     @Transactional
@@ -94,6 +97,7 @@ public class DeviceModbusReadingQueryService {
         );
 
         DeviceModbusReading saved = readingRepository.save(reading);
+        collectionScriptSyncService.regenerateByModelId(endpoint.getDevice().getDeviceModel().getId());
         return DeviceModbusReadingResponse.from(saved);
     }
 
@@ -142,14 +146,16 @@ public class DeviceModbusReadingQueryService {
         );
 
         DeviceModbusReading saved = readingRepository.save(reading);
+        collectionScriptSyncService.regenerateByModelId(endpoint.getDevice().getDeviceModel().getId());
         return DeviceModbusReadingResponse.from(saved);
     }
 
     @Transactional
     public Integer deleteReading(Integer deviceId, Integer endpointId, Integer readingId) {
-        validateReadingSource(deviceId, endpointId);
+        DeviceProtocolEndpoint endpoint = validateReadingSource(deviceId, endpointId);
         DeviceModbusReading reading = findReading(readingId, endpointId);
         readingRepository.delete(reading);
+        collectionScriptSyncService.regenerateByModelId(endpoint.getDevice().getDeviceModel().getId());
         return readingId;
     }
 

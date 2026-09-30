@@ -116,8 +116,7 @@ public class CollectionOperationsHealthService {
 
         List<CollectionJobHealthResponse> result = new ArrayList<>();
         for (CollectionTask task : collectionTaskRepository.findAll(null, null, null)) {
-            if (!task.isActive() || task.getScriptType() == null
-                    || !CollectionGroupSpecService.SNMP_PROTOCOL_CODE.equalsIgnoreCase(task.getScriptType().getCode())) {
+            if (!task.isActive() || !isCollectorTask(task)) {
                 continue;
             }
             for (CollectionTaskGroup group : task.getGroups()) {
@@ -241,8 +240,7 @@ public class CollectionOperationsHealthService {
         int missingJob = 0;
         int missingSpec = 0;
         for (CollectionTask task : collectionTaskRepository.findAll(null, null, null)) {
-            if (!task.isActive() || task.getScriptType() == null
-                    || !CollectionGroupSpecService.SNMP_PROTOCOL_CODE.equalsIgnoreCase(task.getScriptType().getCode())) {
+            if (!task.isActive() || !isCollectorTask(task)) {
                 continue;
             }
             for (CollectionTaskGroup group : task.getGroups()) {
@@ -269,6 +267,11 @@ public class CollectionOperationsHealthService {
                 collectorHealth == null ? null : collectorHealth.jobs(),
                 collectorHealth == null ? null : collectorHealth.instanceId()
         );
+    }
+
+    private static boolean isCollectorTask(CollectionTask task) {
+        return task.getScriptType() != null
+                && CollectionGroupSpecService.isCollectorProtocol(task.getScriptType().getCode());
     }
 
     private static CollectionOperationsHealthResponse.Component component(

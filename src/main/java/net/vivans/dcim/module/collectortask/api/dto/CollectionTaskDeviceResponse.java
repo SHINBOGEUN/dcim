@@ -1,7 +1,6 @@
 package net.vivans.dcim.module.collectortask.api.dto;
 
-import net.vivans.dcim.module.collectortask.application.CollectionGroupSpec;
-import net.vivans.dcim.module.collectortask.application.CollectionGroupTargetSpec;
+import net.vivans.dcim.module.collectortask.application.CollectionGroupPlan;
 import net.vivans.dcim.module.collectortask.domain.model.CollectionTaskDevice;
 
 /**
@@ -18,19 +17,17 @@ public record CollectionTaskDeviceResponse(
         String exclusionReason
 ) {
 
-    public static CollectionTaskDeviceResponse from(CollectionTaskDevice mapping, CollectionGroupSpec spec) {
+    public static CollectionTaskDeviceResponse from(CollectionTaskDevice mapping, CollectionGroupPlan spec) {
         Integer deviceId = mapping.getDevice().getId();
-        boolean inTargets = spec != null && spec.targets().stream()
-                .map(CollectionGroupTargetSpec::deviceId)
-                .anyMatch(deviceId::equals);
+        boolean inTargets = spec != null && spec.includesSource(deviceId);
         String reason = null;
         if (!inTargets) {
             reason = spec == null ? null
                     : spec.skipped().stream()
                         .filter(r -> r.startsWith("device:" + deviceId + " "))
                         .findFirst()
-                        .orElseGet(() -> spec.oids().isEmpty()
-                                ? "이 수집 작업에 유효한 측정 항목(OID)이 없습니다."
+                        .orElseGet(() -> spec.pointsForSource(deviceId).isEmpty()
+                                ? "이 수집 작업에 유효한 측정 항목이 없습니다."
                                 : null);
         }
         return new CollectionTaskDeviceResponse(

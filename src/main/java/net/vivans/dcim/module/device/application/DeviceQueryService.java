@@ -212,6 +212,7 @@ public class DeviceQueryService {
         } else {
             collectionScriptSyncService.regenerateByModelId(newModelId);
         }
+        collectionScriptSyncService.regenerateForMappedTarget(id);
         return response;
     }
 

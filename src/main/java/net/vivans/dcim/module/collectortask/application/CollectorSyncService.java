@@ -1,5 +1,6 @@
 package net.vivans.dcim.module.collectortask.application;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @Slf4j
 @Service
@@ -23,6 +25,7 @@ public class CollectorSyncService {
     private final CollectorJobClient collectorJobClient;
     private final CollectionTaskRepository collectionTaskRepository;
     private final ObjectMapper objectMapper;
+    private final CollectionGroupSpecService collectionGroupSpecService;
 
     @Transactional
     public void syncGroupSpec(CollectionTaskGroup group) {
@@ -35,11 +38,11 @@ public class CollectorSyncService {
             return;
         }
         CollectionTask task = group.getTask();
-        String specJson = group.getGeneratedSpec();
+        String specJson = currentSpecJson(group);
         if (specJson == null || specJson.isBlank()) {
             return;
         }
-        if (!isSnmpSpec(specJson)) {
+        if (!isSupportedSpec(specJson, task)) {
             removeGroupJob(group, failFast);
             save(task);
             return;
@@ -89,7 +92,7 @@ public class CollectorSyncService {
             return;
         }
         CollectionTask task = group.getTask();
-        if (!isSnmpTask(task)) {
+        if (!isSupportedTask(task) || !isSupportedSpec(currentSpecJson(group), task)) {
             removeGroupJob(group, failFast);
             save(task);
             return;
@@ -182,11 +185,11 @@ public class CollectorSyncService {
             if (!task.isActive()) {
                 continue;
             }
-            if (!isSnmpTask(task)) {
+            if (!isSupportedTask(task)) {
                 continue;
             }
             for (CollectionTaskGroup group : new ArrayList<>(task.getGroups())) {
-                if (!group.isActive() || !hasGeneratedSpec(group)) {
+                if (!group.isActive() || !hasGeneratedSpec(group) && !isModbusTask(task)) {
                     continue;
                 }
                 repushGroupInternal(group);
@@ -207,11 +210,11 @@ public class CollectorSyncService {
         int synchronizedCount = 0;
         List<CollectionTask> tasks = collectionTaskRepository.findAll(null, null, null);
         for (CollectionTask task : tasks) {
-            if (!task.isActive() || !isSnmpTask(task)) {
+            if (!task.isActive() || !isSupportedTask(task)) {
                 continue;
             }
             for (CollectionTaskGroup group : new ArrayList<>(task.getGroups())) {
-                if (!group.isActive() || !hasGeneratedSpec(group)) {
+                if (!group.isActive() || !hasGeneratedSpec(group) && !isModbusTask(task)) {
                     continue;
                 }
                 syncGroupSpec(group, false);
@@ -229,8 +232,8 @@ public class CollectorSyncService {
 
     private void repushGroupInternal(CollectionTaskGroup group) {
         CollectionTask task = group.getTask();
-        String specJson = group.getGeneratedSpec();
-        if (specJson == null || specJson.isBlank()) {
+        String specJson = currentSpecJson(group);
+        if (specJson == null || specJson.isBlank() || !isSupportedSpec(specJson, task)) {
             return;
         }
         try {
@@ -296,14 +299,41 @@ public class CollectorSyncService {
         return group.getGeneratedSpec() != null && !group.getGeneratedSpec().isBlank();
     }
 
-    private static boolean isSnmpTask(CollectionTask task) {
-        return CollectionGroupSpecService.SNMP_PROTOCOL_CODE.equalsIgnoreCase(task.getScriptType().getCode());
+    private String currentSpecJson(CollectionTaskGroup group) {
+        if (isModbusTask(group.getTask())) {
+            String generated = collectionGroupSpecService.generateJson(group);
+            if (!Objects.equals(generated, group.getGeneratedSpec())) {
+                group.updateGeneratedSpec(generated);
+            }
+            return generated;
+        }
+        return group.getGeneratedSpec();
     }
 
-    private boolean isSnmpSpec(String specJson) {
+    private static boolean isModbusTask(CollectionTask task) {
+        return task.getScriptType() != null && CollectionGroupSpecService.MODBUS_PROTOCOL_CODE
+                .equalsIgnoreCase(task.getScriptType().getCode());
+    }
+
+    private static boolean isSupportedTask(CollectionTask task) {
+        if (task.getScriptType() == null) {
+            return false;
+        }
+        return CollectionGroupSpecService.isCollectorProtocol(task.getScriptType().getCode());
+    }
+
+    private boolean isSupportedSpec(String specJson, CollectionTask task) {
+        if (specJson == null || specJson.isBlank() || !isSupportedTask(task)) {
+            return false;
+        }
         try {
-            CollectionGroupSpec spec = objectMapper.readValue(specJson, CollectionGroupSpec.class);
-            return CollectionGroupSpecService.SNMP_PROTOCOL_CODE.equalsIgnoreCase(spec.protocol());
+            JsonNode spec = objectMapper.readTree(specJson);
+            String protocol = spec.path("protocol").asText();
+            if (!task.getScriptType().getCode().equalsIgnoreCase(protocol)) {
+                return false;
+            }
+            return !CollectionGroupSpecService.MODBUS_PROTOCOL_CODE.equalsIgnoreCase(protocol)
+                    || spec.path("targets").isArray() && !spec.path("targets").isEmpty();
         } catch (Exception exception) {
             log.warn("failed to parse generated spec for collector sync", exception);
             return false;

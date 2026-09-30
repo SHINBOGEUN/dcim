@@ -17,6 +17,7 @@ public record DeviceModelModbusPointResponse(
         Integer address,
         boolean requiresInstance,
         Double scale,
+        Double offset,
         String unit,
         boolean enabled
 ) {
@@ -33,6 +34,7 @@ public record DeviceModelModbusPointResponse(
                 point.getAddress(),
                 point.isRequiresInstance(),
                 point.getScale(),
+                point.getOffset(),
                 point.getUnit(),
                 point.isEnabled()
         );

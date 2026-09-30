@@ -16,6 +16,17 @@ final class LastFluxBuilder {
             List<String> pointNames,
             Duration lookback
     ) {
+        return buildLastQuery(bucket, measurement, deviceIds, pointNames, lookback, null);
+    }
+
+    static String buildLastQuery(
+            String bucket,
+            String measurement,
+            List<Integer> deviceIds,
+            List<String> pointNames,
+            Duration lookback,
+            String protocol
+    ) {
         return """
                 from(bucket: %s)
                   |> range(start: -%s)
@@ -23,6 +34,7 @@ final class LastFluxBuilder {
                   |> filter(fn: (r) => r["_field"] == "value")
                   |> filter(fn: (r) => %s)
                   |> filter(fn: (r) => %s)
+                  %s
                   |> group(columns: ["device_id", "point_name"])
                   |> last()
                   |> keep(columns: ["device_id", "point_name", "_value", "_time"])
@@ -31,7 +43,8 @@ final class LastFluxBuilder {
                 toFluxDuration(lookback),
                 quote(measurement),
                 orEquals("device_id", deviceIds.stream().map(String::valueOf).toList()),
-                orEquals("point_name", pointNames)
+                orEquals("point_name", pointNames),
+                protocol == null ? "" : "|> filter(fn: (r) => r[\"protocol\"] == " + quote(protocol) + ")"
         );
     }
 

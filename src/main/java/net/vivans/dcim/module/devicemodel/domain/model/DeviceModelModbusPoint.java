@@ -58,6 +58,9 @@ public class DeviceModelModbusPoint extends BaseEntity {
 
     private Double scale;
 
+    @Column(name = "value_offset")
+    private Double offset;
+
     @Column(length = 50)
     private String unit;
 
@@ -74,6 +77,7 @@ public class DeviceModelModbusPoint extends BaseEntity {
             Integer address,
             boolean requiresInstance,
             Double scale,
+            Double offset,
             String unit,
             boolean enabled
     ) {
@@ -83,6 +87,7 @@ public class DeviceModelModbusPoint extends BaseEntity {
         validateDataType(dataType);
         validateByteOrder(dataType, byteOrder);
         validateAddress(requiresInstance, address);
+        validateOffset(registerType, offset);
         this.modelProtocol = modelProtocol;
         this.name = name;
         this.registerType = registerType;
@@ -91,6 +96,7 @@ public class DeviceModelModbusPoint extends BaseEntity {
         this.address = address;
         this.requiresInstance = requiresInstance;
         this.scale = scale;
+        this.offset = offset;
         this.unit = unit;
         this.enabled = enabled;
     }
@@ -104,13 +110,23 @@ public class DeviceModelModbusPoint extends BaseEntity {
             Integer address,
             boolean requiresInstance,
             Double scale,
+            Double offset,
             String unit,
             boolean enabled
     ) {
         return new DeviceModelModbusPoint(
                 modelProtocol, name, registerType, dataType, byteOrder,
-                address, requiresInstance, scale, unit, enabled
+                address, requiresInstance, scale, offset, unit, enabled
         );
+    }
+
+    public static DeviceModelModbusPoint create(
+            DeviceModelProtocol modelProtocol, String name, ModbusRegisterType registerType,
+            ModbusDataType dataType, ModbusByteOrder byteOrder, Integer address,
+            boolean requiresInstance, Double scale, String unit, boolean enabled
+    ) {
+        return create(modelProtocol, name, registerType, dataType, byteOrder,
+                address, requiresInstance, scale, null, unit, enabled);
     }
 
     public void update(
@@ -121,6 +137,7 @@ public class DeviceModelModbusPoint extends BaseEntity {
             Integer address,
             boolean requiresInstance,
             Double scale,
+            Double offset,
             String unit,
             boolean enabled
     ) {
@@ -129,6 +146,7 @@ public class DeviceModelModbusPoint extends BaseEntity {
         validateDataType(dataType);
         validateByteOrder(dataType, byteOrder);
         validateAddress(requiresInstance, address);
+        validateOffset(registerType, offset);
         this.name = name;
         this.registerType = registerType;
         this.dataType = dataType;
@@ -136,8 +154,18 @@ public class DeviceModelModbusPoint extends BaseEntity {
         this.address = address;
         this.requiresInstance = requiresInstance;
         this.scale = scale;
+        this.offset = offset;
         this.unit = unit;
         this.enabled = enabled;
+    }
+
+    public void update(
+            String name, ModbusRegisterType registerType, ModbusDataType dataType,
+            ModbusByteOrder byteOrder, Integer address, boolean requiresInstance,
+            Double scale, String unit, boolean enabled
+    ) {
+        update(name, registerType, dataType, byteOrder, address, requiresInstance,
+                scale, null, unit, enabled);
     }
 
 
@@ -186,6 +214,16 @@ public class DeviceModelModbusPoint extends BaseEntity {
         }
         if (address != null && (address < ADDRESS_MIN || address > ADDRESS_MAX)) {
             throw new IllegalArgumentException("address must be between 0 and 65535");
+        }
+    }
+
+    private static void validateOffset(ModbusRegisterType registerType, Double offset) {
+        if (offset != null && !Double.isFinite(offset)) {
+            throw new IllegalArgumentException("offset must be finite");
+        }
+        if (offset != null && offset != 0.0 &&
+                (registerType == ModbusRegisterType.COIL || registerType == ModbusRegisterType.DISCRETE)) {
+            throw new IllegalArgumentException("offset is not supported for bit reads");
         }
     }
 }
