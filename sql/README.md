@@ -110,6 +110,7 @@ mysql -h HOST -P PORT -u dcim -p dcim < sql/schema/42_device_asset_document.sql
 | 44 | `44_alter_modbus_reading_endpoint.sql` | (기존 DB용 ALTER) reading FK → device_endpoint_modbus |
 | 46~49 | LoRa/Dragino 매핑 | device_lora_endpoint / device_model_lora_point / (49는 lora_ingest_error_log 제거용 DROP만 포함, 기능 제거됨) |
 | 50~51 | LoRa MQTT 수집 소스·상태 | lora_mqtt_source / lora_mqtt_source_status |
+| 52 | `52_device_modbus_bit_field.sql` | Modbus 원본 reading의 비트 구간별 파생 point |
 
 ---
 

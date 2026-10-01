@@ -12,6 +12,7 @@ import net.vivans.dcim.module.device.domain.model.DeviceModbusReading;
 import net.vivans.dcim.module.device.domain.model.DeviceProtocolEndpoint;
 import net.vivans.dcim.module.device.domain.repository.DeviceEndpointModbusRepository;
 import net.vivans.dcim.module.device.domain.repository.DeviceModbusReadingRepository;
+import net.vivans.dcim.module.device.infrastructure.persistence.DeviceModbusBitFieldRepository;
 import net.vivans.dcim.module.device.domain.repository.DeviceProtocolEndpointRepository;
 import net.vivans.dcim.module.device.domain.repository.DeviceSnmpInstanceRepository;
 import net.vivans.dcim.module.devicemodel.domain.model.DeviceModel;
@@ -44,6 +45,7 @@ class ModbusCollectionGroupSpecServiceTest {
         DeviceModbusReadingRepository readings = mock(DeviceModbusReadingRepository.class);
         CollectionGroupSpecService service = new CollectionGroupSpecService(
                 snmpPoints, modbusPoints, endpoints, endpointSettings, readings,
+                mock(DeviceModbusBitFieldRepository.class),
                 mock(DeviceSnmpInstanceRepository.class), new ObjectMapper());
 
         CommonCode modbusCode = mock(CommonCode.class);
