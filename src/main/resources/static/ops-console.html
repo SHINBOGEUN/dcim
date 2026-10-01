@@ -219,6 +219,17 @@
     .asset-preview-body { padding: 18px; }
     .collection-values-dialog { width: min(920px, 100%); max-height: min(85vh, 800px); display: flex; flex-direction: column; }
     .collection-values-body { overflow: auto; min-height: 0; }
+    .task-detail-dialog { width:min(980px,100%); max-height:min(90vh,900px); display:flex; flex-direction:column; }
+    .task-detail-body { overflow:auto; min-height:0; }
+    #taskList > [data-task] { display:none; }
+    #taskList > [data-task].active { display:block; }
+    .task-page-layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(300px,380px); gap:14px; align-items:start; }
+    .task-index-item { display:flex; align-items:center; justify-content:space-between; gap:14px; width:100%; padding:14px 16px; border:1px solid var(--line); border-radius:10px; background:var(--surface2); color:var(--text); text-align:left; cursor:pointer; }
+    .task-index-item:hover, .task-index-item:focus-visible { border-color:var(--accent); background:var(--accent-soft); }
+    .task-index-item strong { display:block; margin-bottom:4px; }
+    .task-index-item .muted { display:block; font-size:12px; }
+    .task-index-item .chip { flex:none; }
+    @media (max-width:900px) { .task-page-layout { grid-template-columns:1fr; } }
     .modbus-reading-dialog { width: min(1220px, 100%); max-height: 92vh; display: flex; flex-direction: column; }
     .modbus-reading-body { overflow: auto; min-height: 0; }
     .modbus-reading-layout { display:grid; grid-template-columns:minmax(0,1.15fr) minmax(330px,.85fr); gap:14px; min-height:0; }
@@ -231,6 +242,17 @@
     .modbus-reading-item p { margin:3px 0; color:#9db2ca; font-size:11px; line-height:1.5; overflow-wrap:anywhere; }
     .modbus-reading-item .row { justify-content:flex-end; align-self:start; }
     .modbus-reading-item .row button { padding:6px 9px; }
+    .modbus-bit-rule { padding:12px; margin:10px 0; border:1px solid #33465e; border-radius:9px; background:#17263a; }
+    .modbus-bit-rule .fields { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .modbus-bit-rule .field input { width:100%; }
+    .modbus-bit-mappings { display:grid; gap:7px; margin:9px 0; }
+    .modbus-bit-mapping { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto; gap:8px; align-items:end; }
+    .modbus-bit-mapping .field { min-width:0; }
+    .modbus-bit-mapping .field input { width:100%; }
+    .modbus-bit-mapping > span { padding-bottom:10px; color:var(--muted); }
+    .modbus-bit-mapping > button { margin-bottom:1px; }
+    @media (max-width:640px) { .modbus-bit-mapping { grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); } .modbus-bit-mapping > button { grid-column:1/-1; } }
+    .modbus-bit-result { margin:10px 0; padding:10px; border-radius:8px; background:#13273a; font-size:12px; }
     .modbus-reading-feedback { margin-top:10px; padding:9px 11px; border-radius:8px; font-size:12px; line-height:1.5; }
     .modbus-reading-feedback[data-kind="error"] { color:var(--bad); background:var(--bad-bg); }
     .modbus-reading-feedback[data-kind="success"] { color:var(--ok); background:var(--ok-bg); }
@@ -1056,6 +1078,8 @@
     html[data-theme="light"] .modbus-reading-item strong { color:#223a51; }
     html[data-theme="light"] .modbus-reading-item { border-color:#d2deea; background:#fff; }
     html[data-theme="light"] .modbus-reading-item.selected { border-color:#3c9dc7; background:#eaf6fb; }
+    html[data-theme="light"] .modbus-bit-rule { border-color:#d2deea; background:#fff; }
+    html[data-theme="light"] .modbus-bit-result { background:#eaf6fb; }
     html[data-theme="light"] .modbus-reading-item p { color:#5e748b; }
     /* Shared viewport workspace: only lists and editors scroll, never the whole page. */
     body.is-authed { overflow:hidden; }
@@ -1546,7 +1570,7 @@
         </div>
         <div class="muted" id="cjhCheckedAt" style="margin:10px 0 8px;font-size:12px"></div>
         <div class="table-wrap" style="max-height:520px"><table>
-          <thead><tr><th>수집 그룹</th><th>모델</th><th>프로토콜</th><th>상태</th><th>마지막 성공</th><th>마지막 실패</th><th>연속 실패</th><th>마지막 실패 원인</th><th>Collector Job ID</th></tr></thead>
+          <thead><tr><th>수집 그룹</th><th>모델</th><th>프로토콜</th><th>상태</th><th>마지막 성공</th><th>마지막 실패 이력</th><th>연속 실패</th><th>실패 원인 / 이력</th><th>Collector Job ID</th></tr></thead>
           <tbody id="cjhBody"></tbody>
         </table></div>
       </div>
@@ -1762,13 +1786,13 @@
     <section class="panel" id="tab-tasks">
       <h1 class="page-title">수집 작업</h1>
       <p class="page-desc">모델별 수집 스케줄과 주기 그룹을 관리합니다. 그룹에 장비를 넣으면 collector가 주기적으로 읽습니다.</p>
-      <div class="grid2">
+      <div class="task-page-layout">
         <div class="card">
           <h2>등록된 작업</h2>
           <div class="row" style="margin-bottom:10px">
             <button type="button" class="ghost" id="taskReload">새로고침</button>
           </div>
-          <div id="taskList" class="stack" style="display:flex;flex-direction:column;gap:10px"></div>
+          <div id="taskIndex" class="stack" style="display:flex;flex-direction:column;gap:10px"></div>
         </div>
         <div class="card">
           <h2>새 수집 작업</h2>
@@ -2702,6 +2726,12 @@
       <div class="asset-preview-body collection-values-body" id="collectionValuesBody"></div>
     </div>
   </div>
+  <div class="asset-preview-modal" id="taskDetailModal" aria-hidden="true">
+    <div class="asset-preview task-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="taskDetailTitle">
+      <div class="asset-preview-head"><div><h2 id="taskDetailTitle">수집 작업 상세</h2><p id="taskDetailMeta" style="margin:4px 0 0;font-size:12px"></p></div><button type="button" id="taskDetailClose" aria-label="닫기">×</button></div>
+      <div class="asset-preview-body task-detail-body" id="taskDetailBody"><div id="taskList" class="stack"></div></div>
+    </div>
+  </div>
   <div class="asset-preview-modal" id="modbusReadingModal" aria-hidden="true" style="z-index:170">
     <div class="asset-preview modbus-reading-dialog" role="dialog" aria-modal="true" aria-labelledby="modbusReadingTitle">
       <div class="asset-preview-head"><div><h2 id="modbusReadingTitle">Modbus 회선 매핑</h2><p id="modbusReadingMeta" style="margin:4px 0 0;font-size:12px"></p></div><button type="button" id="modbusReadingClose" aria-label="닫기">×</button></div>
@@ -2729,6 +2759,13 @@
           </div>
           <div class="row" style="margin-top:10px"><button type="button" class="primary" id="modbusReadingSave">회선 매핑 추가</button><button type="button" class="ghost" id="modbusReadingCancel" style="display:none">수정 취소</button></div>
           <div class="modbus-reading-feedback" id="modbusReadingFeedback" role="status" aria-live="polite" hidden></div>
+          <section id="modbusBitPanel" style="display:none;margin-top:18px;border-top:1px solid #33465e;padding-top:16px">
+            <h3 id="modbusBitTitle">비트 분리 설정</h3>
+            <p class="muted" style="font-size:12px">원본값은 그대로 저장합니다. 최하위 비트가 0번이며, 원하는 길이만큼 추출해 별도 항목으로 저장합니다. 추출값을 다른 값으로 저장하려면 아래에서 변환 규칙을 추가하세요. 규칙이 없으면 추출값 그대로 저장됩니다.</p>
+            <div id="modbusBitRules"></div>
+            <div class="row"><button type="button" class="ghost" id="modbusBitAdd">+ 결과 항목 추가</button><button type="button" class="ghost" id="modbusBitTry">읽은 값으로 변환 확인</button><button type="button" class="primary" id="modbusBitSave">비트 설정 저장</button></div>
+            <div id="modbusBitResult" class="modbus-bit-result" role="status" aria-live="polite">먼저 ‘지금 한 번 읽기’로 원본값을 확인하세요.</div>
+          </section>
           <div id="modbusPreviewOut" style="margin-top:14px"></div>
           </div>
           </div>
@@ -4954,7 +4991,7 @@
       return `<span class="chip ${className}">${esc(label)}</span>`;
     }
 
-    // 실패 중(FAILING) · 동기화 안 됨(NOT_SYNCED) · 확인 불가(UNKNOWN)를 위로, 복구됨/정상을 아래로.
+    // 실패 중(FAILING) · 동기화 안 됨(NOT_SYNCED) · 확인 불가(UNKNOWN)를 위로, 정상을 아래로.
     function collectionJobIssuePriority(status) {
       return (status === "FAILING" || status === "NOT_SYNCED" || status === "UNKNOWN") ? 0 : 1;
     }
@@ -4973,7 +5010,9 @@
         const reason = job.lastFailureReason || "";
         let reasonCell = '<span class="muted">–</span>';
         if (reason) {
-          reasonCell = reason.length > 60
+          reasonCell = job.status === "NORMAL"
+            ? `<button type="button" class="ghost" data-detail-toggle aria-expanded="false" style="font-size:11px;padding:3px 7px">과거 실패 보기</button><div class="muted mono" style="font-size:11px;margin-top:5px;display:none;white-space:pre-wrap" data-detail>${esc(reason)}</div>`
+            : reason.length > 60
             ? `<span>${esc(reason.slice(0, 60))}…</span> <button type="button" class="ghost" data-detail-toggle style="font-size:10px;padding:1px 6px;margin-left:4px">상세</button><div class="muted mono" style="font-size:10px;margin-top:3px;display:none;white-space:pre-wrap" data-detail>${esc(reason)}</div>`
             : `<span>${esc(reason)}</span>`;
         }
@@ -4993,7 +5032,11 @@
         button.onclick = (event) => {
           event.stopPropagation();
           const detailEl = button.nextElementSibling;
-          if (detailEl) detailEl.style.display = detailEl.style.display === "none" ? "block" : "none";
+          if (detailEl) {
+            const expanded = detailEl.style.display === "none";
+            detailEl.style.display = expanded ? "block" : "none";
+            button.setAttribute("aria-expanded", String(expanded));
+          }
         };
       });
     }
@@ -6091,6 +6134,138 @@
       setModbusReadingFeedback("");
     }
 
+    function renderModbusBitRule(rule = {}) {
+      const row = document.createElement("div");
+      row.className = "modbus-bit-rule";
+      row.innerHTML = `<div class="fields">
+        <label class="field">저장 항목 이름<input data-bit-name placeholder="IRC-CDU-VALVE-1" value="${esc(rule.pointName || "")}" /></label>
+        <label class="field">시작 비트 (LSB=0)<input data-bit-offset type="number" min="0" max="31" value="${esc(rule.bitOffset ?? 0)}" /></label>
+        <label class="field">비트 수<input data-bit-width type="number" min="1" max="32" value="${esc(rule.bitWidth ?? 1)}" /></label>
+        <label class="field">규칙에 없는 값 (비우면 추출값 그대로)<input data-bit-default type="number" step="1" placeholder="예: -1" value="${esc(rule.unmappedValue ?? "")}" /></label>
+      </div><div class="row" style="margin-top:10px"><strong>값 변환 규칙</strong><button type="button" class="ghost" data-map-preset>2비트 상태 예시 적용 (1→0, 2→1)</button></div>
+      <div class="modbus-bit-mappings" data-bit-mappings></div>
+      <div class="row"><button type="button" class="ghost" data-map-add>+ 변환 규칙 추가</button><button type="button" class="danger" data-bit-remove>결과 항목 제거</button></div>`;
+      const mappings = row.querySelector("[data-bit-mappings]");
+      Object.entries(rule.valueMap || {}).forEach(([source, result]) => renderModbusBitMapping(mappings, source, result));
+      row.querySelector("[data-map-add]").onclick = () => renderModbusBitMapping(mappings);
+      row.querySelector("[data-map-preset]").onclick = () => {
+        row.querySelector("[data-bit-width]").value = "2";
+        row.querySelector("[data-bit-default]").value = "-1";
+        mappings.replaceChildren();
+        renderModbusBitMapping(mappings, 1, 0);
+        renderModbusBitMapping(mappings, 2, 1);
+      };
+      row.querySelector("[data-bit-remove]").onclick = () => row.remove();
+      $("modbusBitRules").appendChild(row);
+    }
+
+    function renderModbusBitMapping(container, source = "", result = "") {
+      const mapping = document.createElement("div");
+      mapping.className = "modbus-bit-mapping";
+      mapping.innerHTML = `<label class="field">추출된 비트값<input data-map-source type="number" min="0" step="1" placeholder="예: 1" value="${esc(source)}" /></label>
+        <span aria-hidden="true">→</span>
+        <label class="field">저장할 값<input data-map-result type="number" step="1" placeholder="예: 0" value="${esc(result)}" /></label>
+        <button type="button" class="ghost" data-map-remove aria-label="변환 규칙 제거">제거</button>`;
+      mapping.querySelector("[data-map-remove]").onclick = () => mapping.remove();
+      container.appendChild(mapping);
+    }
+
+    function readModbusBitRules() {
+      return [...$("modbusBitRules").querySelectorAll(".modbus-bit-rule")].map((row) => {
+        const pointName = row.querySelector("[data-bit-name]").value.trim();
+        const bitOffset = Number(row.querySelector("[data-bit-offset]").value);
+        const bitWidth = Number(row.querySelector("[data-bit-width]").value);
+        const valueMap = {};
+        for (const mapping of row.querySelectorAll(".modbus-bit-mapping")) {
+          const sourceText = mapping.querySelector("[data-map-source]").value.trim();
+          const resultText = mapping.querySelector("[data-map-result]").value.trim();
+          const source = Number(sourceText);
+          const result = Number(resultText);
+          if (!sourceText || !resultText || !Number.isSafeInteger(source) || !Number.isSafeInteger(result)
+              || source < 0 || source >= 2 ** bitWidth) {
+            throw new Error(`${pointName || "결과 항목"}: 변환 규칙의 비트값은 현재 비트 수 범위의 정수, 저장값은 정수로 입력하세요.`);
+          }
+          if (Object.prototype.hasOwnProperty.call(valueMap, String(source))) {
+            throw new Error(`${pointName || "결과 항목"}: 비트값 ${source}에 대한 변환 규칙이 중복됩니다.`);
+          }
+          valueMap[source] = result;
+        }
+        const defaultText = row.querySelector("[data-bit-default]").value.trim();
+        const unmappedValue = defaultText === "" ? null : Number(defaultText);
+        if (!pointName || !Number.isInteger(bitOffset) || !Number.isInteger(bitWidth)
+            || bitOffset < 0 || bitOffset > 31 || bitWidth < 1 || bitWidth > 32
+            || !Number.isSafeInteger(unmappedValue ?? 0)) {
+          throw new Error("결과 항목 이름·비트 범위·기본값을 확인하세요.");
+        }
+        return { pointName, bitOffset, bitWidth, valueMap, unmappedValue };
+      });
+    }
+
+    async function openModbusBitFields(readingId) {
+      const reading = state.modbusReadings.find((item) => item.id === readingId);
+      const point = state.modbusReadingPoints.find((item) => item.id === reading?.pointId);
+      if (!reading || !point) return toast("회선 또는 모델 측정항목을 찾지 못했습니다.", true);
+      if (!["HOLDING", "INPUT"].includes(point.registerType) || point.dataType === "FLOAT32"
+          || (point.scale != null && point.scale !== 1) || (point.offset != null && point.offset !== 0)) {
+        return toast("비트 분리는 배율·보정 없는 정수형 HOLDING/INPUT 항목에서 사용할 수 있습니다.", true);
+      }
+      try {
+        const fields = await api(`/api/manager/devices/${state.selectedDeviceId}/endpoints/${state.modbusReadingEndpointId}/modbus/readings/${readingId}/bit-fields`);
+        state.modbusBitReadingId = readingId;
+        $("modbusBitTitle").textContent = `${reading.pointName} · 비트 분리 설정`;
+        $("modbusBitRules").innerHTML = "";
+        (fields || []).forEach(renderModbusBitRule);
+        $("modbusBitPanel").style.display = "";
+        $("modbusBitResult").textContent = "원본값을 읽은 뒤 ‘읽은 값으로 변환 확인’을 누르세요. 저장하기 전에는 실제 수집에 반영되지 않습니다.";
+        $("modbusBitPanel").scrollIntoView({ behavior:"smooth", block:"nearest" });
+      } catch (error) { toast(error.message, true); }
+    }
+
+    $("modbusBitAdd").onclick = () => renderModbusBitRule();
+    $("modbusBitTry").onclick = () => {
+      try {
+        const reading = state.modbusReadings.find((item) => item.id === state.modbusBitReadingId);
+        const point = state.modbusReadingPoints.find((item) => item.id === reading?.pointId);
+        const target = (state.modbusLastPreview?.targets || []).find((item) =>
+          item.deviceId === reading?.targetDeviceId && item.unitId === reading?.unitId && !item.error
+          && Object.prototype.hasOwnProperty.call(item.values || {}, reading.pointName));
+        if (!target) throw new Error("먼저 ‘지금 한 번 읽기’로 이 회선의 원본값을 가져오세요.");
+        const raw = Number(target.values[reading.pointName]);
+        if (!Number.isSafeInteger(raw)) throw new Error("원본값이 정수가 아니어서 비트로 분리할 수 없습니다.");
+        const sourceBits = point.dataType.endsWith("32") ? 32 : 16;
+        const unsigned = BigInt.asUintN(sourceBits, BigInt(raw));
+        const lines = readModbusBitRules().map((rule) => {
+          if (rule.bitOffset + rule.bitWidth > sourceBits) throw new Error(`${rule.pointName}: ${sourceBits}비트 범위를 벗어났습니다.`);
+          const extracted = Number((unsigned >> BigInt(rule.bitOffset)) & ((1n << BigInt(rule.bitWidth)) - 1n));
+          const mapped = Object.prototype.hasOwnProperty.call(rule.valueMap, String(extracted))
+            ? rule.valueMap[String(extracted)] : (rule.unmappedValue ?? extracted);
+          const unchanged = !Object.prototype.hasOwnProperty.call(rule.valueMap, String(extracted)) && rule.unmappedValue == null;
+          return `${rule.pointName}: 비트값 ${extracted} → 저장값 ${mapped}${unchanged ? " (변환 규칙 없음)" : ""}`;
+        });
+        $("modbusBitResult").textContent = `원본 ${raw} (${unsigned.toString(2).padStart(sourceBits,"0")})\n${lines.join("\n") || "추가한 결과 항목이 없습니다."}`;
+        $("modbusBitResult").style.whiteSpace = "pre-wrap";
+      } catch (error) { $("modbusBitResult").textContent = error.message; }
+    };
+    $("modbusBitSave").onclick = async () => {
+      try {
+        const fields = readModbusBitRules();
+        const reading = state.modbusReadings.find((item) => item.id === state.modbusBitReadingId);
+        const point = state.modbusReadingPoints.find((item) => item.id === reading?.pointId);
+        const sourceBits = point.dataType.endsWith("32") ? 32 : 16;
+        if (fields.some((field) => field.bitOffset + field.bitWidth > sourceBits)) {
+          throw new Error(`선택한 측정항목은 ${sourceBits}비트입니다. 비트 범위를 확인하세요.`);
+        }
+        const button = $("modbusBitSave");
+        button.disabled = true;
+        try {
+          await api(`/api/manager/devices/${state.selectedDeviceId}/endpoints/${state.modbusReadingEndpointId}/modbus/readings/${reading.id}/bit-fields`,
+            { method:"PUT", body:JSON.stringify({ fields }) });
+          $("modbusBitResult").textContent = "비트 설정을 저장하고 Collector 수집 정의를 갱신했습니다.";
+          toast("비트 분리 설정을 저장했습니다.");
+        } finally { button.disabled = false; }
+      } catch (error) { $("modbusBitResult").textContent = error.message; toast(error.message, true); }
+    };
+
     async function reloadModbusReadings(endpoint) {
       const card = $("modbusReadingCard");
       card.style.display = endpoint ? "" : "none";
@@ -6106,6 +6281,9 @@
       const protocol = (model?.protocols || []).find((item) => protocolCode(item) === "modbus");
       const url = `/api/manager/devices/${deviceId}/endpoints/${endpoint.id}/modbus/readings`;
       state.modbusReadingEndpointId = endpoint.id;
+      state.modbusBitReadingId = null;
+      state.modbusLastPreview = null;
+      $("modbusBitPanel").style.display = "none";
       try {
         const [readings, points] = await Promise.all([
           api(url),
@@ -6133,9 +6311,12 @@
             <div><strong>Unit ${esc(reading.unitId)} · 주소 ${esc(reading.address)}</strong>
               <p>${esc(target?.name || `장비 #${reading.targetDeviceId}`)} → ${esc(reading.pointName)} ${reading.enabled ? '<span class="chip ok">사용</span>' : '<span class="chip warn">중지</span>'}</p>
               <p>${esc(point?.name || `측정항목 #${reading.pointId}`)} · ${esc(format)}</p></div>
-            <div class="row" data-role-gate="admin"><button type="button" class="ghost" data-mb-reading-edit="${esc(reading.id)}">수정</button><button type="button" class="danger" data-mb-reading-delete="${esc(reading.id)}">삭제</button></div>
+            <div class="row" data-role-gate="admin"><button type="button" class="ghost" data-mb-bit-open="${esc(reading.id)}">비트 분리</button><button type="button" class="ghost" data-mb-reading-edit="${esc(reading.id)}">수정</button><button type="button" class="danger" data-mb-reading-delete="${esc(reading.id)}">삭제</button></div>
           </article>`;
         }).join("") : '<div class="empty">회선 매핑이 없습니다. 오른쪽에서 Unit ID·주소·결과 장비를 등록하세요.</div>';
+        $("modbusReadingList").querySelectorAll("[data-mb-bit-open]").forEach((button) => {
+          button.onclick = () => openModbusBitFields(Number(button.dataset.mbBitOpen));
+        });
         $("modbusReadingList").querySelectorAll("[data-mb-reading-edit]").forEach((button) => button.onclick = () => {
           const reading = state.modbusReadings.find((item) => item.id === Number(button.dataset.mbReadingEdit));
           if (!reading) return;
@@ -6208,17 +6389,22 @@
       try {
         const result = await api(`/api/manager/devices/${deviceId}/modbus/read-preview`, { method: "POST" });
         if (state.selectedDeviceId !== deviceId) return;
+        state.modbusLastPreview = result;
         const rows = (result.targets || []).flatMap((target) => target.error
           ? [{ deviceId: target.deviceId, unitId: target.unitId, name: "–", value: "–", error: target.error }]
           : Object.entries(target.values || {}).map(([name, value]) => {
             const reading = (state.modbusReadings || []).find((item) => item.targetDeviceId === target.deviceId
               && item.unitId === target.unitId && item.pointName === name);
             const point = (state.modbusReadingPoints || []).find((item) => item.id === reading?.pointId);
+            const width = point?.dataType?.endsWith("32") ? 32 : 16;
+            const binary = point && point.dataType !== "FLOAT32" && Number.isSafeInteger(Number(value))
+              ? BigInt.asUintN(width, BigInt(Number(value))).toString(2).padStart(width, "0") : "";
             return { deviceId: target.deviceId, unitId: target.unitId, name,
-              value: `${value}${point?.unit ? ` ${point.unit}` : ""}`, error: "" };
+              value: `${value}${point?.unit ? ` ${point.unit}` : ""}`, binary, error: "" };
           }));
         const warnings = (result.skipped || []).map((reason) => `<div class="muted" style="font-size:12px">제외: ${esc(reason)}</div>`).join("");
-        $("modbusPreviewOut").innerHTML = `<h3>일회성 읽기 결과</h3>${warnings}${rows.length ? `<div class="table-wrap"><table><thead><tr><th>결과 장비</th><th>Unit ID</th><th>항목</th><th>값</th><th>오류</th></tr></thead><tbody>${rows.map((row) => `<tr><td>${esc(state.devices.find((d) => d.id === row.deviceId)?.name || `#${row.deviceId}`)}</td><td>${row.unitId}</td><td>${esc(row.name)}</td><td><b>${esc(String(row.value))}</b></td><td>${esc(row.error)}</td></tr>`).join("")}</tbody></table></div>` : '<div class="empty">읽을 수 있는 회선이 없습니다.</div>'}`;
+        $("modbusPreviewOut").innerHTML = `<h3>일회성 읽기 결과</h3>${warnings}${rows.length ? `<div class="table-wrap"><table><thead><tr><th>결과 장비</th><th>Unit ID</th><th>항목</th><th>값</th><th>2진수</th><th>오류</th></tr></thead><tbody>${rows.map((row) => `<tr><td>${esc(state.devices.find((d) => d.id === row.deviceId)?.name || `#${row.deviceId}`)}</td><td>${row.unitId}</td><td>${esc(row.name)}</td><td><b>${esc(String(row.value))}</b></td><td class="mono">${esc(row.binary || "—")}</td><td>${esc(row.error)}</td></tr>`).join("")}</tbody></table></div>` : '<div class="empty">읽을 수 있는 회선이 없습니다.</div>'}`;
+        if (state.modbusBitReadingId) $("modbusBitTry").click();
       } catch (error) { $("modbusPreviewOut").innerHTML = `<div class="empty">${esc(error.message)}</div>`; }
       finally { button.disabled = false; }
     };
@@ -6388,9 +6574,37 @@
       </div>`;
     }
 
+    let openTaskDetailId = null;
+
+    function closeTaskDetail() {
+      openTaskDetailId = null;
+      $("taskDetailModal").classList.remove("open");
+      $("taskDetailModal").setAttribute("aria-hidden", "true");
+    }
+
+    function showTaskDetail(taskId) {
+      const task = state.tasks.find((item) => Number(item.id) === Number(taskId));
+      if (!task) return closeTaskDetail();
+      openTaskDetailId = Number(taskId);
+      $("taskDetailTitle").textContent = task.name;
+      $("taskDetailMeta").textContent = `${task.modelName || "모델 미지정"} · ${task.scriptTypeName || task.scriptTypeCode || "프로토콜 미지정"} · 작업 #${task.id}`;
+      $("taskList").querySelectorAll("[data-task]").forEach((card) => card.classList.toggle("active", Number(card.dataset.task) === openTaskDetailId));
+      $("taskDetailModal").classList.add("open");
+      $("taskDetailModal").setAttribute("aria-hidden", "false");
+      $("taskDetailClose").focus();
+    }
+
     async function loadTasks() {
       state.tasks = await api("/api/manager/collector/tasks") || [];
       if (state.tasks.content) state.tasks = state.tasks.content;
+      $("taskIndex").innerHTML = state.tasks.map((task) => {
+        const groups = task.groups || [];
+        const deviceCount = new Set(groups.flatMap((group) => (group.devices || []).map((device) => device.deviceId ?? device.id))).size;
+        return `<button type="button" class="task-index-item" data-open-task="${task.id}" aria-label="${esc(task.name)} 상세 열기">
+          <span><strong>${esc(task.name)}</strong><span class="muted">${esc(task.modelName || "모델 미지정")} · ${esc(task.scriptTypeName || task.scriptTypeCode || "—")} · 그룹 ${groups.length}개 · 장비 ${deviceCount}대</span></span>
+          <span class="chip ${task.active ? "ok" : "bad"}">${task.active ? "동작 중" : "중지"}</span>
+        </button>`;
+      }).join("") || '<div class="empty">수집 작업이 없습니다</div>';
       $("taskList").innerHTML = state.tasks.map((t) => `
         <div style="border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--surface2)" data-task="${t.id}" data-task-model="${t.modelId}">
           <div class="row" style="justify-content:space-between">
@@ -6461,6 +6675,13 @@
             <button type="button" class="danger" data-del-task="${t.id}" data-role-gate="admin">Task 삭제</button>
           </div>
         </div>`).join("") || '<div class="empty">수집 작업이 없습니다</div>';
+      $("taskIndex").querySelectorAll("[data-open-task]").forEach((button) => {
+        button.onclick = () => {
+          showTaskDetail(button.dataset.openTask);
+          $("taskDetailBody")?.scrollTo(0, 0);
+        };
+      });
+      if (openTaskDetailId != null) showTaskDetail(openTaskDetailId);
       $("taskList").querySelectorAll("[data-toggle-task]").forEach((btn) => {
         btn.onclick = async () => {
           try {
@@ -7134,6 +7355,8 @@
     $("assetPreviewModal").onclick = (event) => { if (event.target === $("assetPreviewModal")) closeAssetPreview(); };
     $("collectionValuesClose").onclick = closeCollectionValues;
     $("collectionValuesModal").onclick = (event) => { if (event.target === $("collectionValuesModal")) closeCollectionValues(); };
+    $("taskDetailClose").onclick = closeTaskDetail;
+    $("taskDetailModal").onclick = (event) => { if (event.target === $("taskDetailModal")) closeTaskDetail(); };
     $("modbusReadingOpen").onclick = openModbusReadingModal;
     $("modbusReadingClose").onclick = closeModbusReadingModal;
     $("modbusReadingModal").onclick = (event) => { if (event.target === $("modbusReadingModal")) closeModbusReadingModal(); };
@@ -7158,6 +7381,7 @@
       else if ($("deviceDetailModal").classList.contains("open")) closeDeviceDetail();
       else if ($("assetDetailModal").classList.contains("open")) closeAssetDetailModal();
       else if ($("collectionValuesModal").classList.contains("open")) closeCollectionValues();
+      else if ($("taskDetailModal").classList.contains("open")) closeTaskDetail();
       else if ($("assetPreviewModal").classList.contains("open")) closeAssetPreview();
       else closeRackPreview();
     });
