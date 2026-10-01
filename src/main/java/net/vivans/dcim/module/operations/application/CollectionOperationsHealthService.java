@@ -151,9 +151,9 @@ public class CollectionOperationsHealthService {
         String status;
         if (job.consecutiveFailureCount() > 0) {
             status = "FAILING";
-        } else if (job.lastFailureAt() != null) {
-            status = "RECOVERED";
         } else {
+            // lastFailureAt은 과거 이력이다. 정상 tick 이후에도 Collector에 남아 있으므로
+            // 현재 상태 판정에는 연속 실패 횟수만 사용한다.
             status = "NORMAL";
         }
         return new CollectionJobHealthResponse(
