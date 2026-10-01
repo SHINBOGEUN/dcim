@@ -17,7 +17,7 @@
     .eyebrow { color:var(--accent); font-size:10px; font-weight:800; letter-spacing:.14em; }
     h1 { max-width:780px; margin:10px 0 14px; font-size:clamp(34px,5vw,58px); line-height:1.08; letter-spacing:-.045em; }
     .lead { max-width:660px; margin:0 0 36px; color:var(--muted); font-size:15px; line-height:1.7; }
-    .apps { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+    .apps { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
     a { position:relative; display:flex; align-items:center; gap:15px; min-height:112px; padding:19px; border:1px solid var(--line); border-radius:12px; overflow:hidden; color:var(--text); text-decoration:none; background:linear-gradient(145deg,#172338,#111a29); box-shadow:0 10px 28px rgba(0,0,0,.14); transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease; }
     a::after { content:"→"; position:absolute; right:18px; top:18px; color:#66809d; font-size:18px; }
     a:hover { border-color:var(--accent); transform:translateY(-3px); box-shadow:0 16px 34px rgba(0,0,0,.24); }
@@ -27,6 +27,7 @@
     .footer { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-top:30px; padding-top:18px; border-top:1px solid rgba(42,58,82,.7); color:#657c97; font-size:11px; }
     .online { display:inline-flex; align-items:center; gap:7px; color:var(--ok); }
     .online::before { content:""; width:7px; height:7px; border-radius:50%; background:currentColor; box-shadow:0 0 0 4px rgba(71,213,140,.1); }
+    @media(max-width:1000px){.apps{grid-template-columns:repeat(2,minmax(0,1fr))}}
     @media(max-width:700px){body{place-items:start center;padding:24px 18px}.brand{margin-bottom:44px}.apps{grid-template-columns:1fr}a{min-height:96px}.footer{align-items:flex-start;flex-direction:column}}
   </style>
 </head>
@@ -40,6 +41,7 @@
       <a href="/ops-console.html"><span class="app-icon">⌘</span><div><strong>운영 콘솔</strong><span>장비 등록 · 자산 · Rack · 수집 작업 · 기준 정보 관리</span></div></a>
       <a href="/widget-dashboard.html"><span class="app-icon">▦</span><div><strong>위젯 대시보드</strong><span>전력 · 환경 · PUE 현황과 사용자 배치 위젯</span></div></a>
       <a href="/live-test.html"><span class="app-icon">⌁</span><div><strong>실시간 텔레메트리</strong><span>선택한 장비 Point의 MQTT 실시간 스트림</span></div></a>
+      <a href="/mqtt-monitor.html"><span class="app-icon">◉</span><div><strong>MQTT 모니터</strong><span>브로커 연결 · 토픽 구독 · 원문 JSON 확인</span></div></a>
       <a href="/swagger-ui/index.html"><span class="app-icon">{ }</span><div><strong>API 문서</strong><span>Manager API 명세와 요청·응답 확인</span></div></a>
     </section>
     <div class="footer"><span>DEFOG DCIM · MANAGER SERVICE</span><span class="online">Manager workspace ready</span></div>
