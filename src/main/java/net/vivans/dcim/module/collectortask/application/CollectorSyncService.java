@@ -14,8 +14,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Service
@@ -26,6 +29,8 @@ public class CollectorSyncService {
     private final CollectionTaskRepository collectionTaskRepository;
     private final ObjectMapper objectMapper;
     private final CollectionGroupSpecService collectionGroupSpecService;
+    /** HTTP 재시도까지 실패한 그룹만 다음 reconciliation 주기에 최신 DB 상태로 재전송한다. */
+    private final Set<Integer> pendingGroupIds = ConcurrentHashMap.newKeySet();
 
     @Transactional
     public void syncGroupSpec(CollectionTaskGroup group) {
@@ -40,6 +45,7 @@ public class CollectorSyncService {
         CollectionTask task = group.getTask();
         String specJson = currentSpecJson(group);
         if (specJson == null || specJson.isBlank()) {
+            pendingGroupIds.remove(group.getId());
             return;
         }
         if (!isSupportedSpec(specJson, task)) {
@@ -76,6 +82,7 @@ public class CollectorSyncService {
                 );
             }
             save(task);
+            pendingGroupIds.remove(group.getId());
         } catch (Exception exception) {
             handleFailure("syncGroupSpec", task.getId(), group.getId(), failFast, exception);
         }
@@ -101,6 +108,8 @@ public class CollectorSyncService {
         if (group.getCollectorJobId() == null) {
             if (enabled && hasGeneratedSpec(group)) {
                 syncGroupSpec(group, failFast);
+            } else {
+                pendingGroupIds.remove(group.getId());
             }
             return;
         }
@@ -115,6 +124,7 @@ public class CollectorSyncService {
                     group.getCollectorJobId(),
                     enabled
             );
+            pendingGroupIds.remove(group.getId());
         } catch (Exception exception) {
             handleFailure("syncGroupToggle", task.getId(), group.getId(), failFast, exception);
         }
@@ -143,6 +153,7 @@ public class CollectorSyncService {
             return;
         }
         if (group.getCollectorJobId() == null) {
+            pendingGroupIds.remove(group.getId());
             return;
         }
         CollectionTask task = group.getTask();
@@ -151,6 +162,7 @@ public class CollectorSyncService {
             collectorJobClient.delete(collectorJobId);
             group.updateCollectorJobId(null);
             save(task);
+            pendingGroupIds.remove(group.getId());
             log.info(
                     "[COLLECTOR_SYNC_END] type=REGULAR action=DELETE taskId={} groupId={} collectorJobId={}",
                     task.getId(),
@@ -225,6 +237,36 @@ public class CollectorSyncService {
         return synchronizedCount;
     }
 
+    /** Collector 인스턴스가 바뀌지 않아도 실패한 설정을 최신 DB 내용으로 다시 동기화한다. */
+    @Transactional
+    public void retryPendingGroups() {
+        if (!collectorJobClient.isEnabled() || pendingGroupIds.isEmpty()) {
+            return;
+        }
+        Set<Integer> missingGroupIds = new HashSet<>(pendingGroupIds);
+        for (CollectionTask task : collectionTaskRepository.findAll(null, null, null)) {
+            for (CollectionTaskGroup group : new ArrayList<>(task.getGroups())) {
+                if (!missingGroupIds.remove(group.getId())) {
+                    continue;
+                }
+                log.info("[COLLECTOR_SYNC_RETRY] taskId={} groupId={}", task.getId(), group.getId());
+                try {
+                    syncGroupSpec(group, false);
+                    if (!pendingGroupIds.contains(group.getId()) && isCollectorEnabled(task, group)
+                            && group.getCollectorJobId() != null) {
+                        syncGroupToggle(group, false);
+                    }
+                } catch (Exception exception) {
+                    pendingGroupIds.add(group.getId());
+                    log.error("[COLLECTOR_SYNC_RETRY_ERROR] taskId={} groupId={}",
+                            task.getId(), group.getId(), exception);
+                }
+            }
+        }
+        // 이미 삭제된 그룹은 더 이상 재시도할 설정이 없다.
+        pendingGroupIds.removeAll(missingGroupIds);
+    }
+
     @Transactional
     public void repushGroup(CollectionTaskGroup group) {
         repushGroupInternal(group);
@@ -240,6 +282,7 @@ public class CollectorSyncService {
             CollectorJobResponse response = collectorJobClient.register(specJson);
             group.updateCollectorJobId(response.collectorJobId());
             save(task);
+            pendingGroupIds.remove(group.getId());
             log.info(
                     "collector job repushed: taskId={}, groupId={}, collectorJobId={}",
                     task.getId(),
@@ -253,6 +296,7 @@ public class CollectorSyncService {
 
     private void disableGroupJob(CollectionTaskGroup group, boolean failFast) {
         if (group.getCollectorJobId() == null) {
+            pendingGroupIds.remove(group.getId());
             return;
         }
         CollectionTask task = group.getTask();
@@ -264,6 +308,7 @@ public class CollectorSyncService {
                     group.getId(),
                     group.getCollectorJobId()
             );
+            pendingGroupIds.remove(group.getId());
         } catch (Exception exception) {
             handleFailure("disableGroupJob", task.getId(), group.getId(), failFast, exception);
         }
@@ -284,6 +329,9 @@ public class CollectorSyncService {
                     "collector sync failed: " + operation + " (taskId=" + taskId + ", groupId=" + groupId + ")",
                     exception
             );
+        }
+        if (groupId != null && !"removeGroupJob".equals(operation)) {
+            pendingGroupIds.add(groupId);
         }
     }
 
