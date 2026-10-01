@@ -65,13 +65,14 @@ class CollectionStatusProtocolScopeTest {
         when(model.getId()).thenReturn(id);
         when(model.getName()).thenReturn("model-" + id);
         when(model.getManufacturer()).thenReturn("test");
-        when(model.getProtocols()).thenReturn(java.util.Arrays.stream(protocolCodes).map(code -> {
+        List<DeviceModelProtocol> protocols = java.util.Arrays.stream(protocolCodes).map(code -> {
             CommonCode type = mock(CommonCode.class);
             when(type.getCode()).thenReturn(code);
             DeviceModelProtocol protocol = mock(DeviceModelProtocol.class);
             when(protocol.getProtocolType()).thenReturn(type);
             return protocol;
-        }).toList());
+        }).toList();
+        when(model.getProtocols()).thenReturn(protocols);
         return model;
     }
 
