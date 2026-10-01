@@ -1,5 +1,7 @@
 package net.vivans.dcim.module.collectortask.application;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 import java.util.List;
 
 /** Collector의 ModbusCollectionGroupSpec JSON 계약과 동일한 필드만 직렬화한다. */
@@ -23,8 +25,17 @@ public record CollectionGroupModbusSpec(
             String dataType,
             String byteOrder,
             Double scale,
-            Double offset
+            Double offset,
+            @JsonInclude(JsonInclude.Include.NON_EMPTY) List<ModbusBitField> bitFields
     ) {
+        public ModbusPoint(String name, String registerType, Integer address, String dataType,
+                           String byteOrder, Double scale, Double offset) {
+            this(name, registerType, address, dataType, byteOrder, scale, offset, List.of());
+        }
+    }
+
+    public record ModbusBitField(String name, int bitOffset, int bitWidth,
+                                 java.util.Map<String, Long> valueMap, Long unmappedValue) {
     }
 
     public record ModbusTarget(

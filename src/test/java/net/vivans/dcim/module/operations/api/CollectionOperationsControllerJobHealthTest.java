@@ -38,7 +38,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * "수집 안정성 강화" 작업 중 요구사항 #3(실패 시각/횟수/원인 가시화)과 #5(정상 복구 자동 반영)를
  * 검증한다. 실제 Collector 대신 CollectorJobClient를 목으로 대체해, Collector가 보고하는
  * job 상태(성공/실패 이력)가 /api/manager/operations/collection/jobs 응답에
- * NOT_SYNCED / UNKNOWN / FAILING / RECOVERED / NORMAL 로 정확히 반영되는지 확인한다.
+ * NOT_SYNCED / UNKNOWN / FAILING / NORMAL 로 정확히 반영되는지 확인한다.
  */
 @SpringBootTest(classes = ManagerServerApplication.class)
 @AutoConfigureMockMvc
@@ -68,7 +68,7 @@ class CollectionOperationsControllerJobHealthTest {
     private CollectorJobClient collectorJobClient;
 
     @Test
-    void jobHealth_reflectsNotSyncedUnknownFailingAndRecoveredStates() throws Exception {
+    void jobHealth_reflectsCurrentFailureWithoutTreatingHistoryAsFailure() throws Exception {
         // 픽스처를 만드는 동안은 실제 동기화가 일어나지 않도록 비활성 상태로 둔다.
         when(collectorJobClient.isEnabled()).thenReturn(false);
 
@@ -120,9 +120,12 @@ class CollectionOperationsControllerJobHealthTest {
                 // hasItem(containsString(...))로 "배열의 한 원소가 이 문자열을 포함한다"를 검증한다.
                 .andExpect(jsonPath(groupJson(failingGroupId) + ".lastFailureReason").value(
                         org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.containsString("timeout"))))
-                .andExpect(jsonPath(groupJson(recoveredGroupId) + ".status").value("RECOVERED"))
+                .andExpect(jsonPath(groupJson(recoveredGroupId) + ".status").value("NORMAL"))
                 .andExpect(jsonPath(groupJson(recoveredGroupId) + ".consecutiveFailureCount").value(0))
-                .andExpect(jsonPath(groupJson(recoveredGroupId) + ".lastSuccessAt").exists());
+                .andExpect(jsonPath(groupJson(recoveredGroupId) + ".lastSuccessAt").exists())
+                .andExpect(jsonPath(groupJson(recoveredGroupId) + ".lastFailureAt").exists())
+                .andExpect(jsonPath(groupJson(recoveredGroupId) + ".lastFailureReason").value(
+                        org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.containsString("deviceId=2"))));
     }
 
     /** data 배열에서 groupId로 특정 원소를 찾는 jsonPath. 배열 순서에 의존하지 않기 위함. */

@@ -9,6 +9,8 @@ import net.vivans.dcim.module.collectortask.domain.model.CollectionTaskGroup;
 import net.vivans.dcim.module.device.domain.model.Device;
 import net.vivans.dcim.module.device.domain.model.DeviceEndpointModbus;
 import net.vivans.dcim.module.device.domain.model.DeviceModbusReading;
+import net.vivans.dcim.module.device.domain.model.DeviceModbusBitField;
+import net.vivans.dcim.module.device.infrastructure.persistence.DeviceModbusBitFieldRepository;
 import net.vivans.dcim.module.device.domain.model.DeviceProtocolEndpoint;
 import net.vivans.dcim.module.device.domain.model.DeviceSnmpInstance;
 import net.vivans.dcim.module.device.domain.repository.DeviceEndpointModbusRepository;
@@ -20,6 +22,7 @@ import net.vivans.dcim.module.devicemodel.domain.model.DeviceModelModbusPoint;
 import net.vivans.dcim.module.devicemodel.domain.model.DeviceModelProtocol;
 import net.vivans.dcim.module.devicemodel.domain.model.DeviceModelSnmpPoint;
 import net.vivans.dcim.module.devicemodel.domain.model.ModbusRegisterType;
+import net.vivans.dcim.module.devicemodel.domain.model.ModbusDataType;
 import net.vivans.dcim.module.devicemodel.domain.repository.DeviceModelModbusPointRepository;
 import net.vivans.dcim.module.devicemodel.domain.repository.DeviceModelSnmpPointRepository;
 import org.springframework.stereotype.Service;
@@ -55,6 +58,7 @@ public class CollectionGroupSpecService {
     private final DeviceProtocolEndpointRepository deviceProtocolEndpointRepository;
     private final DeviceEndpointModbusRepository deviceEndpointModbusRepository;
     private final DeviceModbusReadingRepository deviceModbusReadingRepository;
+    private final DeviceModbusBitFieldRepository deviceModbusBitFieldRepository;
     private final DeviceSnmpInstanceRepository deviceSnmpInstanceRepository;
     private final ObjectMapper objectMapper;
 
@@ -320,7 +324,7 @@ public class CollectionGroupSpecService {
                 continue;
             }
             addModbusPoint(source, source, endpoint, endpointModbus.getUnitId(), point.getName(),
-                    point.getAddress(), point, pointsByTarget, usedNamesByStorageDevice, sourcePoints, skipped);
+                    point.getAddress(), point, List.of(), pointsByTarget, usedNamesByStorageDevice, sourcePoints, skipped);
         }
         for (DeviceModbusReading reading : deviceModbusReadingRepository.findAllByEndpointIdOrderByIdAsc(endpoint.getId())) {
             if (!reading.isEnabled()) continue;
@@ -336,7 +340,9 @@ public class CollectionGroupSpecService {
                 continue;
             }
             addModbusPoint(source, storageDevice, endpoint, reading.getUnitId(), reading.getPointName(),
-                    reading.getAddress(), point, pointsByTarget, usedNamesByStorageDevice, sourcePoints, skipped);
+                    reading.getAddress(), point,
+                    deviceModbusBitFieldRepository.findAllByReading_IdOrderByIdAsc(reading.getId()),
+                    pointsByTarget, usedNamesByStorageDevice, sourcePoints, skipped);
         }
         if (sourcePoints.isEmpty()) skipped.add(deviceReason(source, "no collectible Modbus points"));
         else pointsBySource.put(source.getId(), sourcePoints);
@@ -350,6 +356,7 @@ public class CollectionGroupSpecService {
             String name,
             Integer address,
             DeviceModelModbusPoint point,
+            List<DeviceModbusBitField> bitFields,
             Map<TargetKey, List<CollectionGroupModbusSpec.ModbusPoint>> pointsByTarget,
             Map<Integer, Set<String>> usedNamesByStorageDevice,
             List<CollectionGroupPlan.PointSource> sourcePoints,
@@ -374,11 +381,30 @@ public class CollectionGroupSpecService {
                     + "' for target device " + storageDevice.getId()));
             return;
         }
+        List<CollectionGroupModbusSpec.ModbusBitField> derived = new ArrayList<>();
+        for (DeviceModbusBitField field : bitFields) {
+            if (bitRead || point.getDataType() == ModbusDataType.FLOAT32
+                    || point.getScale() != null && point.getScale() != 1.0
+                    || point.getOffset() != null && point.getOffset() != 0.0
+                    || field.getBitOffset() < 0 || field.getBitWidth() < 1 || field.getBitWidth() > 32
+                    || (long) field.getBitOffset() + field.getBitWidth() > point.getDataType().getRegisterCount() * 16) {
+                skipped.add(deviceReason(source, "invalid Modbus bit field '" + field.getPointName() + "'"));
+                continue;
+            }
+            if (!validPointName(field.getPointName()) || !names.add(field.getPointName())) {
+                skipped.add(deviceReason(source, "duplicate or invalid derived Modbus point '"
+                        + field.getPointName() + "' for target device " + storageDevice.getId()));
+                continue;
+            }
+            derived.add(new CollectionGroupModbusSpec.ModbusBitField(field.getPointName(),
+                    field.getBitOffset(), field.getBitWidth(), field.getValueMap(), field.getUnmappedValue()));
+            sourcePoints.add(new CollectionGroupPlan.PointSource(storageDevice.getId(), field.getPointName(), null));
+        }
         CollectionGroupModbusSpec.ModbusPoint specPoint = new CollectionGroupModbusSpec.ModbusPoint(
                 name, point.getRegisterType().name(), address,
                 bitRead ? "UINT16" : point.getDataType().name(),
                 bitRead || point.getByteOrder() == null ? null : point.getByteOrder().name(),
-                bitRead ? null : point.getScale(), bitRead ? null : point.getOffset());
+                bitRead ? null : point.getScale(), bitRead ? null : point.getOffset(), derived);
         TargetKey key = new TargetKey(storageDevice.getId(), endpoint.getHost(), endpoint.getPort(), unitId);
         pointsByTarget.computeIfAbsent(key, ignored -> new ArrayList<>()).add(specPoint);
         sourcePoints.add(new CollectionGroupPlan.PointSource(storageDevice.getId(), name, point.getUnit()));

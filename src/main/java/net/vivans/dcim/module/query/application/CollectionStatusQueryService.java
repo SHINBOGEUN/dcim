@@ -23,12 +23,15 @@ import net.vivans.dcim.module.collectortask.domain.repository.CollectionTaskRepo
 import net.vivans.dcim.module.device.domain.model.Device;
 import net.vivans.dcim.module.device.domain.repository.DeviceRepository;
 import net.vivans.dcim.module.devicemodel.application.DeviceModelPointCatalog;
+import net.vivans.dcim.module.devicemodel.domain.model.DeviceModelProtocol;
 import net.vivans.dcim.module.query.api.dto.CollectionDeviceStatusResponse;
 import net.vivans.dcim.module.query.api.dto.CollectionStatusResponse;
 import net.vivans.dcim.module.query.config.CollectionStatusProperties;
 import net.vivans.dcim.module.query.domain.LastPoint;
 import net.vivans.dcim.module.query.domain.PointQuery;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.scheduling.support.CronExpression;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,7 +39,8 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * 장비 등록·수집 작업·Influx 최신 데이터를 한 화면의 운영 상태로 결합한다.
  * <p>
- * 프로토콜별 분기를 두지 않는다. 수집 그룹이 실제로 수집할 point 목록과 실패 사유는
+ * MQTT 전용 장비는 별도 LoRa 수집 상태에서 확인한다. 그 외 수집 그룹이 실제로
+ * 수집할 point 목록과 실패 사유는
  * {@link CollectionGroupSpecService#generate}가 돌려주는 {@link CollectionGroupPlan}에서,
  * 측정항목 단위는 {@link DeviceModelPointCatalog}에서 가져온다.
  */
@@ -59,9 +63,8 @@ public class CollectionStatusQueryService {
     public CollectionStatusResponse getStatus(Integer lookbackHours) {
         Instant now = Instant.now();
         int resolvedLookbackHours = resolveLookbackHours(lookbackHours);
-        List<Device> devices = deviceRepository.findAll(null, null, null, null, null, null,
-                PageRequest.of(0, MAX_DEVICES, org.springframework.data.domain.Sort.by("id"))).getContent();
         Map<Integer, Registration> registrationByDeviceId = registrations();
+        List<Device> devices = collectorStatusDevices(registrationByDeviceId);
         Map<Integer, CollectionGroupPlan> specByGroupId = specsByGroup(registrationByDeviceId);
         Map<Integer, Map<String, String>> unitsByModelId = deviceModelPointCatalog.unitsByModelId(modelIds(devices));
         Map<Integer, List<LastPoint>> lastPointsByDeviceId = latestPoints(devices, registrationByDeviceId,
@@ -84,6 +87,49 @@ public class CollectionStatusQueryService {
         rows.sort(Comparator.comparing(CollectionDeviceStatusResponse::status)
                 .thenComparing(CollectionDeviceStatusResponse::deviceName));
         return new CollectionStatusResponse(now, summarize(rows), rows);
+    }
+
+    private List<Device> collectorStatusDevices(Map<Integer, Registration> registrations) {
+        List<Device> selected = new ArrayList<>();
+        Map<Integer, Boolean> mqttOnlyByModelId = new HashMap<>();
+        for (int pageIndex = 0; selected.size() < MAX_DEVICES; pageIndex++) {
+            Page<Device> page = deviceRepository.findAll(null, null, null, null, null, null,
+                    PageRequest.of(pageIndex, MAX_DEVICES, Sort.by("id")));
+            for (Device device : page.getContent()) {
+                boolean mqttOnly = mqttOnlyByModelId.computeIfAbsent(device.getDeviceModel().getId(),
+                        ignored -> isMqttOnlyModel(device));
+                if (mqttOnly && !hasCollectorRegistration(registrations.get(device.getId()))) {
+                    continue;
+                }
+                selected.add(device);
+                if (selected.size() == MAX_DEVICES) break;
+            }
+            if (!page.hasNext()) break;
+        }
+        return selected;
+    }
+
+    private static boolean isMqttOnlyModel(Device device) {
+        var model = device.getDeviceModel();
+        boolean mqtt = false;
+        boolean collector = false;
+        for (DeviceModelProtocol protocol : model.getProtocols()) {
+            String code = protocol.getProtocolType().getCode();
+            mqtt |= "mqtt".equalsIgnoreCase(code);
+            collector |= isCollectorProtocol(code);
+        }
+        boolean loraSensor = model.getDeviceType() != null
+                && "LORA_SENSOR".equalsIgnoreCase(model.getDeviceType().getCode());
+        return !collector && (mqtt || loraSensor);
+    }
+
+    private static boolean hasCollectorRegistration(Registration registration) {
+        return registration != null && registration.task().getScriptType() != null
+                && isCollectorProtocol(registration.task().getScriptType().getCode());
+    }
+
+    private static boolean isCollectorProtocol(String code) {
+        return "snmp".equalsIgnoreCase(code) || "modbus".equalsIgnoreCase(code);
     }
 
     private static Set<Integer> modelIds(List<Device> devices) {

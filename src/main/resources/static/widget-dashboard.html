@@ -346,6 +346,12 @@
       .board-wrap { padding-left:12px; padding-right:12px; }
       .board-toolbar { margin-left:-12px; margin-right:-12px; padding-left:12px; padding-right:12px; }
     }
+    /* The board and edit drawer own their scrolling; keep the app shell fixed. */
+    body { overflow:hidden; }
+    main { min-height:0; overflow:hidden; }
+    .board-wrap { min-height:0; scrollbar-gutter:stable; }
+    body.edit-mode aside { overflow:auto; }
+    :is(button,a,input,select):focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
   </style>
 </head>
 <body>

@@ -157,13 +157,13 @@
     .rack-stats .stat:nth-child(3) .v { color: #287b65; }
     .rack-stats .stat:nth-child(4) .v { color: #8b3a8d; }
     .rack-stats .stat:nth-child(5) .v { color: #b54708; }
-    .rack-overview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(390px, 1fr)); gap: 20px; align-items: start; }
-    .rack-overview-card { background: #f8fafc; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; box-shadow: var(--shadow); }
+    .rack-overview-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 480px), 1fr)); grid-auto-rows: max-content; gap: 20px; align-items: start; }
+    .rack-overview-card { min-width: 0; height: max-content; background: #f8fafc; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; box-shadow: var(--shadow); }
     .rack-overview-head { display: flex; justify-content: space-between; gap: 8px; align-items: center; padding: 11px 13px; background: #1d3655; color: #fff; }
     .rack-overview-head b { font-size: 15px; }
     .rack-overview-head small { display: block; color: #c7d7e8; margin-top: 2px; }
     .rack-overview-head .chip { background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.22); color: #fff; white-space: nowrap; }
-    .rack-visual { display: grid; grid-template-columns: 68px minmax(220px, 1fr) 68px; gap: 8px; align-items: stretch; padding: 14px; min-height: 548px; }
+    .rack-visual { display: grid; grid-template-columns: 82px minmax(220px, 1fr) 82px; gap: 8px; align-items: stretch; padding: 14px; min-height: 548px; }
     .rack-side { display: flex; flex-direction: column; gap: 5px; min-width: 0; border: 2px dashed transparent; border-radius: 8px; transition: background .12s, border-color .12s; }
     .rack-side.drop-active { border-color: #4e9ad5; background: #dcebfa; }
     .rack-side h4 { margin: 0 0 4px; font-size: 11px; color: var(--muted); text-align: center; }
@@ -219,10 +219,47 @@
     .asset-preview-body { padding: 18px; }
     .collection-values-dialog { width: min(920px, 100%); max-height: min(85vh, 800px); display: flex; flex-direction: column; }
     .collection-values-body { overflow: auto; min-height: 0; }
-    .modbus-reading-dialog { width: min(1120px, 100%); max-height: 92vh; display: flex; flex-direction: column; }
+    .task-detail-dialog { width:min(980px,100%); max-height:min(90vh,900px); display:flex; flex-direction:column; }
+    .task-detail-body { overflow:auto; min-height:0; }
+    #taskList > [data-task] { display:none; }
+    #taskList > [data-task].active { display:block; }
+    .task-page-layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(300px,380px); gap:14px; align-items:start; }
+    .task-index-item { display:flex; align-items:center; justify-content:space-between; gap:14px; width:100%; padding:14px 16px; border:1px solid var(--line); border-radius:10px; background:var(--surface2); color:var(--text); text-align:left; cursor:pointer; }
+    .task-index-item:hover, .task-index-item:focus-visible { border-color:var(--accent); background:var(--accent-soft); }
+    .task-index-item strong { display:block; margin-bottom:4px; }
+    .task-index-item .muted { display:block; font-size:12px; }
+    .task-index-item .chip { flex:none; }
+    @media (max-width:900px) { .task-page-layout { grid-template-columns:1fr; } }
+    .modbus-reading-dialog { width: min(1220px, 100%); max-height: 92vh; display: flex; flex-direction: column; }
     .modbus-reading-body { overflow: auto; min-height: 0; }
-    #modbusReadingList table { min-width: 820px; }
-    #modbusReadingList .table-wrap { max-height: none; overflow-x: auto; }
+    .modbus-reading-layout { display:grid; grid-template-columns:minmax(0,1.15fr) minmax(330px,.85fr); gap:14px; min-height:0; }
+    .modbus-reading-pane { min-width:0; padding:17px; border:1px solid #2b405a; border-radius:10px; background:#111e2e; }
+    .modbus-reading-pane h3 { margin:0 0 12px; color:#ebf4ff; font-size:14px; }
+    .modbus-reading-items { display:grid; gap:9px; max-height:calc(92vh - 235px); overflow:auto; padding-right:3px; }
+    .modbus-reading-item { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px; padding:13px; border:1px solid #33465e; border-radius:9px; background:#17263a; }
+    .modbus-reading-item.selected { border-color:#49bde9; background:#17364b; }
+    .modbus-reading-item strong { display:block; margin-bottom:5px; color:#eff6ff; font-size:13px; overflow-wrap:anywhere; }
+    .modbus-reading-item p { margin:3px 0; color:#9db2ca; font-size:11px; line-height:1.5; overflow-wrap:anywhere; }
+    .modbus-reading-item .row { justify-content:flex-end; align-self:start; }
+    .modbus-reading-item .row button { padding:6px 9px; }
+    .modbus-bit-rule { padding:12px; margin:10px 0; border:1px solid #33465e; border-radius:9px; background:#17263a; }
+    .modbus-bit-rule .fields { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .modbus-bit-rule .field input { width:100%; }
+    .modbus-bit-mappings { display:grid; gap:7px; margin:9px 0; }
+    .modbus-bit-mapping { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto; gap:8px; align-items:end; }
+    .modbus-bit-mapping .field { min-width:0; }
+    .modbus-bit-mapping .field input { width:100%; }
+    .modbus-bit-mapping > span { padding-bottom:10px; color:var(--muted); }
+    .modbus-bit-mapping > button { margin-bottom:1px; }
+    @media (max-width:640px) { .modbus-bit-mapping { grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); } .modbus-bit-mapping > button { grid-column:1/-1; } }
+    .modbus-bit-result { margin:10px 0; padding:10px; border-radius:8px; background:#13273a; font-size:12px; }
+    .modbus-reading-feedback { margin-top:10px; padding:9px 11px; border-radius:8px; font-size:12px; line-height:1.5; }
+    .modbus-reading-feedback[data-kind="error"] { color:var(--bad); background:var(--bad-bg); }
+    .modbus-reading-feedback[data-kind="success"] { color:var(--ok); background:var(--ok-bg); }
+    .modbus-reading-pane .fields { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .modbus-reading-pane .field { min-width:0; }
+    @media (max-width:900px) { .modbus-reading-layout { grid-template-columns:1fr; } .modbus-reading-items { max-height:270px; } }
+    @media (max-width:640px) { .modbus-reading-pane .fields { grid-template-columns:1fr; } }
     .asset-preview-main { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 18px; }
     .asset-preview-image { width: 180px; height: 142px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 10px; background: var(--surface2); overflow: hidden; color: var(--muted); }
     .asset-preview-image img { width: 100%; height: 100%; object-fit: cover; }
@@ -478,7 +515,7 @@
     .kv dd { margin: 0; }
 
     .toast-wrap {
-      position: fixed; right: 16px; bottom: 16px; z-index: 50;
+      position: fixed; right: 16px; bottom: 16px; z-index: 300;
       display: flex; flex-direction: column; gap: 8px; max-width: 360px;
     }
     .toast {
@@ -685,10 +722,12 @@
     .side button[data-tab="lora-collection-status"]::before { content:"✓"; }
     .side button[data-tab="users"]::before { content:"♙"; }
     .side button[data-tab="notes"]::before { content:"?"; }
-    .top-page-context { min-width:150px; display:flex; flex-direction:column; gap:2px; }
+    .top-page-context { flex:1 1 0; min-width:0; display:flex; flex-direction:column; gap:2px; overflow:hidden; }
     .top-page-context span { color:#5f7693; font-size:9px; font-weight:800; letter-spacing:.13em; }
-    .top-page-context strong { color:#eef5ff; font-size:15px; }
-    .top-auth { justify-content:flex-end; flex-wrap:nowrap; }
+    .top-page-context h1 { margin:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#eef5ff; font-size:15px; line-height:1.2; }
+    .top-page-description { margin:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#91a4bd; font-size:11px; line-height:1.3; }
+    .top-page-description a { color:var(--accent); }
+    .top-auth { flex:0 0 auto; justify-content:flex-end; flex-wrap:nowrap; }
     .top-auth > .field { display:none; }
     .top-auth button { white-space:nowrap; padding:8px 10px; }
     .top-time { display:flex; flex-direction:column; align-items:flex-end; min-width:82px; color:#8ca0ba; font-size:10px; line-height:1.35; }
@@ -696,13 +735,12 @@
     .top-links a { padding:6px 9px; }
     .shell-menu-btn,.side-backdrop { display:none; }
 
-    /* Page hierarchy */
+    /* The shell owns the page title and description; keep them as panel metadata. */
     .panel.active { animation:panel-in .22s ease both; }
     @keyframes panel-in { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:none; } }
-    .page-heading { display:flex; justify-content:space-between; gap:18px; align-items:flex-end; margin-bottom:22px; padding-bottom:16px; border-bottom:1px solid #1f2d40; }
-    .page-heading .page-title { margin:0 0 5px; }
-    .page-heading .page-desc { margin:0; }
-    .page-heading::after { content:"DEFOG / DCIM"; color:#49627f; font-size:9px; font-weight:800; letter-spacing:.16em; white-space:nowrap; }
+    .panel > .page-title, .panel > .page-desc { display:none; }
+    #tab-home .home-hero { align-items:center; justify-content:space-between; padding:11px 16px; margin-bottom:12px; }
+    #tab-home .home-hero .page-title, #tab-home .home-hero .page-desc { display:none; }
     .card { position:relative; border-radius:12px; overflow:hidden; }
     .card::before { content:""; position:absolute; inset:0 auto auto 0; width:100%; height:1px; background:linear-gradient(90deg,transparent,rgba(91,200,246,.4),transparent); opacity:.55; }
     .card > h2 { min-height:28px; padding-bottom:10px; border-bottom:1px solid #26364c; }
@@ -765,7 +803,7 @@
 
     /* Form workflows */
     #tab-wizard.panel.active { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; align-items:start; }
-    #tab-wizard > .page-heading,#tab-wizard > .wiz-progress,#tab-wizard > .row,#tab-wizard > .result-ok { grid-column:1 / -1; }
+    #tab-wizard > .wiz-progress,#tab-wizard > .row,#tab-wizard > .result-ok { grid-column:1 / -1; }
     #tab-wizard > .card { min-height:100%; margin:0; }
     #tab-wizard > .card .fields { grid-template-columns:1fr; }
     #tab-wizard .field.full { grid-column:auto; }
@@ -774,7 +812,47 @@
     .wiz-progress span:last-child { border-right:0; }
     .wiz-progress span.on { color:#e9f7ff; background:#123b54; }
     .wiz-progress span.done { color:#62dfa0; background:#123226; }
-    #tab-devices .grid2 { grid-template-columns:minmax(620px,1.45fr) minmax(360px,.72fr); }
+    /* Device directory: browse first, edit in a focused workspace. */
+    #tab-devices.panel.active { display:flex; flex:1 1 auto; flex-direction:column; min-height:0; }
+    #tab-devices .device-directory { display:flex; flex:1 1 auto; flex-direction:column; min-height:0; margin-bottom:0; padding:0; }
+    .device-directory-head { display:flex; justify-content:space-between; align-items:center; gap:16px; padding:20px 22px 16px; }
+    .device-directory-head h2 { margin:4px 0 0; color:#eef5ff; font-size:18px; }
+    .device-directory-head p { margin:5px 0 0; color:#8fa4bd; font-size:12px; }
+    .device-directory-filters { display:grid; grid-template-columns:minmax(200px,1.5fr) repeat(2,minmax(145px,1fr)) auto auto; gap:10px; padding:0 22px 18px; align-items:end; }
+    .device-directory-filters .field { margin:0; }
+    .device-directory-filters :is(input,select) { width:100%; }
+    .device-directory-filters button { min-height:40px; white-space:nowrap; }
+    .device-directory-meta { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:11px 22px; color:#92a6bf; font-size:12px; border-block:1px solid #283951; background:#111e2d; }
+    .device-directory-table { flex:1 1 auto; min-height:0; overflow:auto; }
+    .device-directory-table table { border:0; border-radius:0; }
+    .device-directory-table th:first-child,.device-directory-table td:first-child { padding-left:22px; }
+    .device-directory-table th:last-child,.device-directory-table td:last-child { padding-right:22px; }
+    .device-directory-table tr[tabindex] { cursor:pointer; }
+    .device-directory-table tr[tabindex]:focus-visible { outline:2px solid #52cafa; outline-offset:-2px; }
+    .device-directory-table td { vertical-align:middle; }
+    .device-directory-table .device-name { font-size:13px; }
+    .device-directory-table .device-sub { margin-top:3px; font-size:11px; }
+    .device-directory-table .device-open { color:#66cffa; font-size:18px; text-align:right; }
+    .device-detail-modal { display:none; position:fixed; inset:0; z-index:145; padding:20px; background:rgba(3,8,15,.78); }
+    .device-detail-modal.open { display:grid; place-items:center; }
+    .device-detail-dialog { display:flex; flex-direction:column; width:min(1040px,100%); max-height:min(92vh,940px); min-height:min(580px,90vh); overflow:hidden; border:1px solid #37506b; border-radius:16px; background:#101b2b; box-shadow:0 28px 80px rgba(0,0,0,.44); }
+    .device-detail-head { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:18px 24px; border-bottom:1px solid #2d4159; background:linear-gradient(110deg,#16324a,#17283d); }
+    .device-detail-head .eyebrow { display:block; margin-bottom:5px; }
+    .device-detail-head h2 { margin:0; color:#f1f8ff; font-size:21px; }
+    .device-detail-head p { margin:5px 0 0; color:#abc0d5; font-size:12px; }
+    .device-detail-head button { flex:none; min-width:36px; min-height:36px; color:#e6f3ff; background:#223c55; }
+    .device-detail-tabs { display:flex; gap:6px; padding:12px 24px 0; border-bottom:1px solid #2b3d54; }
+    .device-detail-tabs button { padding:10px 15px; border:0; border-radius:8px 8px 0 0; background:transparent; color:#93a9c2; font-weight:700; }
+    .device-detail-tabs button.active { color:#75d5ff; background:#183a50; box-shadow:inset 0 -2px 0 #4ec5f3; }
+    .device-detail-content { flex:1; min-height:0; overflow:auto; padding:22px 24px 28px; }
+    .device-detail-section { display:none; }
+    .device-detail-section.active { display:block; }
+    .device-detail-section > .card { margin:0; }
+    .device-detail-section .fields { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .device-detail-section .field.full { grid-column:1 / -1; }
+    .device-detail-section .section-intro { margin:0 0 16px; color:#9eb2c9; font-size:12px; line-height:1.6; }
+    .device-detail-section #epOut { margin-top:16px; }
+    .device-detail-section #modbusReadingOpen { margin-top:14px; }
     #tab-assets .card:first-child { padding:20px; }
     .asset-detail { width:min(1180px,100%); }
     .asset-detail-body { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
@@ -783,7 +861,7 @@
     .models-layout { grid-template-columns:minmax(310px,.68fr) minmax(620px,1.5fr); }
 
     @media (max-width: 1450px) { .home-layout { grid-template-columns:1fr 1fr; } .quick-actions { grid-column:1 / -1; grid-template-columns:repeat(4,1fr); } }
-    @media (max-width: 1180px) { #tab-wizard.panel.active { grid-template-columns:1fr; } #tab-devices .grid2,.models-layout { grid-template-columns:1fr; } .home-stats { grid-template-columns:repeat(2,1fr); } }
+    @media (max-width: 1180px) { #tab-wizard.panel.active { grid-template-columns:1fr; } .models-layout { grid-template-columns:1fr; } .home-stats { grid-template-columns:repeat(2,1fr); } .device-directory-filters { grid-template-columns:repeat(2,minmax(0,1fr)); } }
     @media (max-width: 980px) {
       body { grid-template-columns:1fr; grid-template-rows:62px minmax(0,1fr); }
       .top { grid-column:1; grid-row:1; padding:9px 14px; }
@@ -800,9 +878,8 @@
       .quick-actions { grid-column:auto; grid-template-columns:repeat(2,1fr); }
       .asset-detail-body { grid-template-columns:1fr; }
       .asset-detail-body > .card:first-child { grid-column:auto; }
-      .page-heading::after { display:none; }
     }
-    @media (max-width: 640px) { .home-stats,.quick-actions { grid-template-columns:1fr; } .home-hero { padding:22px 20px; } .home-hero .page-title { font-size:25px; } .top-page-context span { display:none; } .top-links { display:none; } }
+    @media (max-width: 640px) { .home-stats,.quick-actions { grid-template-columns:1fr; } .home-hero { padding:22px 20px; } .home-hero .page-title { font-size:25px; } .top-page-context span { display:none; } .top-links { display:none; } .device-directory-head { align-items:flex-start; flex-direction:column; } .device-directory-filters { grid-template-columns:1fr; } .device-directory-meta { flex-direction:column; align-items:flex-start; } .device-detail-modal { padding:0; } .device-detail-dialog { width:100%; max-height:100vh; min-height:100vh; border-radius:0; } .device-detail-head { padding:15px 18px; } .device-detail-tabs { padding-inline:12px; } .device-detail-tabs button { flex:1; padding:10px 5px; font-size:12px; } .device-detail-content { padding:16px 12px; } .device-detail-section .fields { grid-template-columns:1fr; } }
     @media (prefers-reduced-motion: reduce) { * { scroll-behavior:auto !important; animation:none !important; transition:none !important; } }
 
     /* Full-screen sign-in experience */
@@ -881,7 +958,8 @@
     html[data-theme="light"] .top { background:rgba(255,255,255,.96); border-bottom-color:#dce4ed; box-shadow:0 4px 18px rgba(31,48,70,.06); }
     html[data-theme="light"] .top-page-context { border-left-color:#d7e0eb; }
     html[data-theme="light"] .top-page-context span { color:#7a8ca1; }
-    html[data-theme="light"] .top-page-context strong { color:#172235; }
+    html[data-theme="light"] .top-page-context h1 { color:#172235; }
+    html[data-theme="light"] .top-page-description { color:#68798d; }
     html[data-theme="light"] .top-time { color:#788ba1; }
     html[data-theme="light"] .top-time strong { color:#24344a; }
     html[data-theme="light"] .card,
@@ -938,8 +1016,6 @@
     html[data-theme="light"] .wiz-progress { border-color:#cfdae6; background:#f4f7fa; }
     html[data-theme="light"] .wiz-progress span { color:#6c7e92; border-right-color:#d5dfea; }
     html[data-theme="light"] .wiz-progress span.on { color:#14577c; background:#e3f3fa; }
-    html[data-theme="light"] .page-heading { border-bottom-color:#dce4ed; }
-    html[data-theme="light"] .page-heading::after { color:#a1adba; }
     html[data-theme="light"] .log-bar { color:#596d84; border-top-color:#d4dee9; background:#f7f9fb; }
     html[data-theme="light"] body:not(.is-authed) { background:#edf2f7; }
     html[data-theme="light"] body:not(.is-authed) .content { background:radial-gradient(circle at 18% 12%,rgba(37,141,193,.13),transparent 31%),#eef3f8; }
@@ -982,6 +1058,122 @@
     html[data-theme="light"] #codeTreeBody .code-group-row:hover td { background:#e4f0fb; }
     html[data-theme="light"] #codeTreeBody .code-group-row.selected td { background:#dbeaf9; }
     html[data-theme="light"] #codeTreeBody .code-group-key { color:#123e69; }
+    html[data-theme="light"] .device-directory-head h2 { color:#172b42; }
+    html[data-theme="light"] .device-directory-head p,
+    html[data-theme="light"] .device-directory-meta { color:#60768d; }
+    html[data-theme="light"] .device-directory-meta { border-color:#dce5ef; background:#f5f8fb; }
+    html[data-theme="light"] .device-directory-table .device-open { color:#1d79aa; }
+    html[data-theme="light"] .device-detail-modal { background:rgba(23,43,63,.52); }
+    html[data-theme="light"] .device-detail-dialog { color:#172b42; border-color:#c8d8e7; background:#fff; box-shadow:0 28px 80px rgba(24,45,69,.24); }
+    html[data-theme="light"] .device-detail-head { border-color:#c7d9e8; background:linear-gradient(110deg,#e7f4fa,#f4f8fc); }
+    html[data-theme="light"] .device-detail-head h2 { color:#16334b; }
+    html[data-theme="light"] .device-detail-head p { color:#5e7890; }
+    html[data-theme="light"] .device-detail-head button { color:#264c67; border-color:#bed5e3; background:#fff; }
+    html[data-theme="light"] .device-detail-tabs { border-color:#dce5ef; }
+    html[data-theme="light"] .device-detail-tabs button { color:#61778b; }
+    html[data-theme="light"] .device-detail-tabs button.active { color:#12618e; background:#e8f5fb; box-shadow:inset 0 -2px 0 #258dbd; }
+    html[data-theme="light"] .device-detail-section .section-intro { color:#63788d; }
+    html[data-theme="light"] .modbus-reading-pane { border-color:#d2deea; background:#f8fafc; }
+    html[data-theme="light"] .modbus-reading-pane h3,
+    html[data-theme="light"] .modbus-reading-item strong { color:#223a51; }
+    html[data-theme="light"] .modbus-reading-item { border-color:#d2deea; background:#fff; }
+    html[data-theme="light"] .modbus-reading-item.selected { border-color:#3c9dc7; background:#eaf6fb; }
+    html[data-theme="light"] .modbus-bit-rule { border-color:#d2deea; background:#fff; }
+    html[data-theme="light"] .modbus-bit-result { background:#eaf6fb; }
+    html[data-theme="light"] .modbus-reading-item p { color:#5e748b; }
+    /* Shared viewport workspace: only lists and editors scroll, never the whole page. */
+    body.is-authed { overflow:hidden; }
+    body.is-authed .content { display:flex; flex-direction:column; min-height:0; overflow:hidden; padding-bottom:14px; }
+    body.is-authed .content > .panel.active { flex:1 1 auto; min-height:0; overflow:auto; }
+    body.is-authed .content > .log-bar { position:relative; flex:none; margin-top:12px; }
+    body.is-authed .content :is(input,select,textarea,button,a):focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+    .workspace-tabs { display:flex; flex:none; gap:6px; padding:5px; border:1px solid var(--line); border-radius:11px; background:var(--surface2); }
+    .workspace-tabs button { border:0; border-radius:7px; padding:10px 15px; background:transparent; color:var(--muted); font-weight:700; white-space:nowrap; }
+    .workspace-tabs button:hover { color:var(--text); background:var(--surface); }
+    .workspace-tabs button.active { color:var(--accent); background:var(--surface); box-shadow:0 2px 9px rgba(0,0,0,.14); }
+    [data-collection-pane][hidden], [data-asset-pane][hidden] { display:none !important; }
+    .workspace-table-card { display:flex; flex-direction:column; min-height:0; overflow:hidden; }
+    .workspace-table-card > .workspace-table-scroll { flex:1 1 auto; min-height:0; max-height:none; overflow:auto; border-top:1px solid var(--line); }
+    .workspace-table-card > .workspace-table-scroll table { margin:0; }
+    .workspace-table-scroll thead { position:sticky; top:0; z-index:2; }
+
+    #tab-devices.panel.active { overflow:hidden; scrollbar-gutter:auto; }
+    #tab-assets.panel.active, #tab-rack-overview.panel.active, #tab-lora-collection-status.panel.active { display:flex; flex-direction:column; overflow:hidden; }
+    #tab-assets .asset-directory-wrap { flex:1 1 auto; min-height:0; display:flex; }
+    #tab-assets .asset-directory-wrap > .card { flex:1 1 auto; margin:0; }
+    #tab-rack-overview > .rack-stats, #tab-rack-overview > .card { flex:none; }
+    #tab-rack-overview > .rack-stats { grid-template-columns:repeat(5,minmax(0,1fr)); gap:8px; margin-bottom:8px; }
+    #tab-rack-overview > .rack-stats .stat { min-height:60px; padding:8px 12px; }
+    #tab-rack-overview > .rack-stats .v { font-size:22px; margin-top:2px; }
+    #tab-rack-overview > .card { padding:8px 12px; margin-bottom:10px; }
+    #tab-rack-overview > .card .field { flex-direction:row; align-items:center; gap:10px; white-space:nowrap; }
+    #tab-rack-overview > .card select, #tab-rack-overview > .card button { min-height:34px; }
+    #rackOverviewOut { flex:1 1 auto; min-height:0; overflow:auto; align-content:start; grid-auto-rows:max-content; padding:2px 4px 16px 2px; }
+    #tab-lora-collection-status > .card:first-of-type { flex:none; }
+    #tab-lora-collection-status > .workspace-table-card { flex:1 1 auto; margin:0; }
+
+    #tab-collection-status.panel.active { display:flex; flex-direction:column; overflow:hidden; }
+    #tab-collection-status .collection-tabs { margin-bottom:14px; }
+    #tab-collection-status > [data-collection-pane="operations"], #tab-collection-status > [data-collection-pane="jobs"] { flex:1 1 auto; min-height:0; overflow:auto; margin:0; }
+    #tab-collection-status > .stats { flex:none; }
+    #tab-collection-status > .workspace-table-card { flex:1 1 auto; margin:0; }
+
+    :is(#tab-device-groups,#tab-tasks,#tab-widgets,#tab-locations,#tab-models,#tab-lora-model-mapping).panel.active { display:flex; flex-direction:column; overflow:hidden; }
+    :is(#tab-device-groups,#tab-tasks,#tab-widgets,#tab-locations) > .grid2,
+    :is(#tab-models,#tab-lora-model-mapping) > .models-layout { flex:1 1 auto; min-height:0; align-items:stretch; overflow:hidden; }
+    :is(#tab-device-groups,#tab-tasks,#tab-widgets,#tab-locations) > .grid2 > *,
+    :is(#tab-models,#tab-lora-model-mapping) > .models-layout > * { height:100%; min-height:0; overflow:auto; scrollbar-gutter:stable; }
+    :is(#tab-device-groups,#tab-tasks,#tab-widgets,#tab-locations) > .grid2 > .card,
+    #tab-lora-model-mapping > .models-layout > .card { margin-bottom:0; }
+
+    :is(#tab-lora-mqtt-sources,#tab-lora-endpoints,#tab-users,#tab-codes).panel.active { display:grid; grid-template-columns:minmax(0,1.35fr) minmax(350px,.7fr); grid-template-rows:minmax(0,1fr); gap:14px; overflow:hidden; }
+    :is(#tab-lora-mqtt-sources,#tab-lora-endpoints,#tab-users,#tab-codes) > .card { height:100%; min-height:0; margin:0; overflow:auto; }
+    :is(#tab-lora-mqtt-sources,#tab-lora-endpoints,#tab-users) > .workspace-table-card { overflow:hidden; }
+    #tab-codes > .workspace-table-card { overflow:hidden; }
+    #tab-codes > .grid2 { display:block; min-height:0; height:100%; overflow:auto; }
+    #tab-codes > .grid2 > * { min-width:0; }
+
+    #tab-wizard.panel.active { grid-template-rows:auto minmax(0,1fr) auto auto; align-items:stretch; overflow:hidden; }
+    #tab-wizard > .card { min-height:0; overflow:auto; scrollbar-gutter:stable; }
+    #tab-wizard > .row { align-self:center; }
+    .asset-detail { display:flex; flex-direction:column; max-height:min(92vh,940px); background:var(--surface); border-color:var(--line); }
+    .asset-detail-head { flex:none; }
+    .asset-detail-tabs { margin:12px 18px 0; overflow-x:auto; }
+    .asset-detail-body { flex:1 1 auto; min-height:0; max-height:none; overflow:auto; align-content:start; }
+    .asset-detail-body > .card:first-child { grid-column:auto; }
+    .asset-detail-body > .card[data-asset-pane="basic"] { grid-column:1 / -1; }
+    @media (max-width:1180px) {
+      :is(#tab-device-groups,#tab-tasks,#tab-widgets,#tab-locations,#tab-models,#tab-lora-model-mapping).panel.active,
+      :is(#tab-lora-mqtt-sources,#tab-lora-endpoints,#tab-users,#tab-codes).panel.active,
+      #tab-wizard.panel.active { display:block; overflow:auto; }
+      :is(#tab-device-groups,#tab-tasks,#tab-widgets,#tab-locations) > .grid2,
+      :is(#tab-models,#tab-lora-model-mapping) > .models-layout { display:grid; overflow:visible; }
+      :is(#tab-device-groups,#tab-tasks,#tab-widgets,#tab-locations) > .grid2 > *,
+      :is(#tab-models,#tab-lora-model-mapping) > .models-layout > *,
+      :is(#tab-lora-mqtt-sources,#tab-lora-endpoints,#tab-users,#tab-codes) > .card { height:auto; overflow:visible; }
+      #tab-codes > .grid2 { height:auto; overflow:visible; }
+      #tab-wizard > .card { overflow:visible; margin-bottom:14px; }
+    }
+    @media (max-width:1250px) {
+      #tab-rack-overview > .rack-stats { grid-template-columns:repeat(3,minmax(0,1fr)); }
+    }
+    @media (max-width:700px) {
+      .workspace-tabs { overflow-x:auto; }
+      .asset-detail-tabs { margin:8px 10px 0; }
+      .asset-detail-body { grid-template-columns:1fr; }
+      .asset-detail-body > .card[data-asset-pane="basic"] { grid-column:auto; }
+      #tab-collection-status > .stats, #tab-rack-overview > .rack-stats { grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; }
+      #tab-collection-status > .stats .stat, #tab-rack-overview > .rack-stats .stat { padding:9px 11px; }
+      #tab-collection-status > .stats .v, #tab-rack-overview > .rack-stats .v { font-size:18px; }
+      #tab-collection-status .row { gap:7px; }
+      #tab-collection-status .row input { min-width:130px !important; }
+    }
+    @media (max-height:700px) {
+      #tab-rack-overview.panel.active { overflow:auto; }
+      #rackOverviewOut { flex:none; overflow:visible; }
+      #tab-wizard.panel.active { display:block; overflow:auto; }
+      #tab-wizard > .card { overflow:visible; margin-bottom:14px; }
+    }
   </style>
 </head>
 <body>
@@ -989,7 +1181,8 @@
     <button type="button" class="shell-menu-btn" id="sideToggle" aria-label="메뉴 열기">☰</button>
     <div class="top-page-context">
       <span>DCIM MANAGEMENT</span>
-      <strong id="topPageTitle">한눈에 보기</strong>
+      <h1 id="topPageTitle">한눈에 보기</h1>
+      <p class="top-page-description" id="topPageDescription"></p>
     </div>
     <div class="top-auth">
       <div class="login-inline" id="loginInline">
@@ -1208,8 +1401,8 @@
     <section class="panel" id="tab-assets">
       <h1 class="page-title">자산관리</h1>
       <p class="page-desc">장비 자산번호·시리얼·상태·Rack U 배치·이미지를 관리합니다. 장비 기본 등록과 통신 설정은 기존 장비 목록에서 처리합니다.</p>
-      <div>
-        <div class="card">
+      <div class="asset-directory-wrap">
+        <div class="card workspace-table-card">
           <div class="row" style="justify-content:space-between;margin-bottom:12px">
             <h2 style="margin:0">자산 목록</h2>
             <button type="button" class="ghost" id="assetReload">새로고침</button>
@@ -1218,7 +1411,7 @@
             <input id="assetFilterName" placeholder="장비명 · 자산번호 검색" style="min-width:180px" />
             <select id="assetFilterStatus"><option value="">모든 운영 상태</option></select>
           </div>
-          <div style="overflow:auto;max-height:620px">
+          <div class="workspace-table-scroll">
             <table>
               <thead><tr><th>자산</th><th>모델</th><th>위치 / Rack</th><th>U</th><th>IP</th><th>문서</th><th>운영 상태</th></tr></thead>
               <tbody id="assetBody"></tbody>
@@ -1231,8 +1424,14 @@
     <div class="asset-detail-modal" id="assetDetailModal" aria-hidden="true">
       <div class="asset-detail" role="dialog" aria-modal="true" aria-labelledby="assetDetailTitle">
         <div class="asset-detail-head"><div><h2 id="assetDetailTitle">자산 상세</h2><p id="assetDetailSubtitle">자산 정보·운영 상태·Rack 배치·이미지를 관리합니다.</p></div><button type="button" id="assetDetailClose" aria-label="닫기">×</button></div>
+        <div class="workspace-tabs asset-detail-tabs" role="tablist" aria-label="자산 상세 항목">
+          <button type="button" data-asset-tab="basic" class="active">기본 정보</button>
+          <button type="button" data-asset-tab="status">운영 상태 · 이력</button>
+          <button type="button" data-asset-tab="rack">Rack 배치</button>
+          <button type="button" data-asset-tab="files">이미지 · 문서</button>
+        </div>
         <div class="asset-detail-body">
-          <div class="card">
+          <div class="card" data-asset-pane="basic">
             <h2>선택 자산</h2>
             <div id="assetHint" class="sel-banner">왼쪽에서 자산을 선택하세요.</div>
             <div id="assetForm" style="display:none">
@@ -1252,7 +1451,7 @@
               <button type="button" class="primary" style="margin-top:12px" id="assetSave" data-role-gate="admin">자산 정보 저장</button>
             </div>
           </div>
-          <div class="card">
+          <div class="card" data-asset-pane="status">
             <h2>자산 운영 상태</h2>
             <p class="muted" style="margin-top:-4px;font-size:13px">운영중 → 점검 중/장애/미사용 → 폐기 흐름으로 관리합니다. 미사용·폐기는 수집과 장비 기반 위젯 대상에서 자동 제외됩니다.</p>
             <div id="assetStatusFlowHint" class="muted">자산을 선택하면 운영 상태를 전환할 수 있습니다.</div>
@@ -1264,11 +1463,11 @@
               <button type="button" class="primary" style="margin-top:12px" id="assetStatusTransition">운영 상태 변경</button>
             </div>
           </div>
-          <div class="card">
+          <div class="card" data-asset-pane="status">
             <h2>자산 변경 이력</h2>
             <div id="assetHistory" class="muted">자산을 선택하면 자산번호·시리얼·상태 변경 이력이 표시됩니다.</div>
           </div>
-          <div class="card" id="assetRackCard">
+          <div class="card" id="assetRackCard" data-asset-pane="rack">
             <h2>Rack 배치</h2>
             <div id="assetRackHint" class="muted">자산을 선택하면 Rack 위치와 U 배치를 등록할 수 있습니다.</div>
             <div id="assetRackForm" style="display:none">
@@ -1281,11 +1480,11 @@
               <div class="row" style="margin-top:12px" data-role-gate="admin"><button type="button" class="primary" id="assetRackSave">Rack 배치 저장</button><button type="button" class="ghost" id="assetRackDelete">배치 해제</button></div>
             </div>
           </div>
-          <div class="card">
+          <div class="card" data-asset-pane="rack">
             <h2>Rack 변경 이력</h2>
             <div id="assetRackHistory" class="muted">자산을 선택하면 배치 변경 이력이 표시됩니다.</div>
           </div>
-          <div class="card">
+          <div class="card" data-asset-pane="files">
             <h2>장비 이미지</h2>
             <div id="assetImageHint" class="muted">자산을 선택한 뒤 JPG, PNG, WEBP 이미지(최대 10MB)를 등록하세요.</div>
             <div id="assetImageForm" style="display:none">
@@ -1293,7 +1492,7 @@
               <div id="assetImageList" class="row" style="margin-top:12px;flex-wrap:wrap"></div>
             </div>
           </div>
-          <div class="card">
+          <div class="card" data-asset-pane="files">
             <h2>관련 문서</h2>
             <div id="assetDocumentHint" class="muted">자산을 선택한 뒤 문서 파일을 등록하세요. 파일 형식 제한 없이 최대 20MB까지 가능합니다.</div>
             <div id="assetDocumentForm" style="display:none">
@@ -1301,7 +1500,7 @@
               <div id="assetDocumentList" class="pick-list" style="margin-top:12px"></div>
             </div>
           </div>
-          <div class="card">
+          <div class="card" data-asset-pane="rack">
             <div class="row" style="justify-content:space-between"><h2 style="margin:0">Rack 보기</h2><button type="button" class="ghost" id="assetRackLayoutLoad">조회</button></div>
             <select id="assetRackLayout" style="margin-top:10px;width:100%"></select>
             <div id="assetRackLayoutOut" class="muted" style="margin-top:12px">Rack을 선택하세요.</div>
@@ -1334,7 +1533,12 @@
     <section class="panel" id="tab-collection-status">
       <h1 class="page-title">수집 상태</h1>
       <p class="page-desc">장비 등록, 수집 작업 그룹, InfluxDB 최신 저장값을 함께 확인합니다. 수집 주기의 2배(최소 5분)를 넘기면 지연으로 표시합니다. SNMP·Modbus 등 프로토콜에 관계없이 같은 화면에서 확인합니다.</p>
-      <div class="card" id="collectionOperationsCard">
+      <div class="workspace-tabs collection-tabs" role="tablist" aria-label="수집 상태 보기">
+        <button type="button" data-collection-tab="devices" class="active">장비별 상태</button>
+        <button type="button" data-collection-tab="jobs">수집 작업</button>
+        <button type="button" data-collection-tab="operations">서비스 · 동기화</button>
+      </div>
+      <div class="card" id="collectionOperationsCard" data-collection-pane="operations">
         <div class="row" style="justify-content:space-between;align-items:flex-start">
           <div>
             <span class="eyebrow">COLLECTION OPERATIONS</span>
@@ -1355,7 +1559,7 @@
       </div>
 
       <!-- COLLECTOR JOB HEALTH (수집 작업 단위 성공/실패 이력 — 장비별 InfluxDB 최신값 상태(아래 표)와는 별개) -->
-      <div class="card" id="collectionJobHealthCard">
+      <div class="card" id="collectionJobHealthCard" data-collection-pane="jobs">
         <div class="row" style="justify-content:space-between;align-items:flex-start">
           <div>
             <span class="eyebrow">COLLECTOR JOBS</span>
@@ -1366,18 +1570,18 @@
         </div>
         <div class="muted" id="cjhCheckedAt" style="margin:10px 0 8px;font-size:12px"></div>
         <div class="table-wrap" style="max-height:520px"><table>
-          <thead><tr><th>수집 그룹</th><th>모델</th><th>프로토콜</th><th>상태</th><th>마지막 성공</th><th>마지막 실패</th><th>연속 실패</th><th>마지막 실패 원인</th><th>Collector Job ID</th></tr></thead>
+          <thead><tr><th>수집 그룹</th><th>모델</th><th>프로토콜</th><th>상태</th><th>마지막 성공</th><th>마지막 실패 이력</th><th>연속 실패</th><th>실패 원인 / 이력</th><th>Collector Job ID</th></tr></thead>
           <tbody id="cjhBody"></tbody>
         </table></div>
       </div>
 
-      <div class="stats">
+      <div class="stats" data-collection-pane="devices">
         <div class="stat"><div class="k">전체 장비</div><div class="v" id="csTotal">–</div></div>
         <div class="stat"><div class="k">정상</div><div class="v" id="csNormal" style="color:var(--ok)">–</div></div>
         <div class="stat"><div class="k">일부 누락 / 지연 / 데이터 없음</div><div class="v" id="csIssue" style="color:var(--bad)">–</div></div>
         <div class="stat"><div class="k">중지 / 미등록</div><div class="v" id="csStopped" style="color:var(--warn)">–</div></div>
       </div>
-      <div class="card">
+      <div class="card workspace-table-card" data-collection-pane="devices">
         <div class="row" style="justify-content:space-between">
           <div class="row">
             <input id="csFilterName" placeholder="장비명 · 위치 검색" style="min-width:180px" />
@@ -1388,7 +1592,7 @@
           <button type="button" class="ghost" id="csReload">새로고침</button>
         </div>
         <div class="muted" id="csGeneratedAt" style="margin:12px 0 8px;font-size:12px"></div>
-        <div class="table-wrap" style="max-height:650px"><table>
+        <div class="table-wrap workspace-table-scroll"><table>
           <thead><tr><th>장비</th><th>위치 / 모델</th><th>프로토콜</th><th>수집 작업</th><th>상태</th><th>마지막 저장</th><th>최신값 <span class="chip">최대 3개</span></th></tr></thead>
           <tbody id="csBody"></tbody>
         </table></div>
@@ -1398,18 +1602,21 @@
     <!-- DEVICES -->
     <section class="panel" id="tab-devices">
       <h1 class="page-title">장비 목록</h1>
-      <p class="page-desc">등록 장비를 조회·수정·삭제하고, 통신 설정과 수집 그룹에 연결합니다.</p>
-      <div class="grid2">
-        <div class="card">
-          <h2>목록</h2>
-          <div class="row" style="margin-bottom:12px">
-            <input id="devFilterName" placeholder="이름 검색" style="min-width:140px" />
-            <select id="devFilterModel"><option value="">모든 모델</option></select>
-            <select id="devFilterGroup"><option value="">모든 장비 그룹</option></select>
-            <button type="button" class="ghost" id="devReload">조회</button>
-            <button type="button" class="primary" id="devGoWizard" data-role-gate="admin">새 장비</button>
-          </div>
-          <div style="overflow:auto;max-height:520px">
+      <p class="page-desc">장비를 찾아 선택하면 기본 정보·통신 설정·수집 연결을 한 화면에서 관리할 수 있습니다.</p>
+      <div class="card device-directory">
+        <div class="device-directory-head">
+          <div><span class="eyebrow">DEVICE DIRECTORY</span><h2>등록 장비</h2><p>행을 선택하면 상세 작업창이 열립니다.</p></div>
+          <button type="button" class="primary" id="devGoWizard" data-role-gate="admin">＋ 새 장비 등록</button>
+        </div>
+        <div class="device-directory-filters">
+          <label class="field">장비 이름<input id="devFilterName" placeholder="이름으로 검색" /></label>
+          <label class="field">모델<select id="devFilterModel"><option value="">모든 모델</option></select></label>
+          <label class="field">장비 그룹<select id="devFilterGroup"><option value="">모든 장비 그룹</option></select></label>
+          <button type="button" class="ghost" id="devReload">조회</button>
+          <button type="button" class="ghost" id="devClearFilters">초기화</button>
+        </div>
+        <div class="device-directory-meta"><span id="devResultCount">장비를 불러오는 중입니다.</span><span>장비를 클릭하거나 Enter 키로 열기</span></div>
+        <div class="device-directory-table">
             <table>
               <thead>
                 <tr>
@@ -1420,16 +1627,29 @@
                   <th>Path</th>
                   <th>장비 그룹</th>
                   <th>상태</th>
+                  <th aria-label="상세 열기"></th>
                 </tr>
               </thead>
               <tbody id="devBody"></tbody>
             </table>
-          </div>
         </div>
-        <div>
+      </div>
+      <div class="device-detail-modal" id="deviceDetailModal" aria-hidden="true">
+        <div class="device-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="deviceDetailTitle">
+          <div class="device-detail-head">
+            <div><span class="eyebrow">DEVICE WORKSPACE</span><h2 id="deviceDetailTitle">장비 상세</h2><p id="deviceDetailMeta">장비의 연결과 수집 설정을 관리합니다.</p></div>
+            <button type="button" id="deviceDetailClose" aria-label="장비 상세 닫기">×</button>
+          </div>
+          <div class="device-detail-tabs" role="tablist" aria-label="장비 관리 항목">
+            <button type="button" class="active" data-device-detail-tab="info" role="tab" aria-selected="true">기본 정보</button>
+            <button type="button" data-device-detail-tab="endpoint" role="tab" aria-selected="false">통신 설정</button>
+            <button type="button" data-device-detail-tab="collection" role="tab" aria-selected="false">수집 연결</button>
+          </div>
+          <div class="device-detail-content">
+          <section class="device-detail-section active" data-device-detail-panel="info" role="tabpanel">
           <div class="card" id="devEditCard">
-            <h2>장비 정보</h2>
-            <div class="sel-banner" id="devSelHint">왼쪽에서 장비를 클릭하세요.</div>
+            <h2>기본 정보</h2>
+            <div class="sel-banner" id="devSelHint">목록에서 장비를 선택하세요.</div>
             <div id="devEditForm" style="display:none">
               <div class="fields">
                 <label class="field full">표시 이름
@@ -1463,8 +1683,12 @@
               </div>
             </div>
           </div>
+          </section>
+          <section class="device-detail-section" data-device-detail-panel="endpoint" role="tabpanel">
           <div class="card">
             <h2>통신 설정</h2>
+            <p class="section-intro">연결 정보와 프로토콜을 확인하고 수정합니다. Modbus 회선 매핑은 아래 버튼에서 별도로 열 수 있습니다.</p>
+            <button type="button" class="ghost" id="modbusReadingOpen" style="display:none">Modbus 회선 매핑 관리</button>
             <div class="fields">
               <label class="field">프로토콜
                 <select id="epProtocol"></select>
@@ -1490,10 +1714,12 @@
               <button type="button" class="ghost" id="instCreate" style="display:none" data-role-gate="admin">인스턴스만 저장</button>
             </div>
             <div id="epOut"></div>
-            <button type="button" class="ghost" id="modbusReadingOpen" style="display:none;margin-top:12px">Modbus 회선 매핑 관리</button>
           </div>
+          </section>
+          <section class="device-detail-section" data-device-detail-panel="collection" role="tabpanel">
           <div class="card" id="attachCollectionCard">
             <h2>수집 작업에 넣기</h2>
+            <p class="section-intro">장비 모델과 프로토콜에 맞는 수집 작업·주기 그룹을 선택하세요.</p>
             <div class="fields">
               <label class="field">수집 작업
                 <select id="attachTask"></select>
@@ -1504,6 +1730,8 @@
             </div>
             <button type="button" class="primary" style="margin-top:12px" id="attachBtn" data-role-gate="admin">이 장비를 그룹에 추가</button>
             <details class="raw"><summary>응답 상세</summary><pre id="attachOut"></pre></details>
+          </div>
+          </section>
           </div>
         </div>
       </div>
@@ -1558,13 +1786,13 @@
     <section class="panel" id="tab-tasks">
       <h1 class="page-title">수집 작업</h1>
       <p class="page-desc">모델별 수집 스케줄과 주기 그룹을 관리합니다. 그룹에 장비를 넣으면 collector가 주기적으로 읽습니다.</p>
-      <div class="grid2">
+      <div class="task-page-layout">
         <div class="card">
           <h2>등록된 작업</h2>
           <div class="row" style="margin-bottom:10px">
             <button type="button" class="ghost" id="taskReload">새로고침</button>
           </div>
-          <div id="taskList" class="stack" style="display:flex;flex-direction:column;gap:10px"></div>
+          <div id="taskIndex" class="stack" style="display:flex;flex-direction:column;gap:10px"></div>
         </div>
         <div class="card">
           <h2>새 수집 작업</h2>
@@ -2148,7 +2376,7 @@
     <section class="panel" id="tab-codes">
       <h1 class="page-title">공통코드</h1>
       <p class="page-desc">코드 그룹과 그 하위 코드 값을 한 표에서 관리합니다. 위치 유형·Path·모델 유형·프로토콜 등이 여기 있습니다.</p>
-      <div class="card">
+      <div class="card workspace-table-card">
         <div class="row" style="justify-content:space-between;margin-bottom:10px">
           <div>
             <h2 style="margin:0">코드 그룹 · 공통 코드</h2>
@@ -2156,7 +2384,7 @@
           </div>
           <button type="button" class="ghost" id="cgReload">새로고침</button>
         </div>
-        <div style="overflow:auto;max-height:520px">
+        <div class="workspace-table-scroll">
           <table id="codeTreeTable">
             <thead><tr><th>그룹 키</th><th>그룹 이름</th><th>코드</th><th>코드 이름</th><th>정렬</th><th>작업</th></tr></thead>
             <tbody id="codeTreeBody"></tbody>
@@ -2223,9 +2451,9 @@
           <div class="muted" style="font-size:13px" id="loraCsSourceSummary">MQTT 소스 정보를 불러오는 중입니다.</div>
         </div>
       </div>
-      <div class="card">
+      <div class="card workspace-table-card">
         <h2 style="margin:0 0 10px">장비별 수집 상태</h2>
-        <div style="overflow:auto;max-height:560px">
+        <div class="workspace-table-scroll">
           <table>
             <thead><tr><th>장비</th><th>식별자</th><th>상태</th><th>마지막 저장</th><th>마지막 포인트 수</th><th>오류 사유</th></tr></thead>
             <tbody id="loraCsBody"></tbody>
@@ -2238,7 +2466,7 @@
     <section class="panel" id="tab-lora-mqtt-sources">
       <h1 class="page-title">LoRa MQTT 수집 소스</h1>
       <p class="page-desc">LoRaWAN 네트워크 서버의 Broker와 구독 Topic을 관리합니다. 하나의 수집 소스는 여러 LoRa 장비 메시지를 수신하며, 장비 식별은 devEUI/deviceName 엔드포인트 매핑에서 처리합니다. 비밀번호는 저장하지 않고 credential key만 Sensor Data 환경설정과 연결합니다.</p>
-      <div class="card">
+      <div class="card workspace-table-card">
         <div class="row" style="justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:10px">
           <div>
             <h2 style="margin:0">수집 소스 및 연결 상태</h2>
@@ -2249,7 +2477,7 @@
             <button type="button" class="ghost" id="loraSourceReload">새로고침</button>
           </div>
         </div>
-        <div style="overflow:auto;max-height:500px">
+        <div class="workspace-table-scroll">
           <table>
             <thead><tr><th>소스</th><th>Broker</th><th>Topic</th><th>사용</th><th>연결 상태</th><th>마지막 연결</th><th>마지막 메시지</th><th>수신 / 오류</th><th>작업</th></tr></thead>
             <tbody id="loraSourceBody"></tbody>
@@ -2296,7 +2524,7 @@
     <section class="panel" id="tab-lora-endpoints">
       <h1 class="page-title">LoRa 엔드포인트</h1>
       <p class="page-desc">Dragino/ChirpStack 등 LoRa 게이트웨이가 보내는 payload의 devEUI 또는 deviceName을 DCIM 장비와 매칭합니다. Broker와 구독 Topic은 「MQTT 수집 소스」에서 관리합니다.</p>
-      <div class="card">
+      <div class="card workspace-table-card">
         <div class="row" style="justify-content:space-between;margin-bottom:10px">
           <div>
             <h2 style="margin:0">엔드포인트 목록</h2>
@@ -2304,7 +2532,7 @@
           </div>
           <button type="button" class="ghost" id="loraEpReload">새로고침</button>
         </div>
-        <div style="overflow:auto;max-height:480px">
+        <div class="workspace-table-scroll">
           <table>
             <thead><tr><th>장비</th><th>모델</th><th>식별자 유형</th><th>외부 식별자</th><th>정규화 값</th><th>사용</th><th>작업</th></tr></thead>
             <tbody id="loraEpBody"></tbody>
@@ -2411,12 +2639,12 @@
     <section class="panel" id="tab-users">
       <h1 class="page-title">사용자 관리</h1>
       <p class="page-desc">운영 계정을 생성하고 역할을 분류합니다. 현재 역할은 계정 분류용이며, 메뉴·API별 접근 제한은 권한 관리 단계에서 적용합니다.</p>
-      <div class="card">
+      <div class="card workspace-table-card">
         <div class="row" style="justify-content:space-between;margin-bottom:12px">
           <div><h2 style="margin:0">사용자 목록</h2><div class="muted" style="font-size:12px;margin-top:4px" id="userSummary">사용자를 불러오는 중입니다.</div></div>
           <button type="button" class="ghost" id="userReload">새로고침</button>
         </div>
-        <div style="overflow:auto;max-height:520px">
+        <div class="workspace-table-scroll">
           <table>
             <thead><tr><th>사용자</th><th>역할</th><th>비밀번호 재설정</th><th>등록일</th><th>수정일</th><th>작업</th></tr></thead>
             <tbody id="userBody"></tbody>
@@ -2498,6 +2726,12 @@
       <div class="asset-preview-body collection-values-body" id="collectionValuesBody"></div>
     </div>
   </div>
+  <div class="asset-preview-modal" id="taskDetailModal" aria-hidden="true">
+    <div class="asset-preview task-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="taskDetailTitle">
+      <div class="asset-preview-head"><div><h2 id="taskDetailTitle">수집 작업 상세</h2><p id="taskDetailMeta" style="margin:4px 0 0;font-size:12px"></p></div><button type="button" id="taskDetailClose" aria-label="닫기">×</button></div>
+      <div class="asset-preview-body task-detail-body" id="taskDetailBody"><div id="taskList" class="stack"></div></div>
+    </div>
+  </div>
   <div class="asset-preview-modal" id="modbusReadingModal" aria-hidden="true" style="z-index:170">
     <div class="asset-preview modbus-reading-dialog" role="dialog" aria-modal="true" aria-labelledby="modbusReadingTitle">
       <div class="asset-preview-head"><div><h2 id="modbusReadingTitle">Modbus 회선 매핑</h2><p id="modbusReadingMeta" style="margin:4px 0 0;font-size:12px"></p></div><button type="button" id="modbusReadingClose" aria-label="닫기">×</button></div>
@@ -2508,17 +2742,33 @@
             <button type="button" class="ghost" id="modbusReadPreview" data-role-gate="admin">지금 한 번 읽기</button>
           </div>
           <div class="muted" style="font-size:12px;margin:10px 0">주소는 문서 번호가 아닌 실제 요청 주소(0 기반)입니다. 예: 문서 11267 → 요청 11265. 미등록 대상 장비는 먼저 장비 목록에서 생성하세요. 테스트 값은 배율 적용 후 원값이며, 기존 스크립트의 소수 둘째 자리 버림은 적용하지 않습니다.</div>
-          <div id="modbusReadingList"></div>
-          <div class="fields" id="modbusReadingForm" style="margin-top:14px" data-role-gate="admin">
+          <div class="modbus-reading-layout">
+          <div class="modbus-reading-pane">
+            <h3 id="modbusReadingCount">등록된 회선</h3>
+            <div id="modbusReadingList" class="modbus-reading-items"></div>
+          </div>
+          <div class="modbus-reading-pane" data-role-gate="admin">
+            <h3>회선 등록 · 수정</h3>
+          <div class="fields" id="modbusReadingForm">
             <label class="field">모델 측정항목<select id="modbusReadingPoint"></select></label>
             <label class="field">Unit ID<input id="modbusReadingUnit" type="number" min="0" max="247" placeholder="0~247" /></label>
             <label class="field">실제 요청 주소<input id="modbusReadingAddress" type="number" min="0" max="65535" placeholder="문서 주소 - 2 등 보정 후" /></label>
-            <label class="field">결과 장비 ID<input id="modbusReadingTarget" type="number" min="1" list="modbusReadingTargetChoices" placeholder="장비 ID" /><datalist id="modbusReadingTargetChoices"></datalist></label>
+            <label class="field">결과 장비<select id="modbusReadingTarget"></select></label>
             <label class="field">결과 항목 이름<input id="modbusReadingName" placeholder="TOTAL_WT" /></label>
             <label class="field">사용 여부<select id="modbusReadingEnabled"><option value="true">사용</option><option value="false">중지</option></select></label>
           </div>
-          <div class="row" style="margin-top:10px" data-role-gate="admin"><button type="button" class="primary" id="modbusReadingSave">회선 매핑 추가</button><button type="button" class="ghost" id="modbusReadingCancel" style="display:none">수정 취소</button></div>
+          <div class="row" style="margin-top:10px"><button type="button" class="primary" id="modbusReadingSave">회선 매핑 추가</button><button type="button" class="ghost" id="modbusReadingCancel" style="display:none">수정 취소</button></div>
+          <div class="modbus-reading-feedback" id="modbusReadingFeedback" role="status" aria-live="polite" hidden></div>
+          <section id="modbusBitPanel" style="display:none;margin-top:18px;border-top:1px solid #33465e;padding-top:16px">
+            <h3 id="modbusBitTitle">비트 분리 설정</h3>
+            <p class="muted" style="font-size:12px">원본값은 그대로 저장합니다. 최하위 비트가 0번이며, 원하는 길이만큼 추출해 별도 항목으로 저장합니다. 추출값을 다른 값으로 저장하려면 아래에서 변환 규칙을 추가하세요. 규칙이 없으면 추출값 그대로 저장됩니다.</p>
+            <div id="modbusBitRules"></div>
+            <div class="row"><button type="button" class="ghost" id="modbusBitAdd">+ 결과 항목 추가</button><button type="button" class="ghost" id="modbusBitTry">읽은 값으로 변환 확인</button><button type="button" class="primary" id="modbusBitSave">비트 설정 저장</button></div>
+            <div id="modbusBitResult" class="modbus-bit-result" role="status" aria-live="polite">먼저 ‘지금 한 번 읽기’로 원본값을 확인하세요.</div>
+          </section>
           <div id="modbusPreviewOut" style="margin-top:14px"></div>
+          </div>
+          </div>
         </div>
       </div>
     </div>
@@ -2750,10 +3000,10 @@
         toast("이 메뉴에 접근할 권한이 없습니다", true);
         name = "home";
       }
+      if (name !== "devices") closeDeviceDetail(false);
       document.querySelectorAll("#tabs button").forEach((b) => b.classList.toggle("active", b.dataset.tab === name));
       document.querySelectorAll(".panel").forEach((p) => p.classList.toggle("active", p.id === "tab-" + name));
-      const activeMenu = document.querySelector(`#tabs button[data-tab="${name}"]`);
-      if (activeMenu) $("topPageTitle").textContent = activeMenu.childNodes[0]?.textContent.trim() || activeMenu.textContent.trim();
+      updatePageContext(name);
       document.body.classList.remove("side-open");
       if (name === "assets" && state.token) loadAssets().catch((e) => toast(e.message, true));
       if (name === "users" && state.token) loadUsers().catch((e) => toast(e.message, true));
@@ -2769,19 +3019,40 @@
       if (name === "lora-collection-status" && state.token) loadLoraCollectionStatus().catch((e) => toast(e.message, true));
     }
 
-    function enhancePageHeadings() {
-      document.querySelectorAll(".panel").forEach((panel) => {
-        const title = panel.querySelector(":scope > .page-title");
-        if (!title) return;
-        const desc = title.nextElementSibling?.classList.contains("page-desc") ? title.nextElementSibling : null;
-        const heading = document.createElement("div");
-        heading.className = "page-heading";
-        const copy = document.createElement("div");
-        copy.appendChild(title);
-        if (desc) copy.appendChild(desc);
-        heading.appendChild(copy);
-        panel.insertBefore(heading, panel.firstChild);
+    function showCollectionPane(name) {
+      $("tab-collection-status").querySelectorAll("[data-collection-tab]").forEach((button) => {
+        button.setAttribute("role", "tab");
+        button.classList.toggle("active", button.dataset.collectionTab === name);
+        button.setAttribute("aria-selected", String(button.dataset.collectionTab === name));
       });
+      $("tab-collection-status").querySelectorAll("[data-collection-pane]").forEach((section) => {
+        section.hidden = section.dataset.collectionPane !== name;
+      });
+    }
+
+    function showAssetDetailTab(name) {
+      $("assetDetailModal").querySelectorAll("[data-asset-tab]").forEach((button) => {
+        button.setAttribute("role", "tab");
+        button.classList.toggle("active", button.dataset.assetTab === name);
+        button.setAttribute("aria-selected", String(button.dataset.assetTab === name));
+      });
+      $("assetDetailModal").querySelectorAll("[data-asset-pane]").forEach((section) => {
+        section.hidden = section.dataset.assetPane !== name;
+      });
+      $("assetDetailModal").querySelector(".asset-detail-body").scrollTop = 0;
+    }
+
+    function updatePageContext(name) {
+      const activeMenu = document.querySelector(`#tabs button[data-tab="${name}"]`);
+      const panel = document.getElementById(`tab-${name}`);
+      const title = panel?.querySelector(":scope > .page-title, .home-hero .page-title");
+      const description = panel?.querySelector(":scope > .page-desc, .home-hero .page-desc");
+      const topTitle = $("topPageTitle");
+      topTitle.textContent = activeMenu?.childNodes[0]?.textContent.trim() || title?.textContent.trim() || "";
+      topTitle.title = topTitle.textContent;
+      const topDescription = $("topPageDescription");
+      topDescription.replaceChildren(...Array.from(description?.childNodes || [], (node) => node.cloneNode(true)));
+      topDescription.title = description?.textContent.trim() || "";
     }
 
     function updateShellClock() {
@@ -2790,7 +3061,15 @@
       $("topClock").textContent = now.toLocaleTimeString("ko-KR", { hour12:false, hour:"2-digit", minute:"2-digit", second:"2-digit" });
     }
 
-    enhancePageHeadings();
+    updatePageContext("home");
+    showCollectionPane("devices");
+    showAssetDetailTab("basic");
+    document.querySelectorAll("[data-collection-tab]").forEach((button) => {
+      button.onclick = () => showCollectionPane(button.dataset.collectionTab);
+    });
+    document.querySelectorAll("[data-asset-tab]").forEach((button) => {
+      button.onclick = () => showAssetDetailTab(button.dataset.assetTab);
+    });
     updateShellClock();
     setInterval(updateShellClock, 1000);
     $("sideToggle").onclick = () => document.body.classList.toggle("side-open");
@@ -3962,6 +4241,7 @@
       $("assetDetailTitle").textContent = device?.name || "자산 상세";
       $("assetDetailSubtitle").textContent = [device?.assetCode, device?.manufacturer, device?.modelName]
         .filter(Boolean).join(" · ") || "자산 정보·운영 상태·Rack 배치·이미지를 관리합니다.";
+      if (!$("assetDetailModal").classList.contains("open")) showAssetDetailTab("basic");
       $("assetDetailModal").classList.add("open");
       $("assetDetailModal").setAttribute("aria-hidden", "false");
     }
@@ -4711,7 +4991,7 @@
       return `<span class="chip ${className}">${esc(label)}</span>`;
     }
 
-    // 실패 중(FAILING) · 동기화 안 됨(NOT_SYNCED) · 확인 불가(UNKNOWN)를 위로, 복구됨/정상을 아래로.
+    // 실패 중(FAILING) · 동기화 안 됨(NOT_SYNCED) · 확인 불가(UNKNOWN)를 위로, 정상을 아래로.
     function collectionJobIssuePriority(status) {
       return (status === "FAILING" || status === "NOT_SYNCED" || status === "UNKNOWN") ? 0 : 1;
     }
@@ -4730,7 +5010,9 @@
         const reason = job.lastFailureReason || "";
         let reasonCell = '<span class="muted">–</span>';
         if (reason) {
-          reasonCell = reason.length > 60
+          reasonCell = job.status === "NORMAL"
+            ? `<button type="button" class="ghost" data-detail-toggle aria-expanded="false" style="font-size:11px;padding:3px 7px">과거 실패 보기</button><div class="muted mono" style="font-size:11px;margin-top:5px;display:none;white-space:pre-wrap" data-detail>${esc(reason)}</div>`
+            : reason.length > 60
             ? `<span>${esc(reason.slice(0, 60))}…</span> <button type="button" class="ghost" data-detail-toggle style="font-size:10px;padding:1px 6px;margin-left:4px">상세</button><div class="muted mono" style="font-size:10px;margin-top:3px;display:none;white-space:pre-wrap" data-detail>${esc(reason)}</div>`
             : `<span>${esc(reason)}</span>`;
         }
@@ -4750,7 +5032,11 @@
         button.onclick = (event) => {
           event.stopPropagation();
           const detailEl = button.nextElementSibling;
-          if (detailEl) detailEl.style.display = detailEl.style.display === "none" ? "block" : "none";
+          if (detailEl) {
+            const expanded = detailEl.style.display === "none";
+            detailEl.style.display = expanded ? "block" : "none";
+            button.setAttribute("aria-expanded", String(expanded));
+          }
         };
       });
     }
@@ -4768,7 +5054,9 @@
       }
     }
 
+    let deviceListLoadSequence = 0;
     async function loadDevices() {
+      const loadSequence = ++deviceListLoadSequence;
       const qs = new URLSearchParams({ page: "1", size: "100" });
       const name = $("devFilterName").value.trim();
       const modelId = $("devFilterModel").value;
@@ -4777,10 +5065,15 @@
       if (modelId) qs.set("modelId", modelId);
       if (deviceGroupId) qs.set("deviceGroupId", deviceGroupId);
       const page = await api(`/api/manager/devices?${qs}`);
+      if (loadSequence !== deviceListLoadSequence) return;
       state.devices = page.content || [];
+      const total = Number(page.totalElements ?? state.devices.length);
+      $("devResultCount").textContent = total > state.devices.length
+        ? `전체 ${total}대 중 ${state.devices.length}대 표시 · 검색 조건을 좁혀 주세요`
+        : `검색 결과 ${state.devices.length}대`;
       $("devBody").innerHTML = state.devices.map((d) => `
-        <tr class="clickable" data-id="${d.id}">
-          <td><b>${esc(d.name)}</b><div class="muted mono">#${d.id}</div></td>
+        <tr class="clickable${d.id === state.selectedDeviceId ? " selected" : ""}" data-id="${d.id}" tabindex="0" role="button" aria-label="${esc(d.name)} 장비 상세 열기">
+          <td><b class="device-name">${esc(d.name)}</b><div class="muted mono device-sub">#${d.id}</div></td>
           <td>${esc(d.manufacturer || "—")}</td>
           <td>${esc(d.modelName)}<div class="muted" style="font-size:11px">${esc(d.deviceTypeCode || "")}</div></td>
           <td>${esc(d.locationNodeName || d.locationNodeCode)}</td>
@@ -4789,9 +5082,15 @@
             ? (d.deviceGroups || []).map((group) => `<span class="chip">${esc(group.name)}</span>`).join(" ")
             : '<span class="muted">—</span>'}</td>
           <td>${d.enabled ? '<span class="chip ok">사용</span>' : '<span class="chip bad">중지</span>'}</td>
-        </tr>`).join("") || `<tr><td colspan="7"><div class="empty">장비가 없습니다.</div></td></tr>`;
+          <td class="device-open" aria-hidden="true">›</td>
+        </tr>`).join("") || `<tr><td colspan="8"><div class="empty">조건에 맞는 장비가 없습니다. 필터를 초기화해 보세요.</div></td></tr>`;
       $("devBody").querySelectorAll("tr[data-id]").forEach((tr) => {
-        tr.onclick = () => selectDevice(Number(tr.dataset.id));
+        tr.onclick = () => selectDevice(Number(tr.dataset.id), true);
+        tr.onkeydown = (event) => {
+          if (event.key !== "Enter" && event.key !== " ") return;
+          event.preventDefault();
+          selectDevice(Number(tr.dataset.id), true);
+        };
       });
       if (state.selectedDeviceId) {
         const still = state.devices.find((d) => d.id === state.selectedDeviceId);
@@ -5622,12 +5921,43 @@
       refreshWidgetPoints();
     }
 
+    function showDeviceDetailTab(name) {
+      $("deviceDetailModal").querySelectorAll("[data-device-detail-tab]").forEach((button) => {
+        const active = button.dataset.deviceDetailTab === name;
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-selected", String(active));
+      });
+      $("deviceDetailModal").querySelectorAll("[data-device-detail-panel]").forEach((panel) => {
+        panel.classList.toggle("active", panel.dataset.deviceDetailPanel === name);
+      });
+      $("deviceDetailModal").querySelector(".device-detail-content").scrollTop = 0;
+    }
+
+    function openDeviceDetail(device) {
+      $("deviceDetailTitle").textContent = device.name || `장비 #${device.id}`;
+      $("deviceDetailMeta").textContent = `#${device.id} · ${device.modelName || "모델 미지정"} · ${device.locationNodeName || device.locationNodeCode || "위치 미지정"}`;
+      showDeviceDetailTab("info");
+      $("deviceDetailModal").classList.add("open");
+      $("deviceDetailModal").setAttribute("aria-hidden", "false");
+      $("deviceDetailClose").focus();
+    }
+
+    function closeDeviceDetail(restoreFocus = true) {
+      const wasOpen = $("deviceDetailModal").classList.contains("open");
+      closeModbusReadingModal();
+      $("deviceDetailModal").classList.remove("open");
+      $("deviceDetailModal").setAttribute("aria-hidden", "true");
+      if (wasOpen && restoreFocus && state.selectedDeviceId) {
+        $("devBody").querySelector(`tr[data-id="${state.selectedDeviceId}"]`)?.focus();
+      }
+    }
+
     function clearDeviceSelection() {
       state.selectedDeviceId = null;
       clearEndpointEdit();
-      closeModbusReadingModal();
+      closeDeviceDetail();
       $("devSelHint").style.display = "block";
-      $("devSelHint").textContent = "왼쪽에서 장비를 클릭하세요.";
+      $("devSelHint").textContent = "목록에서 장비를 선택하세요.";
       $("devEditForm").style.display = "none";
       $("epOut").innerHTML = "";
       $("modbusReadingCard").style.display = "none";
@@ -5641,7 +5971,7 @@
       $("editDevMfr").value = m?.manufacturer || "";
     }
 
-    async function selectDevice(id) {
+    async function selectDevice(id, showDetail = false) {
       closeModbusReadingModal();
       $("modbusReadingOpen").style.display = "none";
       state.selectedDeviceId = id;
@@ -5657,6 +5987,11 @@
         $("modbusReadingCard").style.display = "none";
         $("modbusReadingOpen").style.display = "none";
         return;
+      }
+      if (showDetail) openDeviceDetail(d);
+      else if ($("deviceDetailModal").classList.contains("open")) {
+        $("deviceDetailTitle").textContent = d.name || `장비 #${d.id}`;
+        $("deviceDetailMeta").textContent = `#${d.id} · ${d.modelName || "모델 미지정"} · ${d.locationNodeName || d.locationNodeCode || "위치 미지정"}`;
       }
       $("devSelHint").style.display = "none";
       $("devEditForm").style.display = "block";
@@ -5779,6 +6114,13 @@
       $("modbusReadingModal").setAttribute("aria-hidden", "true");
     }
 
+    function setModbusReadingFeedback(message, isError = false) {
+      const feedback = $("modbusReadingFeedback");
+      feedback.textContent = message;
+      feedback.dataset.kind = isError ? "error" : "success";
+      feedback.hidden = !message;
+    }
+
     function clearModbusReadingForm() {
       state.modbusReadingEditId = null;
       $("modbusReadingPoint").value = "";
@@ -5789,7 +6131,140 @@
       $("modbusReadingEnabled").value = "true";
       $("modbusReadingSave").textContent = "회선 매핑 추가";
       $("modbusReadingCancel").style.display = "none";
+      setModbusReadingFeedback("");
     }
+
+    function renderModbusBitRule(rule = {}) {
+      const row = document.createElement("div");
+      row.className = "modbus-bit-rule";
+      row.innerHTML = `<div class="fields">
+        <label class="field">저장 항목 이름<input data-bit-name placeholder="IRC-CDU-VALVE-1" value="${esc(rule.pointName || "")}" /></label>
+        <label class="field">시작 비트 (LSB=0)<input data-bit-offset type="number" min="0" max="31" value="${esc(rule.bitOffset ?? 0)}" /></label>
+        <label class="field">비트 수<input data-bit-width type="number" min="1" max="32" value="${esc(rule.bitWidth ?? 1)}" /></label>
+        <label class="field">규칙에 없는 값 (비우면 추출값 그대로)<input data-bit-default type="number" step="1" placeholder="예: -1" value="${esc(rule.unmappedValue ?? "")}" /></label>
+      </div><div class="row" style="margin-top:10px"><strong>값 변환 규칙</strong><button type="button" class="ghost" data-map-preset>2비트 상태 예시 적용 (1→0, 2→1)</button></div>
+      <div class="modbus-bit-mappings" data-bit-mappings></div>
+      <div class="row"><button type="button" class="ghost" data-map-add>+ 변환 규칙 추가</button><button type="button" class="danger" data-bit-remove>결과 항목 제거</button></div>`;
+      const mappings = row.querySelector("[data-bit-mappings]");
+      Object.entries(rule.valueMap || {}).forEach(([source, result]) => renderModbusBitMapping(mappings, source, result));
+      row.querySelector("[data-map-add]").onclick = () => renderModbusBitMapping(mappings);
+      row.querySelector("[data-map-preset]").onclick = () => {
+        row.querySelector("[data-bit-width]").value = "2";
+        row.querySelector("[data-bit-default]").value = "-1";
+        mappings.replaceChildren();
+        renderModbusBitMapping(mappings, 1, 0);
+        renderModbusBitMapping(mappings, 2, 1);
+      };
+      row.querySelector("[data-bit-remove]").onclick = () => row.remove();
+      $("modbusBitRules").appendChild(row);
+    }
+
+    function renderModbusBitMapping(container, source = "", result = "") {
+      const mapping = document.createElement("div");
+      mapping.className = "modbus-bit-mapping";
+      mapping.innerHTML = `<label class="field">추출된 비트값<input data-map-source type="number" min="0" step="1" placeholder="예: 1" value="${esc(source)}" /></label>
+        <span aria-hidden="true">→</span>
+        <label class="field">저장할 값<input data-map-result type="number" step="1" placeholder="예: 0" value="${esc(result)}" /></label>
+        <button type="button" class="ghost" data-map-remove aria-label="변환 규칙 제거">제거</button>`;
+      mapping.querySelector("[data-map-remove]").onclick = () => mapping.remove();
+      container.appendChild(mapping);
+    }
+
+    function readModbusBitRules() {
+      return [...$("modbusBitRules").querySelectorAll(".modbus-bit-rule")].map((row) => {
+        const pointName = row.querySelector("[data-bit-name]").value.trim();
+        const bitOffset = Number(row.querySelector("[data-bit-offset]").value);
+        const bitWidth = Number(row.querySelector("[data-bit-width]").value);
+        const valueMap = {};
+        for (const mapping of row.querySelectorAll(".modbus-bit-mapping")) {
+          const sourceText = mapping.querySelector("[data-map-source]").value.trim();
+          const resultText = mapping.querySelector("[data-map-result]").value.trim();
+          const source = Number(sourceText);
+          const result = Number(resultText);
+          if (!sourceText || !resultText || !Number.isSafeInteger(source) || !Number.isSafeInteger(result)
+              || source < 0 || source >= 2 ** bitWidth) {
+            throw new Error(`${pointName || "결과 항목"}: 변환 규칙의 비트값은 현재 비트 수 범위의 정수, 저장값은 정수로 입력하세요.`);
+          }
+          if (Object.prototype.hasOwnProperty.call(valueMap, String(source))) {
+            throw new Error(`${pointName || "결과 항목"}: 비트값 ${source}에 대한 변환 규칙이 중복됩니다.`);
+          }
+          valueMap[source] = result;
+        }
+        const defaultText = row.querySelector("[data-bit-default]").value.trim();
+        const unmappedValue = defaultText === "" ? null : Number(defaultText);
+        if (!pointName || !Number.isInteger(bitOffset) || !Number.isInteger(bitWidth)
+            || bitOffset < 0 || bitOffset > 31 || bitWidth < 1 || bitWidth > 32
+            || !Number.isSafeInteger(unmappedValue ?? 0)) {
+          throw new Error("결과 항목 이름·비트 범위·기본값을 확인하세요.");
+        }
+        return { pointName, bitOffset, bitWidth, valueMap, unmappedValue };
+      });
+    }
+
+    async function openModbusBitFields(readingId) {
+      const reading = state.modbusReadings.find((item) => item.id === readingId);
+      const point = state.modbusReadingPoints.find((item) => item.id === reading?.pointId);
+      if (!reading || !point) return toast("회선 또는 모델 측정항목을 찾지 못했습니다.", true);
+      if (!["HOLDING", "INPUT"].includes(point.registerType) || point.dataType === "FLOAT32"
+          || (point.scale != null && point.scale !== 1) || (point.offset != null && point.offset !== 0)) {
+        return toast("비트 분리는 배율·보정 없는 정수형 HOLDING/INPUT 항목에서 사용할 수 있습니다.", true);
+      }
+      try {
+        const fields = await api(`/api/manager/devices/${state.selectedDeviceId}/endpoints/${state.modbusReadingEndpointId}/modbus/readings/${readingId}/bit-fields`);
+        state.modbusBitReadingId = readingId;
+        $("modbusBitTitle").textContent = `${reading.pointName} · 비트 분리 설정`;
+        $("modbusBitRules").innerHTML = "";
+        (fields || []).forEach(renderModbusBitRule);
+        $("modbusBitPanel").style.display = "";
+        $("modbusBitResult").textContent = "원본값을 읽은 뒤 ‘읽은 값으로 변환 확인’을 누르세요. 저장하기 전에는 실제 수집에 반영되지 않습니다.";
+        $("modbusBitPanel").scrollIntoView({ behavior:"smooth", block:"nearest" });
+      } catch (error) { toast(error.message, true); }
+    }
+
+    $("modbusBitAdd").onclick = () => renderModbusBitRule();
+    $("modbusBitTry").onclick = () => {
+      try {
+        const reading = state.modbusReadings.find((item) => item.id === state.modbusBitReadingId);
+        const point = state.modbusReadingPoints.find((item) => item.id === reading?.pointId);
+        const target = (state.modbusLastPreview?.targets || []).find((item) =>
+          item.deviceId === reading?.targetDeviceId && item.unitId === reading?.unitId && !item.error
+          && Object.prototype.hasOwnProperty.call(item.values || {}, reading.pointName));
+        if (!target) throw new Error("먼저 ‘지금 한 번 읽기’로 이 회선의 원본값을 가져오세요.");
+        const raw = Number(target.values[reading.pointName]);
+        if (!Number.isSafeInteger(raw)) throw new Error("원본값이 정수가 아니어서 비트로 분리할 수 없습니다.");
+        const sourceBits = point.dataType.endsWith("32") ? 32 : 16;
+        const unsigned = BigInt.asUintN(sourceBits, BigInt(raw));
+        const lines = readModbusBitRules().map((rule) => {
+          if (rule.bitOffset + rule.bitWidth > sourceBits) throw new Error(`${rule.pointName}: ${sourceBits}비트 범위를 벗어났습니다.`);
+          const extracted = Number((unsigned >> BigInt(rule.bitOffset)) & ((1n << BigInt(rule.bitWidth)) - 1n));
+          const mapped = Object.prototype.hasOwnProperty.call(rule.valueMap, String(extracted))
+            ? rule.valueMap[String(extracted)] : (rule.unmappedValue ?? extracted);
+          const unchanged = !Object.prototype.hasOwnProperty.call(rule.valueMap, String(extracted)) && rule.unmappedValue == null;
+          return `${rule.pointName}: 비트값 ${extracted} → 저장값 ${mapped}${unchanged ? " (변환 규칙 없음)" : ""}`;
+        });
+        $("modbusBitResult").textContent = `원본 ${raw} (${unsigned.toString(2).padStart(sourceBits,"0")})\n${lines.join("\n") || "추가한 결과 항목이 없습니다."}`;
+        $("modbusBitResult").style.whiteSpace = "pre-wrap";
+      } catch (error) { $("modbusBitResult").textContent = error.message; }
+    };
+    $("modbusBitSave").onclick = async () => {
+      try {
+        const fields = readModbusBitRules();
+        const reading = state.modbusReadings.find((item) => item.id === state.modbusBitReadingId);
+        const point = state.modbusReadingPoints.find((item) => item.id === reading?.pointId);
+        const sourceBits = point.dataType.endsWith("32") ? 32 : 16;
+        if (fields.some((field) => field.bitOffset + field.bitWidth > sourceBits)) {
+          throw new Error(`선택한 측정항목은 ${sourceBits}비트입니다. 비트 범위를 확인하세요.`);
+        }
+        const button = $("modbusBitSave");
+        button.disabled = true;
+        try {
+          await api(`/api/manager/devices/${state.selectedDeviceId}/endpoints/${state.modbusReadingEndpointId}/modbus/readings/${reading.id}/bit-fields`,
+            { method:"PUT", body:JSON.stringify({ fields }) });
+          $("modbusBitResult").textContent = "비트 설정을 저장하고 Collector 수집 정의를 갱신했습니다.";
+          toast("비트 분리 설정을 저장했습니다.");
+        } finally { button.disabled = false; }
+      } catch (error) { $("modbusBitResult").textContent = error.message; toast(error.message, true); }
+    };
 
     async function reloadModbusReadings(endpoint) {
       const card = $("modbusReadingCard");
@@ -5806,6 +6281,9 @@
       const protocol = (model?.protocols || []).find((item) => protocolCode(item) === "modbus");
       const url = `/api/manager/devices/${deviceId}/endpoints/${endpoint.id}/modbus/readings`;
       state.modbusReadingEndpointId = endpoint.id;
+      state.modbusBitReadingId = null;
+      state.modbusLastPreview = null;
+      $("modbusBitPanel").style.display = "none";
       try {
         const [readings, points] = await Promise.all([
           api(url),
@@ -5815,17 +6293,30 @@
         state.modbusReadings = readings || [];
         $("modbusReadingOpen").textContent = `Modbus 회선 매핑 관리 (${state.modbusReadings.length}개)`;
         $("modbusReadingMeta").textContent = `접속 ${endpoint.host}:${endpoint.port} · 등록된 회선 ${state.modbusReadings.length}개`;
+        $("modbusReadingCount").textContent = `등록된 회선 · ${state.modbusReadings.length}개`;
         state.modbusReadingPoints = (points || []).filter((point) => point.requiresInstance);
         $("modbusReadingPoint").innerHTML = '<option value="">측정항목 선택</option>' + state.modbusReadingPoints.map((point) =>
           `<option value="${point.id}">${esc(point.name)} · ${esc(point.dataType)} / ${esc(point.byteOrder || "-")} · ×${esc(String(point.scale ?? 1))}${point.offset == null ? "" : ` ${point.offset < 0 ? "−" : "+"}${esc(String(Math.abs(point.offset)))}`} ${esc(point.unit || "")}</option>`).join("");
-        $("modbusReadingTargetChoices").innerHTML = state.devices.map((target) =>
-          `<option value="${target.id}" label="${esc(target.name)}"></option>`).join("");
+        $("modbusReadingTarget").innerHTML = '<option value="">결과 장비 선택</option>' + state.devices.map((target) =>
+          `<option value="${target.id}">${esc(target.name)} (#${target.id})</option>`).join("");
         clearModbusReadingForm();
-        $("modbusReadingList").innerHTML = state.modbusReadings.length ? `<div class="table-wrap"><table><thead><tr><th>Unit ID</th><th>요청 주소</th><th>해석</th><th>결과 장비 / 항목</th><th>상태</th><th>관리</th></tr></thead><tbody>${state.modbusReadings.map((reading) => {
+        if (!state.modbusReadingPoints.length) {
+          setModbusReadingFeedback("선택 가능한 측정항목이 없습니다. 장비 모델에서 Modbus 측정항목을 '장비별 주소'로 등록하고 다시 열어주세요.", true);
+        }
+        $("modbusReadingList").innerHTML = state.modbusReadings.length ? state.modbusReadings.map((reading) => {
           const point = state.modbusReadingPoints.find((item) => item.id === reading.pointId);
           const target = state.devices.find((item) => item.id === reading.targetDeviceId);
-          return `<tr><td>${reading.unitId}</td><td class="mono">${reading.address}</td><td>${esc(point ? `${point.dataType} · ${point.byteOrder || "-"} · ×${point.scale ?? 1}${point.offset == null ? "" : ` ${point.offset < 0 ? "−" : "+"}${Math.abs(point.offset)}`} ${point.unit || ""}` : `point #${reading.pointId}`)}</td><td>${esc(target?.name || `장비 #${reading.targetDeviceId}`)} · <b>${esc(reading.pointName)}</b></td><td>${reading.enabled ? '<span class="chip ok">사용</span>' : '<span class="chip warn">중지</span>'}</td><td><div class="row" data-role-gate="admin"><button type="button" class="ghost" data-mb-reading-edit="${reading.id}">수정</button><button type="button" class="danger" data-mb-reading-delete="${reading.id}">삭제</button></div></td></tr>`;
-        }).join("")}</tbody></table></div>` : '<div class="empty">회선 매핑이 없습니다. 아래에서 Unit ID·주소·결과 장비를 등록하세요.</div>';
+          const format = point ? `${point.dataType} · ${point.byteOrder || "-"} · ×${point.scale ?? 1}${point.offset == null ? "" : ` ${point.offset < 0 ? "−" : "+"}${Math.abs(point.offset)}`} ${point.unit || ""}` : `측정항목 #${reading.pointId}`;
+          return `<article class="modbus-reading-item" data-mb-reading-item="${esc(reading.id)}">
+            <div><strong>Unit ${esc(reading.unitId)} · 주소 ${esc(reading.address)}</strong>
+              <p>${esc(target?.name || `장비 #${reading.targetDeviceId}`)} → ${esc(reading.pointName)} ${reading.enabled ? '<span class="chip ok">사용</span>' : '<span class="chip warn">중지</span>'}</p>
+              <p>${esc(point?.name || `측정항목 #${reading.pointId}`)} · ${esc(format)}</p></div>
+            <div class="row" data-role-gate="admin"><button type="button" class="ghost" data-mb-bit-open="${esc(reading.id)}">비트 분리</button><button type="button" class="ghost" data-mb-reading-edit="${esc(reading.id)}">수정</button><button type="button" class="danger" data-mb-reading-delete="${esc(reading.id)}">삭제</button></div>
+          </article>`;
+        }).join("") : '<div class="empty">회선 매핑이 없습니다. 오른쪽에서 Unit ID·주소·결과 장비를 등록하세요.</div>';
+        $("modbusReadingList").querySelectorAll("[data-mb-bit-open]").forEach((button) => {
+          button.onclick = () => openModbusBitFields(Number(button.dataset.mbBitOpen));
+        });
         $("modbusReadingList").querySelectorAll("[data-mb-reading-edit]").forEach((button) => button.onclick = () => {
           const reading = state.modbusReadings.find((item) => item.id === Number(button.dataset.mbReadingEdit));
           if (!reading) return;
@@ -5833,12 +6324,18 @@
           $("modbusReadingPoint").value = String(reading.pointId);
           $("modbusReadingUnit").value = reading.unitId;
           $("modbusReadingAddress").value = reading.address;
+          if (!Array.from($("modbusReadingTarget").options).some((option) => option.value === String(reading.targetDeviceId))) {
+            $("modbusReadingTarget").add(new Option(`장비 #${reading.targetDeviceId} (목록에 없음)`, String(reading.targetDeviceId)));
+          }
           $("modbusReadingTarget").value = String(reading.targetDeviceId);
           $("modbusReadingName").value = reading.pointName;
           $("modbusReadingEnabled").value = String(reading.enabled);
           $("modbusReadingSave").textContent = `회선 #${reading.id} 저장`;
           $("modbusReadingCancel").style.display = "";
-          $("modbusReadingForm").scrollIntoView({ behavior: "smooth", block: "center" });
+          setModbusReadingFeedback("");
+          $("modbusReadingList").querySelectorAll("[data-mb-reading-item]").forEach((item) => item.classList.toggle("selected", Number(item.dataset.mbReadingItem) === reading.id));
+          if (window.matchMedia("(max-width:900px)").matches) $("modbusReadingForm").scrollIntoView({ behavior:"smooth", block:"start" });
+          else $("modbusReadingPoint").focus();
         });
         $("modbusReadingList").querySelectorAll("[data-mb-reading-delete]").forEach((button) => button.onclick = async () => {
           if (!confirm("이 회선 매핑 한 건을 삭제할까요? 장비 자체는 삭제되지 않습니다.")) return;
@@ -5856,20 +6353,32 @@
       const deviceId = state.selectedDeviceId;
       const endpointId = state.modbusReadingEndpointId;
       const editId = state.modbusReadingEditId;
+      const saveButton = $("modbusReadingSave");
       const payload = {
         pointId: Number($("modbusReadingPoint").value), unitId: Number($("modbusReadingUnit").value),
         address: Number($("modbusReadingAddress").value), targetDeviceId: Number($("modbusReadingTarget").value),
         pointName: $("modbusReadingName").value.trim(), enabled: $("modbusReadingEnabled").value === "true",
       };
-      if (!payload.pointId || $("modbusReadingUnit").value === "" || $("modbusReadingAddress").value === ""
-          || !payload.targetDeviceId || !payload.pointName) return toast("필수 항목을 모두 입력하세요", true);
+      const missing = !payload.pointId ? "모델 측정항목을 선택하세요. 목록이 비어 있으면 모델 항목에서 '장비별 주소'를 설정하세요."
+        : $("modbusReadingUnit").value === "" ? "Unit ID를 입력하세요."
+        : $("modbusReadingAddress").value === "" ? "실제 요청 주소를 입력하세요. 주소 0도 입력할 수 있습니다."
+        : !payload.targetDeviceId ? "결과 장비를 선택하세요."
+        : !payload.pointName ? "결과 항목 이름을 입력하세요."
+        : "";
+      if (missing) return setModbusReadingFeedback(missing, true);
+      setModbusReadingFeedback("저장 중입니다…");
+      saveButton.disabled = true;
       try {
         await api(`/api/manager/devices/${deviceId}/endpoints/${endpointId}/modbus/readings${editId ? `/${editId}` : ""}`, {
           method: editId ? "PUT" : "POST", body: JSON.stringify(payload),
         });
         await reloadModbusReadings({ id: endpointId });
+        setModbusReadingFeedback("회선 매핑을 저장했습니다.");
         toast("회선 매핑을 저장했습니다");
-      } catch (error) { toast(error.message, true); }
+      } catch (error) {
+        setModbusReadingFeedback(error.message, true);
+        toast(error.message, true);
+      } finally { saveButton.disabled = false; }
     };
 
     $("modbusReadPreview").onclick = async () => {
@@ -5880,17 +6389,22 @@
       try {
         const result = await api(`/api/manager/devices/${deviceId}/modbus/read-preview`, { method: "POST" });
         if (state.selectedDeviceId !== deviceId) return;
+        state.modbusLastPreview = result;
         const rows = (result.targets || []).flatMap((target) => target.error
           ? [{ deviceId: target.deviceId, unitId: target.unitId, name: "–", value: "–", error: target.error }]
           : Object.entries(target.values || {}).map(([name, value]) => {
             const reading = (state.modbusReadings || []).find((item) => item.targetDeviceId === target.deviceId
               && item.unitId === target.unitId && item.pointName === name);
             const point = (state.modbusReadingPoints || []).find((item) => item.id === reading?.pointId);
+            const width = point?.dataType?.endsWith("32") ? 32 : 16;
+            const binary = point && point.dataType !== "FLOAT32" && Number.isSafeInteger(Number(value))
+              ? BigInt.asUintN(width, BigInt(Number(value))).toString(2).padStart(width, "0") : "";
             return { deviceId: target.deviceId, unitId: target.unitId, name,
-              value: `${value}${point?.unit ? ` ${point.unit}` : ""}`, error: "" };
+              value: `${value}${point?.unit ? ` ${point.unit}` : ""}`, binary, error: "" };
           }));
         const warnings = (result.skipped || []).map((reason) => `<div class="muted" style="font-size:12px">제외: ${esc(reason)}</div>`).join("");
-        $("modbusPreviewOut").innerHTML = `<h3>일회성 읽기 결과</h3>${warnings}${rows.length ? `<div class="table-wrap"><table><thead><tr><th>결과 장비</th><th>Unit ID</th><th>항목</th><th>값</th><th>오류</th></tr></thead><tbody>${rows.map((row) => `<tr><td>${esc(state.devices.find((d) => d.id === row.deviceId)?.name || `#${row.deviceId}`)}</td><td>${row.unitId}</td><td>${esc(row.name)}</td><td><b>${esc(String(row.value))}</b></td><td>${esc(row.error)}</td></tr>`).join("")}</tbody></table></div>` : '<div class="empty">읽을 수 있는 회선이 없습니다.</div>'}`;
+        $("modbusPreviewOut").innerHTML = `<h3>일회성 읽기 결과</h3>${warnings}${rows.length ? `<div class="table-wrap"><table><thead><tr><th>결과 장비</th><th>Unit ID</th><th>항목</th><th>값</th><th>2진수</th><th>오류</th></tr></thead><tbody>${rows.map((row) => `<tr><td>${esc(state.devices.find((d) => d.id === row.deviceId)?.name || `#${row.deviceId}`)}</td><td>${row.unitId}</td><td>${esc(row.name)}</td><td><b>${esc(String(row.value))}</b></td><td class="mono">${esc(row.binary || "—")}</td><td>${esc(row.error)}</td></tr>`).join("")}</tbody></table></div>` : '<div class="empty">읽을 수 있는 회선이 없습니다.</div>'}`;
+        if (state.modbusBitReadingId) $("modbusBitTry").click();
       } catch (error) { $("modbusPreviewOut").innerHTML = `<div class="empty">${esc(error.message)}</div>`; }
       finally { button.disabled = false; }
     };
@@ -6060,9 +6574,37 @@
       </div>`;
     }
 
+    let openTaskDetailId = null;
+
+    function closeTaskDetail() {
+      openTaskDetailId = null;
+      $("taskDetailModal").classList.remove("open");
+      $("taskDetailModal").setAttribute("aria-hidden", "true");
+    }
+
+    function showTaskDetail(taskId) {
+      const task = state.tasks.find((item) => Number(item.id) === Number(taskId));
+      if (!task) return closeTaskDetail();
+      openTaskDetailId = Number(taskId);
+      $("taskDetailTitle").textContent = task.name;
+      $("taskDetailMeta").textContent = `${task.modelName || "모델 미지정"} · ${task.scriptTypeName || task.scriptTypeCode || "프로토콜 미지정"} · 작업 #${task.id}`;
+      $("taskList").querySelectorAll("[data-task]").forEach((card) => card.classList.toggle("active", Number(card.dataset.task) === openTaskDetailId));
+      $("taskDetailModal").classList.add("open");
+      $("taskDetailModal").setAttribute("aria-hidden", "false");
+      $("taskDetailClose").focus();
+    }
+
     async function loadTasks() {
       state.tasks = await api("/api/manager/collector/tasks") || [];
       if (state.tasks.content) state.tasks = state.tasks.content;
+      $("taskIndex").innerHTML = state.tasks.map((task) => {
+        const groups = task.groups || [];
+        const deviceCount = new Set(groups.flatMap((group) => (group.devices || []).map((device) => device.deviceId ?? device.id))).size;
+        return `<button type="button" class="task-index-item" data-open-task="${task.id}" aria-label="${esc(task.name)} 상세 열기">
+          <span><strong>${esc(task.name)}</strong><span class="muted">${esc(task.modelName || "모델 미지정")} · ${esc(task.scriptTypeName || task.scriptTypeCode || "—")} · 그룹 ${groups.length}개 · 장비 ${deviceCount}대</span></span>
+          <span class="chip ${task.active ? "ok" : "bad"}">${task.active ? "동작 중" : "중지"}</span>
+        </button>`;
+      }).join("") || '<div class="empty">수집 작업이 없습니다</div>';
       $("taskList").innerHTML = state.tasks.map((t) => `
         <div style="border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--surface2)" data-task="${t.id}" data-task-model="${t.modelId}">
           <div class="row" style="justify-content:space-between">
@@ -6133,6 +6675,13 @@
             <button type="button" class="danger" data-del-task="${t.id}" data-role-gate="admin">Task 삭제</button>
           </div>
         </div>`).join("") || '<div class="empty">수집 작업이 없습니다</div>';
+      $("taskIndex").querySelectorAll("[data-open-task]").forEach((button) => {
+        button.onclick = () => {
+          showTaskDetail(button.dataset.openTask);
+          $("taskDetailBody")?.scrollTo(0, 0);
+        };
+      });
+      if (openTaskDetailId != null) showTaskDetail(openTaskDetailId);
       $("taskList").querySelectorAll("[data-toggle-task]").forEach((btn) => {
         btn.onclick = async () => {
           try {
@@ -6655,6 +7204,17 @@
     $("locReload").onclick = () => loadLocations().catch((e) => toast(e.message, true));
     $("modelReload").onclick = () => loadModels().catch((e) => toast(e.message, true));
     $("devReload").onclick = () => loadDevices().catch((e) => toast(e.message, true));
+    $("devClearFilters").onclick = () => {
+      $("devFilterName").value = "";
+      $("devFilterModel").value = "";
+      $("devFilterGroup").value = "";
+      loadDevices().catch((e) => toast(e.message, true));
+    };
+    $("devFilterName").addEventListener("keydown", (event) => {
+      if (event.key === "Enter") loadDevices().catch((e) => toast(e.message, true));
+    });
+    $("devFilterModel").addEventListener("change", () => loadDevices().catch((e) => toast(e.message, true)));
+    $("devFilterGroup").addEventListener("change", () => loadDevices().catch((e) => toast(e.message, true)));
     $("assetReload").onclick = () => loadAssets().catch((e) => toast(e.message, true));
     $("userReload").onclick = () => loadUsers().catch((e) => toast(e.message, true));
     $("userCreate").onclick = createUser;
@@ -6795,16 +7355,33 @@
     $("assetPreviewModal").onclick = (event) => { if (event.target === $("assetPreviewModal")) closeAssetPreview(); };
     $("collectionValuesClose").onclick = closeCollectionValues;
     $("collectionValuesModal").onclick = (event) => { if (event.target === $("collectionValuesModal")) closeCollectionValues(); };
+    $("taskDetailClose").onclick = closeTaskDetail;
+    $("taskDetailModal").onclick = (event) => { if (event.target === $("taskDetailModal")) closeTaskDetail(); };
     $("modbusReadingOpen").onclick = openModbusReadingModal;
     $("modbusReadingClose").onclick = closeModbusReadingModal;
     $("modbusReadingModal").onclick = (event) => { if (event.target === $("modbusReadingModal")) closeModbusReadingModal(); };
+    $("deviceDetailClose").onclick = closeDeviceDetail;
+    $("deviceDetailModal").onclick = (event) => { if (event.target === $("deviceDetailModal")) closeDeviceDetail(); };
+    $("deviceDetailModal").querySelectorAll("[data-device-detail-tab]").forEach((button) => {
+      button.onclick = () => showDeviceDetailTab(button.dataset.deviceDetailTab);
+    });
     $("assetDetailClose").onclick = closeAssetDetailModal;
     $("assetDetailModal").onclick = (event) => { if (event.target === $("assetDetailModal")) closeAssetDetailModal(); };
     document.addEventListener("keydown", (event) => {
+      if (event.key === "Tab" && $("deviceDetailModal").classList.contains("open") && !$("modbusReadingModal").classList.contains("open")) {
+        const focusable = [...$("deviceDetailModal").querySelectorAll("button,input,select,textarea,[tabindex]")]
+          .filter((element) => !element.disabled && element.getClientRects().length && element.getAttribute("tabindex") !== "-1");
+        const first = focusable[0];
+        const last = focusable.at(-1);
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+      }
       if (event.key !== "Escape") return;
       if ($("modbusReadingModal").classList.contains("open")) closeModbusReadingModal();
+      else if ($("deviceDetailModal").classList.contains("open")) closeDeviceDetail();
       else if ($("assetDetailModal").classList.contains("open")) closeAssetDetailModal();
       else if ($("collectionValuesModal").classList.contains("open")) closeCollectionValues();
+      else if ($("taskDetailModal").classList.contains("open")) closeTaskDetail();
       else if ($("assetPreviewModal").classList.contains("open")) closeAssetPreview();
       else closeRackPreview();
     });
@@ -7006,7 +7583,7 @@
         });
         toast("장비 생성 #" + created.id);
         await loadDevices();
-        selectDevice(created.id);
+        selectDevice(created.id, true);
       } catch (e) { toast(e.message, true); }
     };
 
@@ -7301,7 +7878,7 @@
             <button type="button" class="ghost" id="wzGoWidget">위젯 만들기로</button>
           </div>`;
         $("wzResult").classList.add("show");
-        $("wzGoDev").onclick = () => { goTab("devices"); selectDevice(device.id); };
+        $("wzGoDev").onclick = () => { goTab("devices"); selectDevice(device.id, true); };
           $("wzGoWidget").onclick = () => {
             goTab("widgets");
             addWidgetDevice(device.id);
