@@ -6227,7 +6227,7 @@
         const reading = state.modbusReadings.find((item) => item.id === state.modbusBitReadingId);
         const point = state.modbusReadingPoints.find((item) => item.id === reading?.pointId);
         const target = (state.modbusLastPreview?.targets || []).find((item) =>
-          item.deviceId === reading?.targetDeviceId && item.unitId === reading?.unitId && !item.error
+          item.deviceId === reading?.targetDeviceId && item.unitId === reading?.unitId
           && Object.prototype.hasOwnProperty.call(item.values || {}, reading.pointName));
         if (!target) throw new Error("먼저 ‘지금 한 번 읽기’로 이 회선의 원본값을 가져오세요.");
         const raw = Number(target.values[reading.pointName]);
@@ -6390,9 +6390,8 @@
         const result = await api(`/api/manager/devices/${deviceId}/modbus/read-preview`, { method: "POST" });
         if (state.selectedDeviceId !== deviceId) return;
         state.modbusLastPreview = result;
-        const rows = (result.targets || []).flatMap((target) => target.error
-          ? [{ deviceId: target.deviceId, unitId: target.unitId, name: "–", value: "–", error: target.error }]
-          : Object.entries(target.values || {}).map(([name, value]) => {
+        const rows = (result.targets || []).flatMap((target) => {
+          const valueRows = Object.entries(target.values || {}).map(([name, value]) => {
             const reading = (state.modbusReadings || []).find((item) => item.targetDeviceId === target.deviceId
               && item.unitId === target.unitId && item.pointName === name);
             const point = (state.modbusReadingPoints || []).find((item) => item.id === reading?.pointId);
@@ -6401,7 +6400,12 @@
               ? BigInt.asUintN(width, BigInt(Number(value))).toString(2).padStart(width, "0") : "";
             return { deviceId: target.deviceId, unitId: target.unitId, name,
               value: `${value}${point?.unit ? ` ${point.unit}` : ""}`, binary, error: "" };
-          }));
+          });
+          return target.error
+            ? [...valueRows, { deviceId: target.deviceId, unitId: target.unitId,
+                name: "읽기 실패 항목", value: "–", error: target.error }]
+            : valueRows;
+        });
         const warnings = (result.skipped || []).map((reason) => `<div class="muted" style="font-size:12px">제외: ${esc(reason)}</div>`).join("");
         $("modbusPreviewOut").innerHTML = `<h3>일회성 읽기 결과</h3>${warnings}${rows.length ? `<div class="table-wrap"><table><thead><tr><th>결과 장비</th><th>Unit ID</th><th>항목</th><th>값</th><th>2진수</th><th>오류</th></tr></thead><tbody>${rows.map((row) => `<tr><td>${esc(state.devices.find((d) => d.id === row.deviceId)?.name || `#${row.deviceId}`)}</td><td>${row.unitId}</td><td>${esc(row.name)}</td><td><b>${esc(String(row.value))}</b></td><td class="mono">${esc(row.binary || "—")}</td><td>${esc(row.error)}</td></tr>`).join("")}</tbody></table></div>` : '<div class="empty">읽을 수 있는 회선이 없습니다.</div>'}`;
         if (state.modbusBitReadingId) $("modbusBitTry").click();

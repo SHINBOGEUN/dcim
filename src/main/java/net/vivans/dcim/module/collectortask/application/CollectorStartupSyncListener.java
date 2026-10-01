@@ -38,6 +38,7 @@ public class CollectorStartupSyncListener {
             return;
         }
         if (health.instanceId().equals(collectorInstanceId)) {
+            collectorSyncService.retryPendingGroups();
             return;
         }
         collectorInstanceId = health.instanceId();
