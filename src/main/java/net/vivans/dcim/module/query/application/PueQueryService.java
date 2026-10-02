@@ -61,6 +61,7 @@ public class PueQueryService {
             throw new IllegalArgumentException("PUE widget has no definition");
         }
         PueDefinition definition = widget.getPue().getPueDefinition();
+        if (definition.getFormula() != null) return getCalculated(widget, definition);
         List<PueDefinition.SourceDefinition> definitionSources = resolveSources(definition);
         List<PueSourceRequest> total = definitionSources.stream()
                 .filter(source -> source.role() == PueDefinitionSourceRole.total)
@@ -111,6 +112,25 @@ public class PueQueryService {
         );
     }
 
+    private PueQueryResponse getCalculated(PageWidget widget, PueDefinition definition) {
+        PageWidgetChartRangePreset preset = resolveRangePreset(
+                widget.getPueRangePreset() == null ? null : widget.getPueRangePreset().name());
+        QueryRanges.Range range = QueryRanges.resolve(preset);
+        Optional<PueLastPoint> last = pointQuery.findLastPue(definition.getId(),
+                Duration.between(range.start(), range.end()));
+        PueLastPoint point = last.orElse(null);
+        boolean stale = point != null && widget.getPueFreshnessMinutes() != null
+                && point.time().isBefore(Instant.now().minusSeconds(widget.getPueFreshnessMinutes().longValue() * 60));
+        boolean complete = point != null && !stale;
+        WidgetDataStatusResponse status = widgetDataStatusResolver.resolve(
+                java.util.Collections.singletonList(point == null ? null : point.time()), widget.getPueFreshnessMinutes());
+        return new PueQueryResponse(complete ? QueryValues.round4(point.value()) : null,
+                null, null, definition.getResultUnit(), preset.name(), range.start(), range.end(), complete,
+                point == null ? "MISSING_DATA" : stale ? "STALE_DATA" : "OK",
+                List.of(), List.of(), List.of(), List.of(), status, definition.getFormula(),
+                complete ? point.inputs() : Map.of());
+    }
+
     private List<PueDefinition.SourceDefinition> resolveSources(PueDefinition definition) {
         List<PueDefinition.SourceDefinition> resolved = definition.resolvedSources();
         if (!resolved.isEmpty()) {
@@ -141,7 +161,7 @@ public class PueQueryService {
         return new PueQueryResponse(
                 latest.value(), latest.totalPower(), latest.coolerPower(), latest.unit(),
                 preset.name(), range.start(), range.end(), latest.complete(), latest.calculationStatus(),
-                latest.missingDeviceIds(), latest.staleDeviceIds(), latest.devices(), trend, latest.dataStatus()
+                latest.missingDeviceIds(), latest.staleDeviceIds(), latest.devices(), trend, latest.dataStatus(), latest.formula(), latest.inputs()
         );
     }
 

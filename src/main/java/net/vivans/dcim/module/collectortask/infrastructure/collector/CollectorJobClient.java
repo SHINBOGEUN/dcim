@@ -27,6 +27,9 @@ public class CollectorJobClient {
     private static final ParameterizedTypeReference<CollectorApiResponse<CollectorModbusPreviewResponse>> MODBUS_PREVIEW_TYPE =
             new ParameterizedTypeReference<>() {
             };
+    private static final ParameterizedTypeReference<CollectorApiResponse<CollectorCalculatedJobResponse>> CALCULATED_JOB_TYPE =
+            new ParameterizedTypeReference<>() {
+            };
 
     private final RestClient restClient;
     private final CollectorServiceProperties properties;
@@ -100,6 +103,12 @@ public class CollectorJobClient {
 
     public void deletePue(Integer definitionId) {
         withRetryVoid(() -> restClient.delete().uri("/api/pue-jobs/{id}", definitionId).retrieve().toBodilessEntity());
+    }
+
+    public CollectorCalculatedJobResponse calculatedJobStatus(Integer definitionId) {
+        CollectorApiResponse<CollectorCalculatedJobResponse> response = restClient.get()
+                .uri("/api/pue-jobs/{id}", definitionId).retrieve().body(CALCULATED_JOB_TYPE);
+        return response == null ? null : response.data();
     }
 
     <T> T withRetry(java.util.function.Supplier<T> action) {

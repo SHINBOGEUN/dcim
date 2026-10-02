@@ -8,7 +8,7 @@ import net.vivans.dcim.module.device.domain.model.Device;
 
 @Entity
 @Table(name = "pue_definition_source", uniqueConstraints =
-        @UniqueConstraint(name = "uk_pue_definition_source_device", columnNames = {"pue_definition_id", "device_id"}))
+        @UniqueConstraint(name = "uk_pue_definition_source_alias", columnNames = {"pue_definition_id", "alias"}))
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class PueDefinitionSource {
@@ -24,8 +24,12 @@ public class PueDefinitionSource {
     private Device device;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 16)
+    @Column(length = 16)
     private PueDefinitionSourceRole role;
+    @Column(name = "alias", length = 32)
+    private String alias;
+    @Column(name = "protocol", length = 16)
+    private String protocol;
 
     @Column(name = "point_name", nullable = false, length = 100)
     private String pointName;
@@ -41,6 +45,21 @@ public class PueDefinitionSource {
 
     static PueDefinitionSource create(PueDefinition definition, Device device, PueDefinitionSourceRole role, String pointName) {
         return new PueDefinitionSource(definition, device, role, pointName);
+    }
+    static PueDefinitionSource createCalculated(PueDefinition definition, Device device, String alias, String pointName, String protocol) {
+        PueDefinitionSource source = new PueDefinitionSource();
+        source.definition = definition;
+        source.device = device;
+        source.alias = alias;
+        source.protocol = protocol;
+        source.pointName = pointName.trim();
+        return source;
+    }
+    void updateCalculated(Device device, String pointName, String protocol) {
+        this.device = device;
+        this.pointName = pointName.trim();
+        this.role = null;
+        this.protocol = protocol;
     }
 
     void update(PueDefinitionSourceRole role, String pointName) {

@@ -128,20 +128,8 @@ public class QueryController {
                 aggregateQueryService.getAggregate(widgetId, rangePreset)));
     }
 
-    @PostMapping("/pue")
-    @Operation(
-            summary = "PUE 계산",
-            description = "위젯과 독립적으로 totalSources와 coolerSources의 장비별 POWER 포인트 최신값을 합산해 "
-                    + "totalPower / coolerPower를 계산합니다."
-    )
-    public ResponseEntity<ApiResponse<PueQueryResponse>> getPue(
-            @Valid @RequestBody PueQueryRequest request
-    ) {
-        return ResponseEntity.ok(ApiResponse.ok(pueQueryService.getPue(request)));
-    }
-
-    @GetMapping("/pue")
-    @Operation(summary = "저장된 PUE 위젯 조회", description = "rangePreset과 window를 함께 보내면 저장된 PUE 시계열 trend도 반환합니다.")
+    @GetMapping({"/pue", "/calculated"})
+    @Operation(summary = "저장된 계산 지표 위젯 조회", description = "rangePreset과 window를 함께 보내면 저장된 계산 시계열 trend도 반환합니다.")
     public ResponseEntity<ApiResponse<PueQueryResponse>> getPue(
             @RequestParam Integer widgetId,
             @RequestParam(required = false) String rangePreset,
