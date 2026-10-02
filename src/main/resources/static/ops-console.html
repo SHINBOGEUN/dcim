@@ -219,6 +219,20 @@
     .asset-preview-body { padding: 18px; }
     .collection-values-dialog { width: min(920px, 100%); max-height: min(85vh, 800px); display: flex; flex-direction: column; }
     .collection-values-body { overflow: auto; min-height: 0; }
+    #calculatedMetricStatusModal .asset-preview { background:var(--surface); color:var(--text); border-color:var(--line); }
+    #calculatedMetricStatusModal .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    #calculatedMetricStatusModal .stat .v { color:var(--text); overflow-wrap:anywhere; }
+    #calculatedMetricStatusBody code { overflow-wrap:anywhere; }
+    .calculated-result { padding:20px; margin-bottom:16px; border:1px solid var(--accent); border-radius:10px; background:var(--surface2); }
+    .calculated-result .result-label { color:var(--muted); font-size:12px; font-weight:700; }
+    .calculated-result .result-value { display:block; margin:5px 0; font-size:clamp(30px,4vw,42px); font-weight:800; line-height:1.15; color:var(--text); overflow-wrap:anywhere; }
+    .calculated-result .result-unit { font-size:16px; font-weight:600; color:var(--muted); }
+    .calculated-detail-section { margin-top:18px; padding-top:14px; border-top:1px solid var(--line); }
+    .calculated-detail-section h3 { margin:0 0 10px; font-size:14px; }
+    .calculated-detail-section p { margin:7px 0; line-height:1.5; overflow-wrap:anywhere; }
+    .calculated-detail-section .table-wrap { overflow-x:auto; }
+    .calculated-detail-section table { min-width:640px; }
+    @media (max-width:700px) { #calculatedMetricStatusModal .stats { grid-template-columns:1fr; } }
     .task-detail-dialog { width:min(980px,100%); max-height:min(90vh,900px); display:flex; flex-direction:column; }
     .task-detail-body { overflow:auto; min-height:0; }
     #taskList > [data-task] { display:none; }
@@ -1174,6 +1188,20 @@
       #tab-wizard.panel.active { display:block; overflow:auto; }
       #tab-wizard > .card { overflow:visible; margin-bottom:14px; }
     }
+    .calculated-formula-builder { margin-top:12px; padding:14px; border:1px solid var(--line); border-radius:10px; background:var(--surface2); }
+    .calculated-formula-builder h3 { margin:0 0 5px; font-size:14px; }
+    .calculated-formula-tools { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+    .calculated-formula-tools button { min-width:38px; }
+    .calculated-ratio-source { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; padding:8px 0; border-top:1px solid var(--line); }
+    .calculated-ratio-source:first-child { border-top:0; }
+    .calculated-ratio-source .source-name { min-width:0; overflow-wrap:anywhere; }
+    .calculated-ratio-source .row { gap:5px; }
+    .calculated-ratio-source button.selected { border-color:var(--accent); background:var(--accent-soft); color:var(--text); }
+    /* 위젯 페이지는 목록/편집 영역 아래에 계산 지표 카드가 이어지므로 패널 내부를 스크롤한다. */
+    #tab-widgets.panel.active { display:block; overflow-x:hidden; overflow-y:auto; scrollbar-gutter:stable; padding-bottom:24px; }
+    #tab-widgets > .grid2 { height:auto; min-height:0; overflow:visible; align-items:start; }
+    #tab-widgets > .grid2 > * { height:auto; min-height:0; overflow:visible; }
+    #tab-widgets > .card:last-child { margin-bottom:16px; }
   </style>
 </head>
 <body>
@@ -1867,7 +1895,7 @@
             <b>count</b>: 장비 선택 없음 · <code>devices.enabled=1</code> 전체 · 집계 방식(전체/모델별/특정 모델)만 선택.
             <b>chart</b>: 대상 방식 → 장비/모델 → 측정 항목 → 기간. 누적 ENERGY는 제외.
             <b>aggregate</b>: 측정 항목 → 호환 장비 → 기간. 유형에 따라 usage/power 자동 결정.
-            <b>PUE</b>: 계속 수집되는 PUE 정의를 선택해 저장된 결과를 표시.
+            <b>계산 지표</b>: 같은 수집 주기에 측정한 값으로 계산된 결과를 표시.
             <b>사이코메트릭</b>: 온도·상대습도 소스를 각각 선택해 InfluxDB 평균값을 습공기선으로 표시.
           </p>
           <div class="fields">
@@ -1883,7 +1911,7 @@
                 <option value="count">개수 (count)</option>
                 <option value="chart">차트 (chart)</option>
                 <option value="aggregate">집계 (aggregate)</option>
-                <option value="pue">PUE</option>
+                <option value="pue">계산 지표</option>
                 <option value="psychrometric">사이코메트릭 (psychrometric)</option>
                 <option value="power_distribution">전력 분배 (power distribution)</option>
               </select>
@@ -2019,10 +2047,10 @@
           </div>
 
           <div id="wPueBlock" style="margin-top:14px;display:none">
-            <div class="muted" style="font-size:12px;font-weight:650;margin-bottom:6px">PUE 수집 정의 선택</div>
+            <div class="muted" style="font-size:12px;font-weight:650;margin-bottom:6px">계산 지표 선택</div>
             <div class="fields">
-              <label class="field full">PUE 정의
-                <select id="wPueDefinition"><option value="">PUE 수집 정의를 먼저 만드세요</option></select>
+              <label class="field full">계산 정의
+                <select id="wPueDefinition"><option value="">계산 지표를 먼저 만드세요</option></select>
               </label>
               <label class="field">조회 기간
                 <select id="wPueRangePreset">
@@ -2038,7 +2066,7 @@
                 </select>
               </label>
             </div>
-            <div class="muted" style="font-size:12px;margin-top:6px">위젯을 끄거나 삭제해도 PUE 수집은 계속됩니다. 수집 중지는 아래 정의에서만 변경합니다.</div>
+            <div class="muted" style="font-size:12px;margin-top:6px">위젯을 꺼도 계산 수집은 계속됩니다. 계산 정의에서 별도로 중지하세요.</div>
           </div>
 
           <div id="wPsychrometricBlock" style="margin-top:14px;display:none">
@@ -2097,32 +2125,40 @@
         </div>
       </div>
       <div class="card" style="margin-top:16px">
-        <h2>PUE 수집 정의</h2>
+        <h2>사용자 계산 지표</h2>
         <p class="muted" style="margin-top:-4px;font-size:13px">
-          총전력 그룹과 Cooler 그룹의 공통 POWER 포인트를 같은 주기로 읽어 <code>totalPower / coolerPower</code>를 계속 기록합니다.
-          위젯은 위 정의를 선택해 기록값만 표시합니다.
+          SNMP·Modbus 측정항목을 각 실행 회차에 새로 읽고, 모두 성공하면 아래 공식으로 계산해 저장합니다. LoRa/MQTT 입력은 지원하지 않습니다.
         </p>
-        <div class="grid2">
-          <div>
-            <h3 style="margin:0 0 8px;font-size:14px">1. 총전력 장비 그룹</h3>
-            <div class="row">
-              <select id="pueTotalDeviceGroup" style="flex:1;min-width:180px"></select>
-              <select id="pueTotalPoint" style="flex:1;min-width:160px" disabled><option value="">그룹 먼저 선택</option></select>
-            </div>
-            <div id="pueTotalGroupInfo" class="pick-list"></div>
+        <div class="row" data-role-gate="admin">
+          <select id="pueSourcePick" style="flex:3;min-width:280px"><option value="">측정항목 불러오는 중</option></select>
+          <input id="pueSourceAlias" placeholder="변수명 (비우면 자동: P1…)" style="flex:1;min-width:170px" />
+          <button type="button" class="ghost" id="pueSourceAdd">항목 추가</button>
+        </div>
+        <div id="pueSourceList" class="pick-list" style="margin-top:10px"></div>
+        <div class="calculated-formula-builder" data-role-gate="admin">
+          <h3>클릭해서 계산 공식 만들기</h3>
+          <div class="muted">간단한 식은 항목·연산자를 클릭하세요. 두 합계를 나눌 때는 아래 ‘합계 ÷ 합계’ 구성을 사용하세요.</div>
+          <div id="pueFormulaTools" class="calculated-formula-tools"></div>
+          <div class="row" style="margin-top:12px;gap:8px">
+            <button type="button" class="ghost" id="pueRatioStart">합계 ÷ 합계 구성</button>
+            <button type="button" class="ghost" id="pueFormulaClear">공식 지우기</button>
           </div>
-          <div>
-            <h3 style="margin:0 0 8px;font-size:14px">2. Cooler Power 장비 그룹</h3>
-            <div class="row">
-              <select id="pueCoolerDeviceGroup" style="flex:1;min-width:180px"></select>
-              <select id="pueCoolerPoint" style="flex:1;min-width:160px" disabled><option value="">그룹 먼저 선택</option></select>
-            </div>
-            <div id="pueCoolerGroupInfo" class="pick-list"></div>
+          <div id="pueRatioBuilder" style="display:none;margin-top:12px">
+            <div class="muted" style="margin-bottom:8px">각 항목을 위쪽 합계(분자) 또는 아래쪽 합계(분모)에 배치하세요. 모두 배치하면 공식이 자동 완성됩니다.</div>
+            <div id="pueRatioSources"></div>
+            <div id="pueRatioSummary" class="muted" style="margin-top:8px"></div>
           </div>
         </div>
         <div class="row" style="margin-top:14px">
           <label class="field" style="min-width:220px">정의 이름
-            <input id="pueWidgetName" placeholder="예: A동 PUE" />
+            <input id="pueWidgetName" placeholder="예: 데이터센터 PUE" />
+          </label>
+          <label class="field" style="min-width:250px;flex:2">계산 공식
+            <input id="pueFormula" placeholder="항목·연산자를 클릭하거나 직접 입력하세요" />
+          </label>
+          <label class="field" style="min-width:100px">결과 단위
+            <input id="pueResultUnit" placeholder="예: PUE, W, %" title="PUE는 물리 단위가 없는 비율이며, 여기서 PUE는 화면 표시 이름입니다." />
+            <small class="muted">PUE는 단위 없는 비율</small>
           </label>
           <label class="field" style="min-width:220px">수집 주기 (cron)
             <input id="pueCalculationCron" value="0 */5 * * * *" />
@@ -2130,7 +2166,7 @@
           <label class="field" style="min-width:160px">수집 상태
             <select id="pueCollectionEnabled"><option value="true">수집 ON</option><option value="false">수집 OFF</option></select>
           </label>
-          <button type="button" class="primary" id="pueCalculate">PUE 계산</button>
+          <button type="button" class="ghost" id="pueCalculate">공식 검사</button>
           <button type="button" class="primary" id="pueWidgetAdd">수집 정의 저장</button>
           <button type="button" class="ghost" id="pueEditCancel" style="display:none">수정 취소</button>
         </div>
@@ -2726,6 +2762,15 @@
       <div class="asset-preview-body collection-values-body" id="collectionValuesBody"></div>
     </div>
   </div>
+  <div class="asset-preview-modal" id="calculatedMetricStatusModal" aria-hidden="true">
+    <div class="asset-preview collection-values-dialog" role="dialog" aria-modal="true" aria-labelledby="calculatedMetricStatusTitle">
+      <div class="asset-preview-head"><h2 id="calculatedMetricStatusTitle">계산 지표 수집 상세</h2><button type="button" id="calculatedMetricStatusClose" aria-label="닫기">×</button></div>
+      <div class="asset-preview-body collection-values-body">
+        <div class="row" style="justify-content:flex-end;margin-bottom:10px"><button type="button" class="ghost" id="calculatedMetricStatusReload">새로고침</button></div>
+        <div id="calculatedMetricStatusBody" role="status" aria-live="polite"></div>
+      </div>
+    </div>
+  </div>
   <div class="asset-preview-modal" id="taskDetailModal" aria-hidden="true">
     <div class="asset-preview task-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="taskDetailTitle">
       <div class="asset-preview-head"><div><h2 id="taskDetailTitle">수집 작업 상세</h2><p id="taskDetailMeta" style="margin:4px 0 0;font-size:12px"></p></div><button type="button" id="taskDetailClose" aria-label="닫기">×</button></div>
@@ -2811,12 +2856,16 @@
       widgetModelIds: [],
       widgetPointCatalog: [], // [{name, unit, models:[]}]
       widgetPointNamesByModel: new Map(),
-      pueTotalGroup: null,
-      pueCoolerGroup: null,
       psychrometricTemperatureSources: [],
       psychrometricHumiditySources: [],
       powerDistributionGroups: [],
       pueDefinitions: [],
+      selectedCalculatedMetricId: null,
+      calculatedSources: [],
+      calculatedSourceOptions: [],
+      calculatedRatioMode: false,
+      calculatedRatioTop: [],
+      calculatedRatioBottom: [],
       editingPueDefinitionId: null,
       editingWidgetId: null,
       editingLayout: null,
@@ -7228,7 +7277,7 @@
     $("opsHealthReload").onclick = () => loadCollectionOperationsHealth().catch((e) => toast(e.message, true));
     $("cjhReload").onclick = () => loadCollectionJobHealth().catch((e) => toast(e.message, true));
     $("opsReconcile").onclick = async () => {
-      if (!confirm("활성 수집 그룹과 PUE 정의를 Collector에 다시 반영할까요? 기존 Job은 업데이트합니다.")) return;
+      if (!confirm("활성 수집 그룹과 계산 지표를 Collector에 다시 반영할까요? 기존 Job은 업데이트합니다.")) return;
       const button = $("opsReconcile");
       button.disabled = true;
       try {
@@ -7359,6 +7408,11 @@
     $("assetPreviewModal").onclick = (event) => { if (event.target === $("assetPreviewModal")) closeAssetPreview(); };
     $("collectionValuesClose").onclick = closeCollectionValues;
     $("collectionValuesModal").onclick = (event) => { if (event.target === $("collectionValuesModal")) closeCollectionValues(); };
+    $("calculatedMetricStatusClose").onclick = closeCalculatedMetricStatus;
+    $("calculatedMetricStatusModal").onclick = (event) => { if (event.target === $("calculatedMetricStatusModal")) closeCalculatedMetricStatus(); };
+    $("calculatedMetricStatusReload").onclick = () => {
+      if (state.selectedCalculatedMetricId != null) loadCalculatedMetricStatus(state.selectedCalculatedMetricId);
+    };
     $("taskDetailClose").onclick = closeTaskDetail;
     $("taskDetailModal").onclick = (event) => { if (event.target === $("taskDetailModal")) closeTaskDetail(); };
     $("modbusReadingOpen").onclick = openModbusReadingModal;
@@ -7385,6 +7439,7 @@
       else if ($("deviceDetailModal").classList.contains("open")) closeDeviceDetail();
       else if ($("assetDetailModal").classList.contains("open")) closeAssetDetailModal();
       else if ($("collectionValuesModal").classList.contains("open")) closeCollectionValues();
+      else if ($("calculatedMetricStatusModal").classList.contains("open")) closeCalculatedMetricStatus();
       else if ($("taskDetailModal").classList.contains("open")) closeTaskDetail();
       else if ($("assetPreviewModal").classList.contains("open")) closeAssetPreview();
       else closeRackPreview();
@@ -8002,7 +8057,7 @@
       const presetLabel = ({
         usage: "사용량",
         power: "전력 합",
-        pue: "PUE",
+        pue: "계산 지표",
       })[data.aggregatePreset] || data.aggregatePreset || "";
       const rangeLabel = ({
         today: "오늘",
@@ -8276,7 +8331,7 @@
         } else if (w.queryKind === "aggregate") {
           queryBtn = `<button type="button" class="ghost" data-agg="${w.id}">집계</button>`;
         } else if (w.queryKind === "pue") {
-          queryBtn = `<button type="button" class="ghost" data-pue="${w.id}">PUE</button>`;
+          queryBtn = `<button type="button" class="ghost" data-pue="${w.id}">계산값</button>`;
         } else if (w.queryKind === "psychrometric") {
           queryBtn = `<button type="button" class="ghost" data-psychrometric="${w.id}">습공기선</button>`;
         } else if (w.queryKind === "power_distribution") {
@@ -8288,7 +8343,7 @@
             ? `<div class="muted">${esc(({
                 usage: "사용량",
                 power: "전력 합",
-                pue: "PUE",
+                pue: "계산 지표",
               })[w.op] || w.op || "")}${w.aggregateRangePreset ? " · " + esc(({
                 today: "오늘",
                 yesterday: "어제",
@@ -8298,7 +8353,7 @@
                 last_7d: "최근 7일",
               })[w.aggregateRangePreset] || w.aggregateRangePreset) : ""}</div>`
             : w.queryKind === "pue"
-              ? `<div class="muted">PUE 정의 #${esc(w.pueDefinitionId || "–")} · ${esc(w.pueRangePreset || "last_24h")} · 최신 ${esc(w.pueFreshnessMinutes || 15)}분</div>`
+              ? `<div class="muted">계산 지표 #${esc(w.pueDefinitionId || "–")} · ${esc(w.pueRangePreset || "last_24h")} · 최신 ${esc(w.pueFreshnessMinutes || 15)}분</div>`
               : w.queryKind === "psychrometric"
                 ? `<div class="muted">온도·상대습도 소스 ${esc((w.psychrometricSources || []).length)}개 · 최근 5개 평균</div>`
                 : w.queryKind === "power_distribution"
@@ -8312,7 +8367,7 @@
           : w.queryKind === "chart" && (w.chartScope || "devices") === "models"
             ? ((w.modelIds || []).join(", ") || "–")
             : w.queryKind === "pue"
-              ? `PUE 정의 #${esc(w.pueDefinitionId || "–")}`
+              ? `계산 지표 #${esc(w.pueDefinitionId || "–")}`
               : w.queryKind === "psychrometric"
                 ? `소스 ${(w.psychrometricSources || []).length}개`
                 : w.queryKind === "power_distribution"
@@ -8399,6 +8454,15 @@
           }
         };
       });
+      $("wBody").querySelectorAll("[data-pue]").forEach((btn) => {
+        btn.onclick = async () => {
+          try {
+            const data = await api(`/api/manager/query/calculated?widgetId=${btn.dataset.pue}`);
+            renderPueResult(data, true);
+            $("wLastOut").innerHTML = $("pueResult").innerHTML;
+          } catch (e) { $("wLastOut").innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+        };
+      });
       $("wBody").querySelectorAll("[data-edit]").forEach((btn) => {
         btn.onclick = () => startEditWidget(Number(btn.dataset.edit));
       });
@@ -8419,150 +8483,183 @@
     }
 
     async function loadPueDefinitions() {
-      state.pueDefinitions = await api("/api/manager/pue-definitions");
+      state.pueDefinitions = await api("/api/manager/calculated-metrics");
       const select = $("wPueDefinition");
       if (select) {
         const selected = select.value;
         fillSelect(select, state.pueDefinitions, (definition) =>
           `<option value="${definition.id}">${esc(definition.name)} · ${definition.collectionEnabled ? "수집 ON" : "수집 OFF"} · ${definition.deviceGroups?.length ? `그룹 ${definition.deviceGroups.length}개` : `소스 ${definition.sources.length}개`}</option>`,
-          state.pueDefinitions.length ? "PUE 정의 선택" : "PUE 수집 정의를 먼저 만드세요");
+          state.pueDefinitions.length ? "계산 지표 선택" : "계산 지표를 먼저 만드세요");
         if ([...select.options].some((option) => option.value === selected)) select.value = selected;
       }
       const body = $("pueDefinitionBody");
       if (!body) return;
       body.innerHTML = state.pueDefinitions.map((definition) => {
-        const sources = definition.deviceGroups?.length
-          ? definition.deviceGroups.map((group) => `${group.role === "total" ? "총" : "Cooler"} ${esc(group.deviceGroupName)}:${esc(group.pointName)} (${group.deviceCount}대)`).join(" · ")
-          : definition.sources.map((source) => `${source.role === "total" ? "총" : "Cooler"} ${esc(source.deviceName)}:${esc(source.pointName)}`).join(" · ");
-        return `<tr><td><b>${esc(definition.name)}</b><div class="muted mono">#${definition.id} · v${definition.configVersion}</div></td>`
+        const sources = definition.sources.map((source) => `${esc(source.alias)} = ${esc(source.deviceName)}:${esc(source.pointName)} (${esc(source.protocol)})`).join(" · ");
+        return `<tr><td><button type="button" class="ghost" data-calculated-detail="${definition.id}" title="수집 상세 보기">${esc(definition.name)}</button><div class="muted mono">#${definition.id} · v${definition.configVersion}</div></td>`
           + `<td class="mono">${esc(definition.calculationCron || "0 */5 * * * *")}</td>`
           + `<td>${definition.collectionEnabled ? '<span class="chip ok">ON</span>' : '<span class="chip">OFF</span>'}</td>`
-          + `<td>${sources || "–"}</td><td class="actions"><div class="action-btns" data-role-gate="admin">`
+          + `<td><b class="mono">${esc(definition.formula)}</b><div class="muted">${sources || "–"}</div></td><td class="actions"><div class="action-btns"><button type="button" class="ghost" data-calculated-detail="${definition.id}">상세</button><span class="action-btns" data-role-gate="admin">`
           + `<button type="button" class="ghost" data-pue-definition-edit="${definition.id}">수정</button>`
           + `<button type="button" class="ghost" data-pue-definition-toggle="${definition.id}" data-pue-definition-enabled="${!definition.collectionEnabled}">${definition.collectionEnabled ? "수집 중지" : "수집 시작"}</button>`
-          + `<button type="button" class="danger" data-pue-definition-delete="${definition.id}">삭제</button></div></td></tr>`;
-      }).join("") || '<tr><td colspan="5"><div class="empty">등록된 PUE 수집 정의가 없습니다.</div></td></tr>';
+          + `<button type="button" class="danger" data-pue-definition-delete="${definition.id}">삭제</button></span></div></td></tr>`;
+      }).join("") || '<tr><td colspan="5"><div class="empty">등록된 계산 지표가 없습니다.</div></td></tr>';
+      body.querySelectorAll("[data-calculated-detail]").forEach((button) => button.onclick = () => openCalculatedMetricStatus(Number(button.dataset.calculatedDetail)));
       body.querySelectorAll("[data-pue-definition-edit]").forEach((button) => button.onclick = () => editPueDefinition(Number(button.dataset.pueDefinitionEdit)));
       body.querySelectorAll("[data-pue-definition-toggle]").forEach((button) => button.onclick = async () => {
         try {
-          await api(`/api/manager/pue-definitions/${button.dataset.pueDefinitionToggle}/collection-enabled?enabled=${button.dataset.pueDefinitionEnabled}`, { method: "PATCH" });
+          await api(`/api/manager/calculated-metrics/${button.dataset.pueDefinitionToggle}/collection-enabled?enabled=${button.dataset.pueDefinitionEnabled}`, { method: "PATCH" });
           await loadPueDefinitions();
         } catch (e) { toast(e.message, true); }
       });
       body.querySelectorAll("[data-pue-definition-delete]").forEach((button) => button.onclick = async () => {
-        if (!confirm("PUE 수집 정의를 삭제할까요? 연결된 위젯은 조회할 수 없게 됩니다.")) return;
-        try { await api(`/api/manager/pue-definitions/${button.dataset.pueDefinitionDelete}`, { method: "DELETE" }); await clearPueForm(); await loadPueDefinitions(); }
+        if (!confirm("계산 지표를 삭제할까요? 연결된 위젯은 먼저 삭제해야 합니다.")) return;
+        try { await api(`/api/manager/calculated-metrics/${button.dataset.pueDefinitionDelete}`, { method: "DELETE" }); await clearPueForm(); await loadPueDefinitions(); }
         catch (e) { toast(e.message, true); }
       });
     }
 
-    function pueGroup(role) {
-      return role === "total" ? state.pueTotalGroup : state.pueCoolerGroup;
+    function closeCalculatedMetricStatus() {
+      $("calculatedMetricStatusModal").classList.remove("open");
+      $("calculatedMetricStatusModal").setAttribute("aria-hidden", "true");
+      state.selectedCalculatedMetricId = null;
     }
 
-    function setPueGroup(role, value) {
-      if (role === "total") state.pueTotalGroup = value;
-      else state.pueCoolerGroup = value;
+    function openCalculatedMetricStatus(id) {
+      state.selectedCalculatedMetricId = id;
+      $("calculatedMetricStatusTitle").textContent = "계산 지표 수집 상세";
+      $("calculatedMetricStatusModal").classList.add("open");
+      $("calculatedMetricStatusModal").setAttribute("aria-hidden", "false");
+      $("calculatedMetricStatusClose").focus();
+      loadCalculatedMetricStatus(id);
     }
 
-    function pueGroupById(id) {
-      return state.deviceGroups.find((group) => Number(group.id) === Number(id));
+    async function loadCalculatedMetricStatus(id) {
+      $("calculatedMetricStatusBody").innerHTML = '<div class="empty">실행·저장 상태를 확인하는 중입니다.</div>';
+      try {
+        const data = await api(`/api/manager/calculated-metrics/${id}/status`);
+        if (state.selectedCalculatedMetricId !== id) return;
+        const definition = data.definition;
+        $("calculatedMetricStatusTitle").textContent = `${definition.name} · 수집 상세`;
+        const execution = { STOPPED:"수집 중지", COLLECTOR_UNAVAILABLE:"Collector 확인 불가", NOT_SYNCED:"Collector 미등록", RUNNING:"계산 실행 중", FAILING:"최근 실행 실패", WAITING_FIRST_RUN:"첫 실행 대기", NORMAL:"최근 실행 성공" }[data.executionStatus] || data.executionStatus;
+        const storage = { SAVED:"저장값 있음", NO_RECENT_RESULT:"현재 설정의 최근 30일 저장값 없음", INFLUX_UNAVAILABLE:"InfluxDB 확인 불가" }[data.storageStatus] || data.storageStatus;
+        const date = (value) => value ? esc(new Date(value).toLocaleString("ko-KR")) : "—";
+        const number = (value) => Number(value).toLocaleString("ko-KR", { maximumFractionDigits: 6 });
+        const lastInputs = data.lastInputs || {};
+        const sourceRows = (definition.sources || []).map((source) => {
+          const hasValue = Object.prototype.hasOwnProperty.call(lastInputs, source.alias);
+          return `<tr><td class="mono"><b>${esc(source.alias || "")}</b></td><td>${esc(source.deviceName || "")} (#${esc(source.deviceId)})</td>`
+            + `<td>${esc(source.pointName)}</td><td><b>${hasValue ? esc(number(lastInputs[source.alias])) : "—"}</b></td>`
+            + `<td>${esc((source.protocol || "").toUpperCase())}</td></tr>`;
+        }).join("");
+        const isPue = String(definition.resultUnit || "").trim().toUpperCase() === "PUE";
+        const resultUnit = isPue ? "PUE · 단위 없는 비율" : (definition.resultUnit || "결과 단위 미설정");
+        $("calculatedMetricStatusBody").innerHTML = `
+          <div class="calculated-result"><div class="result-label">최근 계산 결과 · ${esc(storage)}</div>
+            <strong class="result-value">${data.lastValue == null ? "저장값 없음" : esc(number(data.lastValue))}</strong>
+            <div class="result-unit">${esc(resultUnit)}</div><div class="muted" style="margin-top:8px">마지막 저장: ${date(data.lastSavedAt)}</div>
+            ${isPue ? '<div class="muted" style="margin-top:5px">PUE는 같은 단위의 전체 전력 ÷ IT 전력으로 구한 비율이라 W·kWh 같은 단위가 붙지 않습니다.</div>' : ""}
+          </div>
+          <div class="stats"><div class="stat"><div class="k">수집 설정</div><div class="v">${definition.collectionEnabled ? "ON" : "OFF"}</div></div>
+          <div class="stat"><div class="k">Collector 실행</div><div class="v" style="font-size:16px">${esc(execution)}</div></div>
+          <div class="stat"><div class="k">InfluxDB 결과</div><div class="v" style="font-size:16px">${esc(storage)}</div></div></div>
+          <div class="calculated-detail-section"><h3>계산 공식</h3><p><code>${esc(definition.formula)}</code></p>
+            <p class="muted">수집 주기: <span class="mono">${esc(definition.calculationCron)}</span> · 설정 버전: ${esc(definition.configVersion)}</p></div>
+          <div class="calculated-detail-section"><h3>입력 항목과 마지막 계산에 사용한 값</h3>
+            <div class="table-wrap"><table><thead><tr><th>변수</th><th>원본 장비</th><th>측정항목</th><th>입력값</th><th>프로토콜</th></tr></thead><tbody>${sourceRows}</tbody></table></div></div>
+          <div class="calculated-detail-section"><h3>Collector 실행 이력</h3>
+            <p>마지막 성공: ${date(data.lastSuccessAt)} · 마지막 실패: ${date(data.lastFailureAt)} · 연속 실패: ${esc(data.consecutiveFailureCount)}회</p>
+            ${data.lastFailureReason ? `<p class="chip warn" style="white-space:normal">마지막 실패 원인(이력): ${esc(data.lastFailureReason)}</p>` : ""}
+            <p class="muted" style="font-size:12px">실행 이력은 Collector 재시작 시 초기화됩니다. 위 저장 결과와 입력값은 InfluxDB의 현재 설정 버전 기준입니다.</p></div>`;
+      } catch (error) {
+        if (state.selectedCalculatedMetricId === id) $("calculatedMetricStatusBody").innerHTML = `<div class="empty">상세 조회 실패: ${esc(error.message)}</div>`;
+      }
     }
 
     async function fillPueDeviceGroupPicks() {
-      if (!$("pueTotalDeviceGroup")) return;
-      const selectedIds = new Set([state.pueTotalGroup?.deviceGroupId, state.pueCoolerGroup?.deviceGroupId].filter(Boolean));
-      const groups = state.deviceGroups.filter((group) => group.enabled && group.deviceCount > 0);
-      for (const role of ["total", "cooler"]) {
-        const prefix = role === "total" ? "pueTotal" : "pueCooler";
-        const current = pueGroup(role);
-        const available = groups.filter((group) => !selectedIds.has(group.id) || Number(group.id) === Number(current?.deviceGroupId));
-        fillSelect($(prefix + "DeviceGroup"), available, (group) =>
-          `<option value="${group.id}">${esc(group.name)} · 장비 ${group.deviceCount}대</option>`,
-          available.length ? "장비 그룹 선택" : "사용 가능한 장비 그룹 없음");
-        $(prefix + "DeviceGroup").value = current?.deviceGroupId ? String(current.deviceGroupId) : "";
-        await loadPueGroupPointPick(role, true);
-      }
-    }
-
-    function resetPueGroupPointPick(role) {
-      const prefix = role === "total" ? "pueTotal" : "pueCooler";
-      const pointSelect = $(prefix + "Point");
-      pointSelect.innerHTML = '<option value="">그룹 먼저 선택</option>';
-      pointSelect.disabled = true;
-    }
-
-    async function loadPueGroupPointPick(role, preserve = false) {
-      const prefix = role === "total" ? "pueTotal" : "pueCooler";
-      const groupId = Number($(prefix + "DeviceGroup").value);
-      const pointSelect = $(prefix + "Point");
-      const group = pueGroupById(groupId);
-      if (!group) {
-        if (!preserve) setPueGroup(role, null);
-        resetPueGroupPointPick(role);
-        renderPueGroups();
-        return;
-      }
+      if (!$("pueSourcePick")) return;
       try {
-        const modelIds = [...new Set(group.devices.filter((device) => device.enabled !== false).map((device) => Number(device.modelId)))];
-        const pointLists = await Promise.all(modelIds.map((modelId) => loadSnmpPointsForModel(modelId)));
-        const common = pointLists.reduce((names, points) => {
-          const available = new Set(points.filter((point) =>
-            String(point.dataPointType || "").toUpperCase() === "POWER" && String(point.unit || "").trim().toUpperCase() === "W")
-            .map((point) => String(point.name).toUpperCase()));
-          return names.filter((name) => available.has(name));
-        }, pointLists[0]?.filter((point) => String(point.dataPointType || "").toUpperCase() === "POWER" && String(point.unit || "").trim().toUpperCase() === "W")
-          .map((point) => String(point.name).toUpperCase()) || []);
-        const points = pointLists[0]?.filter((point) => common.includes(String(point.name).toUpperCase())) || [];
-        fillSelect(pointSelect, points, (point) =>
-          `<option value="${esc(point.name)}">${esc(formatPointLabel(point))}</option>`,
-          points.length ? "공통 W 단위 POWER 측정항목 선택" : "그룹 전체의 공통 W POWER 측정항목 없음");
-        const current = pueGroup(role);
-        pointSelect.value = preserve && current?.deviceGroupId === groupId ? current.pointName || "" : "";
-        pointSelect.disabled = !points.length;
-        if (!preserve) setPueGroup(role, pointSelect.value ? { deviceGroupId: groupId, pointName: pointSelect.value } : { deviceGroupId: groupId, pointName: null });
-      } catch (e) {
-        resetPueGroupPointPick(role);
-        toast("PUE 그룹 측정항목 조회 실패: " + e.message, true);
-      }
+        state.calculatedSourceOptions = await api("/api/manager/calculated-metrics/sources");
+        fillSelect($("pueSourcePick"), state.calculatedSourceOptions, (source, index) =>
+          `<option value="${index}">${esc(source.deviceName)} (#${source.deviceId}) · ${esc(source.protocol.toUpperCase())} · ${esc(source.pointName)}${source.unit ? ` (${esc(source.unit)})` : ""}</option>`,
+          state.calculatedSourceOptions.length ? "장비·측정항목 선택" : "선택 가능한 SNMP·Modbus 측정항목 없음");
+      } catch (error) { toast("계산 입력 항목 조회 실패: " + error.message, true); }
       renderPueGroups();
     }
 
     function renderPueGroups() {
-      for (const role of ["total", "cooler"]) {
-        const groupConfig = pueGroup(role);
-        const box = $(role === "total" ? "pueTotalGroupInfo" : "pueCoolerGroupInfo");
-        const group = pueGroupById(groupConfig?.deviceGroupId);
-        box.innerHTML = group && groupConfig?.pointName
-          ? `<div class="pick-item"><div><b>${esc(group.name)}</b><div class="muted" style="font-size:12px">${esc(groupConfig.pointName)} · W · 장비 ${group.deviceCount}대가 자동 반영됩니다.</div></div></div>`
-          : '<div class="empty" style="padding:12px">장비 그룹과 공통 W 단위 POWER 측정항목을 선택하세요.</div>';
+      const box = $("pueSourceList");
+      if (box) {
+        box.innerHTML = state.calculatedSources.length
+          ? state.calculatedSources.map((source, index) => `<div class="pick-item"><div><b class="mono">${esc(source.alias)}</b> = ${esc(source.deviceName)} · ${esc(source.protocol.toUpperCase())} · ${esc(source.pointName)}</div><button type="button" class="ghost" data-calculated-remove="${index}" data-role-gate="admin">제거</button></div>`).join("")
+          : '<div class="empty" style="padding:12px">공식에 사용할 포인트를 추가하세요.</div>';
+        box.querySelectorAll("[data-calculated-remove]").forEach((button) => button.onclick = () => {
+          state.calculatedSources.splice(Number(button.dataset.calculatedRemove), 1);
+          renderPueGroups();
+        });
       }
-      $("wBody").querySelectorAll("[data-pue]").forEach((btn) => {
-        btn.onclick = async () => {
-          try {
-            const data = await api(`/api/manager/query/pue?widgetId=${btn.dataset.pue}`);
-             renderPueResult(data, true);
-            $("wLastOut").innerHTML = $("pueResult").innerHTML;
-          } catch (e) { $("wLastOut").innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
-        };
+      renderCalculatedFormulaBuilder();
+    }
+
+    function renderCalculatedFormulaBuilder() {
+      const tools = $("pueFormulaTools");
+      if (!tools) return;
+      const tokens = state.calculatedSources.map((source) => source.alias);
+      tools.innerHTML = tokens.map((alias) => `<button type="button" class="ghost mono" data-calculated-token="${esc(alias)}" title="${esc(alias)} 항목 삽입">${esc(alias)}</button>`).join("")
+        + ["+", "-", "*", "/", "(", ")"].map((token) => `<button type="button" class="ghost mono" data-calculated-token="${token}" title="${token} 삽입">${token}</button>`).join("");
+      tools.querySelectorAll("[data-calculated-token]").forEach((button) => button.onclick = () => {
+        if (state.calculatedRatioMode) {
+          state.calculatedRatioMode = false;
+          renderCalculatedFormulaBuilder();
+        }
+        const field = $("pueFormula");
+        const token = button.dataset.calculatedToken;
+        const text = ["+", "-", "*", "/"].includes(token) ? ` ${token} ` : token;
+        const start = field.selectionStart ?? field.value.length;
+        const end = field.selectionEnd ?? start;
+        field.value = field.value.slice(0, start) + text + field.value.slice(end);
+        field.focus();
+        field.setSelectionRange(start + text.length, start + text.length);
       });
+
+      $("pueRatioBuilder").style.display = state.calculatedRatioMode ? "" : "none";
+      if (!state.calculatedRatioMode) return;
+      const aliases = state.calculatedSources.map((source) => source.alias);
+      state.calculatedRatioTop = state.calculatedRatioTop.filter((alias) => aliases.includes(alias));
+      state.calculatedRatioBottom = state.calculatedRatioBottom.filter((alias) => aliases.includes(alias));
+      $("pueRatioSources").innerHTML = state.calculatedSources.map((source) => {
+        const alias = source.alias;
+        const top = state.calculatedRatioTop.includes(alias);
+        const bottom = state.calculatedRatioBottom.includes(alias);
+        return `<div class="calculated-ratio-source"><span class="source-name"><b class="mono">${esc(alias)}</b> · ${esc(source.deviceName)} · ${esc(source.pointName)}</span>`
+          + `<span class="row"><button type="button" class="ghost${top ? " selected" : ""}" data-ratio-alias="${esc(alias)}" data-ratio-group="top" aria-pressed="${top}">위쪽 합계</button>`
+          + `<button type="button" class="ghost${bottom ? " selected" : ""}" data-ratio-alias="${esc(alias)}" data-ratio-group="bottom" aria-pressed="${bottom}">아래쪽 합계</button></span></div>`;
+      }).join("") || '<div class="muted">먼저 측정항목을 추가하세요.</div>';
+      $("pueRatioSources").querySelectorAll("[data-ratio-alias]").forEach((button) => button.onclick = () => {
+        const alias = button.dataset.ratioAlias;
+        const group = button.dataset.ratioGroup;
+        const wasSelected = (group === "top" ? state.calculatedRatioTop : state.calculatedRatioBottom).includes(alias);
+        state.calculatedRatioTop = state.calculatedRatioTop.filter((item) => item !== alias);
+        state.calculatedRatioBottom = state.calculatedRatioBottom.filter((item) => item !== alias);
+        if (!wasSelected) (group === "top" ? state.calculatedRatioTop : state.calculatedRatioBottom).push(alias);
+        renderCalculatedFormulaBuilder();
+      });
+      const assigned = state.calculatedRatioTop.length + state.calculatedRatioBottom.length;
+      const complete = aliases.length > 0 && assigned === aliases.length && state.calculatedRatioTop.length > 0 && state.calculatedRatioBottom.length > 0;
+      $("pueFormula").value = complete
+        ? `(${state.calculatedRatioTop.join(" + ")}) / (${state.calculatedRatioBottom.join(" + ")})` : "";
+      $("pueRatioSummary").textContent = complete
+        ? `공식 완성: ${$("pueFormula").value} · 아래 ‘공식 검사’를 눌러 확인하세요.`
+        : `${assigned}/${aliases.length}개 배치 · 위쪽 ${state.calculatedRatioTop.length}개 · 아래쪽 ${state.calculatedRatioBottom.length}개 (양쪽에 모두 항목이 필요합니다)`;
     }
 
     function renderPueResult(data, fromInflux = false) {
       const value = data.value == null ? "계산 불가" : Number(data.value).toFixed(4);
-      const statusLabel = { OK: "정상", MISSING_DATA: "일부 데이터 없음", STALE_DATA: "저장값 오래됨", ZERO_COOLER_POWER: "Cooler 전력 0" }[data.calculationStatus] || data.calculationStatus;
-      const rows = (data.devices || []).map((d) => `<tr><td>${d.role === "total" ? "총전력" : "Cooler"}</td>`
-        + `<td>${esc(d.deviceName)} (#${d.deviceId})</td><td>${esc(d.pointName)}</td>`
-        + `<td>${d.value == null ? "데이터 없음" : `${esc(d.value)} ${esc(d.unit || data.unit || "")}`}</td></tr>`).join("");
-      const detailRows = rows || `<tr><td colspan="4" class="muted">PUE 수집 정의의 장비별 값은 InfluxDB에서 합산되어 저장됩니다.</td></tr>`;
-      $("pueResult").innerHTML = `<div class="stats" style="grid-template-columns:repeat(3,minmax(0,1fr))">`
-        + `<div class="stat"><div class="k">PUE</div><div class="v">${esc(value)}</div></div>`
-        + `<div class="stat"><div class="k">총전력</div><div class="v">${data.totalPower == null ? "–" : `${esc(data.totalPower)} ${esc(data.unit)}`}</div></div>`
-        + `<div class="stat"><div class="k">Cooler Power</div><div class="v">${data.coolerPower == null ? "–" : `${esc(data.coolerPower)} ${esc(data.unit)}`}</div></div></div>`
-        + `<p class="muted" style="font-size:12px">${fromInflux ? "값 출처: InfluxDB 저장 최신값 · " : "값 출처: 원본 포인트 계산 · "}상태: ${esc(statusLabel)} · 기간: ${esc(data.rangePreset)}`
-        + `${data.missingDeviceIds?.length ? ` · 데이터 없는 장비: ${data.missingDeviceIds.map((id) => `#${id}`).join(", ")}` : ""}`
-        + `${data.staleDeviceIds?.length ? ` · 오래된 데이터: ${data.staleDeviceIds.map((id) => `#${id}`).join(", ")}` : ""}</p>`
-        + `<div class="table-wrap"><table><thead><tr><th>역할</th><th>장비</th><th>측정항목</th><th>최신값</th></tr></thead><tbody>${detailRows}</tbody></table></div>`;
+      const statusLabel = { OK: "정상", MISSING_DATA: "계산 결과 없음", STALE_DATA: "저장값 오래됨" }[data.calculationStatus] || data.calculationStatus;
+      $("pueResult").innerHTML = `<div class="stats"><div class="stat"><div class="k">계산 결과</div><div class="v">${esc(value)} ${esc(data.unit || "")}</div></div></div>`
+        + `<p class="muted">${fromInflux ? "같은 수집 회차에 읽은 값으로 계산한 InfluxDB 저장 결과" : "계산 결과"} · 상태: ${esc(statusLabel)} · 기간: ${esc(data.rangePreset)}</p>`
+        + `<div class="muted mono">${esc(data.formula || "")}</div>`
+        + (Object.keys(data.inputs || {}).length ? `<div class="muted" style="margin-top:8px">입력값: ${Object.entries(data.inputs).map(([alias, input]) => `${esc(alias)}=${esc(input)}`).join(" · ")}</div>` : "");
     }
 
     function psychrometricSources(role) {
@@ -8778,18 +8875,6 @@
       fillPowerDistributionPicks();
     }
 
-    $("pueTotalDeviceGroup")?.addEventListener("change", async () => { await loadPueGroupPointPick("total"); await fillPueDeviceGroupPicks(); });
-    $("pueCoolerDeviceGroup")?.addEventListener("change", async () => { await loadPueGroupPointPick("cooler"); await fillPueDeviceGroupPicks(); });
-    $("pueTotalPoint")?.addEventListener("change", () => {
-      const groupId = Number($("pueTotalDeviceGroup").value);
-      setPueGroup("total", groupId ? { deviceGroupId: groupId, pointName: $("pueTotalPoint").value || null } : null);
-      renderPueGroups();
-    });
-    $("pueCoolerPoint")?.addEventListener("change", () => {
-      const groupId = Number($("pueCoolerDeviceGroup").value);
-      setPueGroup("cooler", groupId ? { deviceGroupId: groupId, pointName: $("pueCoolerPoint").value || null } : null);
-      renderPueGroups();
-    });
     $("wPsychTemperatureDevice")?.addEventListener("change", () => loadPsychrometricPointPick("temperature"));
     $("wPsychHumidityDevice")?.addEventListener("change", () => loadPsychrometricPointPick("humidity"));
     $("wPsychTemperaturePoint")?.addEventListener("change", () => { $("wPsychTemperatureAdd").disabled = !$("wPsychTemperaturePoint").value; });
@@ -8800,21 +8885,54 @@
     $("wPowerDevice")?.addEventListener("change", loadPowerDistributionPointPick);
     $("wPowerPoint")?.addEventListener("change", () => { $("wPowerSourceAdd").disabled = !$("wPowerPoint").value; });
     $("wPowerSourceAdd")?.addEventListener("click", addPowerDistributionSource);
+    $("pueSourceAdd")?.addEventListener("click", () => {
+      const selected = $("pueSourcePick").value === "" ? null
+        : state.calculatedSourceOptions[Number($("pueSourcePick").value)];
+      let alias = $("pueSourceAlias").value.trim();
+      if (!selected) return toast("측정항목을 선택하세요", true);
+      if (!alias) {
+        let next = 1;
+        while (state.calculatedSources.some((source) => source.alias === `P${next}`)) next++;
+        alias = `P${next}`;
+      }
+      if (!/^[A-Za-z][A-Za-z0-9_]{0,31}$/.test(alias)) return toast("변수명은 영문자로 시작하고 영문·숫자·_만 사용할 수 있습니다", true);
+      if (state.calculatedSources.some((source) => source.alias === alias)) return toast("이미 사용 중인 변수명입니다", true);
+      if (state.calculatedSources.length >= 32) return toast("최대 32개 항목까지 사용할 수 있습니다", true);
+      state.calculatedSources.push({ ...selected, alias });
+      $("pueSourceAlias").value = "";
+      renderPueGroups();
+    });
+    $("pueRatioStart")?.addEventListener("click", () => {
+      if (!state.calculatedSources.length) return toast("먼저 계산에 사용할 측정항목을 추가하세요", true);
+      if (state.calculatedRatioMode) return;
+      if (!state.calculatedRatioMode && $("pueFormula").value.trim()
+          && !confirm("현재 계산 공식을 합계 ÷ 합계 공식으로 바꿀까요?")) return;
+      state.calculatedRatioMode = true;
+      state.calculatedRatioTop = [];
+      state.calculatedRatioBottom = [];
+      renderCalculatedFormulaBuilder();
+    });
+    $("pueFormulaClear")?.addEventListener("click", () => {
+      state.calculatedRatioMode = false;
+      state.calculatedRatioTop = [];
+      state.calculatedRatioBottom = [];
+      $("pueFormula").value = "";
+      renderCalculatedFormulaBuilder();
+    });
+    $("pueFormula")?.addEventListener("input", () => {
+      if (state.calculatedRatioMode) {
+        state.calculatedRatioMode = false;
+        renderCalculatedFormulaBuilder();
+      }
+    });
     $("pueCalculate")?.addEventListener("click", async () => {
       try {
-        if (!state.pueTotalGroup?.pointName || !state.pueCoolerGroup?.pointName) {
-          throw new Error("총전력 그룹과 Cooler 그룹의 POWER 측정항목을 각각 선택하세요");
-        }
-        const totalGroup = pueGroupById(state.pueTotalGroup.deviceGroupId);
-        const coolerGroup = pueGroupById(state.pueCoolerGroup.deviceGroupId);
-        const body = {
-          totalSources: totalGroup.devices.map((device) => ({ deviceId: device.id, pointName: state.pueTotalGroup.pointName })),
-          coolerSources: coolerGroup.devices.map((device) => ({ deviceId: device.id, pointName: state.pueCoolerGroup.pointName })),
-          rangePreset: "last_24h",
-        };
-        const data = await api("/api/manager/query/pue", { method: "POST", body: JSON.stringify(body) });
-        $("pueOut").textContent = JSON.stringify({ request: body, response: data }, null, 2);
-        renderPueResult(data);
+        const formula = $("pueFormula").value.trim();
+        if (!formula || formula.length > 500 || !/^[A-Za-z0-9_+*/().\s-]+$/.test(formula)) throw new Error("지원되는 계산식은 변수·숫자·사칙연산·괄호만 포함합니다");
+        const refs = [...new Set(formula.match(/[A-Za-z][A-Za-z0-9_]*/g) || [])].sort();
+        const aliases = state.calculatedSources.map((source) => source.alias).sort();
+        if (!refs.length || JSON.stringify(refs) !== JSON.stringify(aliases)) throw new Error("계산식 변수와 추가한 측정항목 변수명이 정확히 일치해야 합니다");
+        $("pueResult").innerHTML = '<div class="empty">공식의 변수 연결을 확인했습니다. 저장 후 첫 수집 회차의 결과가 위젯에 표시됩니다.</div>';
       } catch (e) {
         $("pueResult").innerHTML = `<div class="empty">${esc(e.message)}</div>`;
         toast(e.message, true);
@@ -8823,23 +8941,23 @@
     $("pueWidgetAdd")?.addEventListener("click", async () => {
       try {
         const name = $("pueWidgetName").value.trim();
-        if (!name) throw new Error("PUE 정의 이름을 입력하세요");
-        if (!state.pueTotalGroup?.pointName || !state.pueCoolerGroup?.pointName) {
-          throw new Error("총전력 그룹과 Cooler 그룹의 POWER 측정항목을 각각 선택하세요");
-        }
+        if (!name) throw new Error("계산 지표 이름을 입력하세요");
+        if (!state.calculatedSources.length) throw new Error("계산에 사용할 측정항목을 추가하세요");
+        if (!$("pueFormula").value.trim()) throw new Error("계산 공식을 완성하세요. 합계 ÷ 합계 구성에서는 모든 항목을 배치해야 합니다");
         const body = {
           name,
+          formula: $("pueFormula").value.trim(),
+          resultUnit: $("pueResultUnit").value.trim(),
           calculationCron: $("pueCalculationCron").value.trim() || null,
           collectionEnabled: $("pueCollectionEnabled").value === "true",
-          totalDeviceGroups: [state.pueTotalGroup],
-          coolerDeviceGroups: [state.pueCoolerGroup],
+          sources: state.calculatedSources.map(({ deviceId, alias, pointName, protocol }) => ({ deviceId, alias, pointName, protocol })),
         };
         const editingId = state.editingPueDefinitionId;
-        const saved = await api(editingId ? `/api/manager/pue-definitions/${editingId}` : "/api/manager/pue-definitions", {
+        const saved = await api(editingId ? `/api/manager/calculated-metrics/${editingId}` : "/api/manager/calculated-metrics", {
           method: editingId ? "PUT" : "POST", body: JSON.stringify(body)
         });
         $("pueOut").textContent = JSON.stringify({ request: body, response: saved }, null, 2);
-        toast(`PUE 수집 정의 #${saved.id}${editingId ? "을 수정했습니다" : "을 만들었습니다"}`);
+        toast(`계산 지표 #${saved.id}${editingId ? "을 수정했습니다" : "을 만들었습니다"}`);
         clearPueForm();
         await loadPueDefinitions();
       } catch (e) { toast(e.message, true); }
@@ -8848,9 +8966,13 @@
 
     function clearPueForm() {
       state.editingPueDefinitionId = null;
-      state.pueTotalGroup = null;
-      state.pueCoolerGroup = null;
+      state.calculatedSources = [];
+      state.calculatedRatioMode = false;
+      state.calculatedRatioTop = [];
+      state.calculatedRatioBottom = [];
       $("pueWidgetName").value = "";
+      $("pueFormula").value = "";
+      $("pueResultUnit").value = "";
       $("pueCalculationCron").value = "0 */5 * * * *";
       $("pueCollectionEnabled").value = "true";
       $("pueWidgetAdd").textContent = "수집 정의 저장";
@@ -8861,26 +8983,24 @@
 
     async function editPueDefinition(id) {
       const definition = state.pueDefinitions.find((item) => Number(item.id) === id);
-      if (!definition) return toast("PUE 수집 정의를 찾을 수 없습니다.", true);
+      if (!definition) return toast("계산 지표를 찾을 수 없습니다.", true);
       state.editingPueDefinitionId = definition.id;
-      const groups = definition.deviceGroups || [];
-      state.pueTotalGroup = groups.find((group) => group.role === "total")
-        ? { deviceGroupId: groups.find((group) => group.role === "total").deviceGroupId, pointName: groups.find((group) => group.role === "total").pointName } : null;
-      state.pueCoolerGroup = groups.find((group) => group.role === "cooler")
-        ? { deviceGroupId: groups.find((group) => group.role === "cooler").deviceGroupId, pointName: groups.find((group) => group.role === "cooler").pointName } : null;
-      if (!state.pueTotalGroup || !state.pueCoolerGroup) {
-        toast("기존 개별 장비 PUE 정의입니다. 장비 그룹을 선택해 그룹 방식으로 저장하면 전환됩니다.", true);
-      }
+      state.calculatedSources = definition.sources.map((source) => ({ ...source }));
+      state.calculatedRatioMode = false;
+      state.calculatedRatioTop = [];
+      state.calculatedRatioBottom = [];
       $("pueWidgetName").value = definition.name || "";
+      $("pueFormula").value = definition.formula || "";
+      $("pueResultUnit").value = definition.resultUnit || "";
       $("pueCalculationCron").value = definition.calculationCron || "0 */5 * * * *";
       $("pueCollectionEnabled").value = String(definition.collectionEnabled);
-      $("pueWidgetAdd").textContent = `PUE 정의 #${definition.id} 수정 저장`;
+      $("pueWidgetAdd").textContent = `계산 지표 #${definition.id} 수정 저장`;
       $("pueEditCancel").style.display = "";
       renderPueGroups();
       fillPueDeviceGroupPicks();
       $("pueResult").innerHTML = "";
       $("tab-widgets")?.scrollIntoView({ behavior: "smooth", block: "start" });
-      toast(`PUE 수집 정의 #${definition.id} 수정 모드`);
+      toast(`계산 지표 #${definition.id} 수정 모드`);
     }
     renderPueGroups();
 
@@ -9041,7 +9161,7 @@
           ? [...new Set(lastSources.flatMap((source) => source.pointNames))]
           : (kind === "count" || kind === "pue") ? [] : selectedWidgetPoints();
         const pueDefinitionId = kind === "pue" ? Number($("wPueDefinition").value) || null : null;
-        if (kind === "pue" && !pueDefinitionId) throw new Error("표시할 PUE 수집 정의를 선택하세요");
+        if (kind === "pue" && !pueDefinitionId) throw new Error("표시할 계산 지표를 선택하세요");
         if (kind === "last" && !lastSources.length) {
           throw new Error("장비마다 측정항목을 하나 이상 선택해 추가하세요");
         }

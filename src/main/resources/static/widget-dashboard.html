@@ -784,7 +784,7 @@
     }
 
     function aggregatePresetLabel(op) {
-      return ({ usage: "사용량", power: "전력 합", pue: "PUE" }[op] || op || "");
+      return ({ usage: "사용량", power: "전력 합", pue: "계산 지표" }[op] || op || "");
     }
 
     function renderDataStatus(status) {
@@ -833,7 +833,7 @@
 
     async function fetchPue(widget) {
       try {
-        return await api(`/api/manager/query/pue?widgetId=${widget.id}`);
+        return await api(`/api/manager/query/calculated?widgetId=${widget.id}`);
       } catch (err) {
         return { value: null, error: err.message };
       }
@@ -887,19 +887,11 @@
 
     function renderPueBody(pue) {
       if (!pue || pue.error) return `<div class="empty" style="padding:12px">${escapeHtml(pue?.error || "데이터 없음")}</div>`;
-      const status = ({ OK: "정상", MISSING_DATA: "일부 데이터 없음", ZERO_COOLER_POWER: "Cooler 전력 0" })[pue.calculationStatus] || pue.calculationStatus;
-      const rows = (pue.devices || []).map((d) => `<div class="series-row"><div><b>${escapeHtml(d.role === "total" ? "총전력" : "Cooler")}</b> · ${escapeHtml(d.deviceName || "")}</div>`
-        + `<div class="meta-line">${escapeHtml(d.pointName || "")} · ${d.time ? escapeHtml(new Date(d.time).toLocaleString()) : "데이터 없음"}</div>`
-        + `<div class="val">${d.value == null ? "–" : formatValue(d.value)} ${escapeHtml(d.unit || pue.unit || "")}</div></div>`).join("");
-      const issue = [
-        ...(pue.staleDeviceIds || []).map((id) => `오래된 데이터 #${id}`),
-        ...(pue.missingDeviceIds || []).filter((id) => !(pue.staleDeviceIds || []).includes(id)).map((id) => `데이터 없음 #${id}`),
-      ];
+      const status = ({ OK: "정상", MISSING_DATA: "계산 결과 없음", STALE_DATA: "저장값 오래됨" })[pue.calculationStatus] || pue.calculationStatus;
       return `<div class="count-label">${escapeHtml(pue.rangePreset || "")} · ${escapeHtml(status || "")}</div>`
-        + `<div class="count-total">${pue.value == null ? "–" : formatValue(pue.value)}</div>`
-        + `<div class="count-label">총전력 ${formatValue(pue.totalPower)} ${escapeHtml(pue.unit || "")} · Cooler ${formatValue(pue.coolerPower)} ${escapeHtml(pue.unit || "")}</div>`
-        + (issue.length ? `<div class="meta" style="margin-top:6px">${escapeHtml(issue.join(" · "))}</div>` : "")
-        + `<details style="margin-top:9px"><summary class="meta">장비별 상세</summary>${rows || '<div class="meta">소스 없음</div>'}</details>`;
+        + `<div class="count-total">${pue.value == null ? "–" : formatValue(pue.value)} ${escapeHtml(pue.unit || "")}</div>`
+        + `<div class="meta" style="margin-top:6px">${escapeHtml(pue.formula || "")}</div>`
+        + (Object.keys(pue.inputs || {}).length ? `<details style="margin-top:9px"><summary class="meta">이번 회차 입력값</summary>${Object.entries(pue.inputs).map(([alias, value]) => `<div class="series-row"><b>${escapeHtml(alias)}</b> ${formatValue(value)}</div>`).join("")}</details>` : "");
     }
 
     function psychrometricSeries(data, label) {
@@ -1180,11 +1172,9 @@
     function pueTrendChartData(data) {
       const trend = data.trend || [];
       return {
-        units: ["PUE", data.unit || "W"],
+        units: [data.unit || "값"],
         series: [
-          { label: "PUE", unit: "PUE", axis: "left", times: trend.map((point) => point.time), values: trend.map((point) => point.value) },
-          { label: "총전력", unit: data.unit || "W", axis: "right", times: trend.map((point) => point.time), values: trend.map((point) => point.totalPower) },
-          { label: "Cooler 전력", unit: data.unit || "W", axis: "right", times: trend.map((point) => point.time), values: trend.map((point) => point.coolerPower) },
+          { label: "계산 결과", unit: data.unit || "값", axis: "left", times: trend.map((point) => point.time), values: trend.map((point) => point.value) },
         ],
       };
     }
@@ -1193,9 +1183,9 @@
       if (state.editMode) return;
       const widget = state.widgets.find((item) => Number(item.id) === Number(widgetId));
       if (!widget || widget.queryKind !== "pue") return;
-      const data = await api(`/api/manager/query/pue?widgetId=${widget.id}&rangePreset=last_3d&window=15m`);
+      const data = await api(`/api/manager/query/calculated?widgetId=${widget.id}&rangePreset=last_3d&window=15m`);
       if (!data.trend?.length) {
-        log(`trend skipped #${widget.id}: 최근 3일 PUE 시계열 데이터 없음`);
+        log(`trend skipped #${widget.id}: 최근 3일 계산 결과 없음`);
         return;
       }
       const modal = $("trendModal");
@@ -1204,7 +1194,7 @@
         try { state.trendModalChart.destroy(); } catch (_) { /* ignore */ }
         state.trendModalChart = null;
       }
-      $("trendModalMeta").textContent = `최근 3일 · 15분 평균 · PUE / ${data.unit || "W"}`;
+      $("trendModalMeta").textContent = `최근 3일 · 15분 평균 · ${data.unit || "값"}`;
       modal.classList.add("open");
       state.trendModalChart = createChartInstance($("trendModalCanvas"), pueTrendChartData(data));
     }
