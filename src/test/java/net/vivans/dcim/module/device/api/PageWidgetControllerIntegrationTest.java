@@ -48,6 +48,7 @@ class PageWidgetControllerIntegrationTest {
     @Autowired
     private CommonCodeRepository commonCodeRepository;
 
+
     @Test
     void createAndListWidgets_filtersByPageCode() throws Exception {
         String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, userRepository, "widget-create", "password123");
@@ -326,20 +327,52 @@ class PageWidgetControllerIntegrationTest {
     }
 
     @Test
-    void pueWidget_createUpdateToggleAndDelete() throws Exception {
+    void calculatedWidget_createUpdateToggleAndDelete() throws Exception {
         String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, userRepository, "widget-pue", "password123");
         devicePageCodeId(accessToken, "dashboard", "Dashboard", 1);
         int totalDevice = createDevice(accessToken, "Pue-Total");
         int coolerDevice = createDevice(accessToken, "Pue-Cooler");
 
-        String created = mockMvc.perform(post("/api/manager/widgets/pue")
+        Integer protocolGroupId = findOrCreateCodeGroup(accessToken, "PROTOCOL_TYPE", "Protocol Type");
+        Integer snmpId = findOrCreateCommonCode(accessToken, protocolGroupId, "snmp", "SNMP", 1);
+        for (int deviceId : new int[]{totalDevice, coolerDevice}) {
+            mockMvc.perform(post("/api/manager/devices/{deviceId}/endpoints", deviceId)
+                            .header("Authorization", bearerToken(accessToken))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"protocolTypeId":%d,"host":"127.0.0.1","port":%d,"enabled":true}
+                                    """.formatted(snmpId, 16000 + deviceId)))
+                    .andExpect(status().isOk());
+        }
+        String definitionResponse = mockMvc.perform(post("/api/manager/calculated-metrics")
                         .header("Authorization", bearerToken(accessToken))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"pageCode":"dashboard","name":"사업장 PUE","rangePreset":"last_24h","freshnessMinutes":30,
-                                 "totalSources":[{"deviceId":%d,"pointName":"TOTAL_WT"}],
-                                 "coolerSources":[{"deviceId":%d,"pointName":"TOTAL_WT"}]}
+                                {"name":"사업장 계산 지표","formula":"FACILITY / IT","resultUnit":"PUE",
+                                 "sources":[{"deviceId":%d,"alias":"FACILITY","pointName":"TOTAL_WT","protocol":"snmp"},
+                                            {"deviceId":%d,"alias":"IT","pointName":"TOTAL_WT","protocol":"snmp"}]}
                                 """.formatted(totalDevice, coolerDevice)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.formula").value("FACILITY / IT"))
+                .andReturn().getResponse().getContentAsString();
+        int definitionId = objectMapper.readTree(definitionResponse).path("data").path("id").asInt();
+
+        mockMvc.perform(post("/api/manager/calculated-metrics")
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"MQTT 제외 확인","formula":"LORA","sources":[
+                                  {"deviceId":%d,"alias":"LORA","pointName":"TEMP","protocol":"mqtt"}]}
+                                """.formatted(totalDevice)))
+                .andExpect(status().isBadRequest());
+
+        String created = mockMvc.perform(post("/api/manager/widgets")
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"pageCode":"dashboard","name":"사업장 계산 지표","queryKind":"pue",
+                                 "pueDefinitionId":%d,"pueRangePreset":"last_24h","pueFreshnessMinutes":30}
+                                """.formatted(definitionId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.queryKind").value("pue"))
                 .andExpect(jsonPath("$.data.pueFreshnessMinutes").value(30))
@@ -347,16 +380,27 @@ class PageWidgetControllerIntegrationTest {
                 .andReturn().getResponse().getContentAsString();
         int widgetId = objectMapper.readTree(created).path("data").path("id").asInt();
 
-        mockMvc.perform(put("/api/manager/widgets/{id}/pue", widgetId)
+        mockMvc.perform(put("/api/manager/calculated-metrics/{id}", definitionId)
                         .header("Authorization", bearerToken(accessToken))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"name":"사업장 PUE 수정","enabled":true,"rangePreset":"today","freshnessMinutes":60,
-                                 "totalSources":[{"deviceId":%d,"pointName":"TOTAL_WT"}],
-                                 "coolerSources":[{"deviceId":%d,"pointName":"TOTAL_WT"}]}
+                                {"name":"사업장 계산 지표","formula":"FACILITY - IT","resultUnit":"W",
+                                 "sources":[{"deviceId":%d,"alias":"FACILITY","pointName":"TOTAL_WT","protocol":"snmp"},
+                                            {"deviceId":%d,"alias":"IT","pointName":"TOTAL_WT","protocol":"snmp"}]}
                                 """.formatted(totalDevice, coolerDevice)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.name").value("사업장 PUE 수정"))
+                .andExpect(jsonPath("$.data.formula").value("FACILITY - IT"))
+                .andExpect(jsonPath("$.data.configVersion").value(2));
+
+        mockMvc.perform(put("/api/manager/widgets/{id}", widgetId)
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"사업장 계산 지표 수정","enabled":true,"queryKind":"pue",
+                                 "pueDefinitionId":%d,"pueRangePreset":"today","pueFreshnessMinutes":60}
+                                """.formatted(definitionId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.name").value("사업장 계산 지표 수정"))
                 .andExpect(jsonPath("$.data.pueFreshnessMinutes").value(60));
 
         mockMvc.perform(patch("/api/manager/widgets/{id}/enabled", widgetId)

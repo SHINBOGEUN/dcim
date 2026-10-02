@@ -58,11 +58,11 @@ final class LastFluxBuilder {
                 from(bucket: %s)
                   |> range(start: -%s)
                   |> filter(fn: (r) => r["_measurement"] == %s)
-                  |> filter(fn: (r) => r["metric_kind"] == "pue")
-                  |> filter(fn: (r) => r["pue_definition_id"] == %s)
-                  |> filter(fn: (r) => r["_field"] == "value" or r["_field"] == "total_power" or r["_field"] == "cooler_power")
+                  |> filter(fn: (r) => r["metric_kind"] == "calculated")
+                  |> filter(fn: (r) => r["calculated_metric_id"] == %s)
+                  |> filter(fn: (r) => r["_field"] == "value" or r["_field"] =~ /^input_/)
                   |> group()
-                  |> pivot(rowKey: ["_time", "pue_definition_id"], columnKey: ["_field"], valueColumn: "_value")
+                  |> pivot(rowKey: ["_time", "calculated_metric_id"], columnKey: ["_field"], valueColumn: "_value")
                   |> sort(columns: ["_time"], desc: true)
                   |> limit(n: 1)
                 """.formatted(
@@ -71,6 +71,24 @@ final class LastFluxBuilder {
                 quote(measurement),
                 quote(String.valueOf(definitionId))
         );
+    }
+
+    static String buildCalculatedLastQuery(String bucket, String measurement, Integer definitionId,
+                                           Integer configVersion, Duration lookback) {
+        return """
+                from(bucket: %s)
+                  |> range(start: -%s)
+                  |> filter(fn: (r) => r["_measurement"] == %s)
+                  |> filter(fn: (r) => r["metric_kind"] == "calculated")
+                  |> filter(fn: (r) => r["calculated_metric_id"] == %s)
+                  |> filter(fn: (r) => r["calculated_config_version"] == %s)
+                  |> filter(fn: (r) => r["_field"] == "value" or r["_field"] =~ /^input_/)
+                  |> group()
+                  |> pivot(rowKey: ["_time", "calculated_metric_id"], columnKey: ["_field"], valueColumn: "_value")
+                  |> sort(columns: ["_time"], desc: true)
+                  |> limit(n: 1)
+                """.formatted(quote(bucket), toFluxDuration(lookback), quote(measurement),
+                quote(String.valueOf(definitionId)), quote(String.valueOf(configVersion)));
     }
 
     private static String orEquals(String tag, List<String> values) {

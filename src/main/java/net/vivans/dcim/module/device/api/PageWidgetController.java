@@ -77,25 +77,6 @@ public class PageWidgetController {
     }
 
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping("/pue")
-    @Operation(summary = "PUE 위젯 등록")
-    public ResponseEntity<ApiResponse<PageWidgetResponse>> createPueWidget(
-            @Valid @RequestBody PageWidgetPueCreateRequest request
-    ) {
-        return ResponseEntity.ok(ApiResponse.ok(pageWidgetQueryService.createPueWidget(request)));
-    }
-
-    @PreAuthorize("hasRole('ADMIN')")
-    @PutMapping("/{id}/pue")
-    @Operation(summary = "PUE 위젯 수정")
-    public ResponseEntity<ApiResponse<PageWidgetResponse>> updatePueWidget(
-            @PathVariable Integer id,
-            @Valid @RequestBody PageWidgetPueUpdateRequest request
-    ) {
-        return ResponseEntity.ok(ApiResponse.ok(pageWidgetQueryService.updatePueWidget(id, request)));
-    }
-
-    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/psychrometric")
     @Operation(summary = "사이코메트릭 위젯 등록")
     public ResponseEntity<ApiResponse<PageWidgetResponse>> createPsychrometricWidget(

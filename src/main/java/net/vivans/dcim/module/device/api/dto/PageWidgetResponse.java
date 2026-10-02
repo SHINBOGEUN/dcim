@@ -60,9 +60,11 @@ public record PageWidgetResponse(
                 widget.getPueDefinitionId(),
                 widget.getPue() == null || widget.getPue().getPueDefinition() == null
                         ? List.of()
-                        : widget.getPue().getPueDefinition().resolvedSources().stream()
-                        .map(PageWidgetPueSourceResponse::from)
-                        .toList(),
+                        : widget.getPue().getPueDefinition().getFormula() == null
+                            ? widget.getPue().getPueDefinition().resolvedSources().stream()
+                                .map(PageWidgetPueSourceResponse::from).toList()
+                            : widget.getPue().getPueDefinition().calculatedSources().stream()
+                                .map(PageWidgetPueSourceResponse::from).toList(),
                 widget.getQueryKind().name().equals("last")
                         ? widget.lastSourceDefinitions().stream()
                         .map(PageWidgetLastSourceResponse::from)

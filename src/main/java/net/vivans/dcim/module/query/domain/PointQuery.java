@@ -40,5 +40,9 @@ public interface PointQuery {
 
     Optional<PueLastPoint> findLastPue(Integer definitionId, Duration lookback);
 
+    default Optional<PueLastPoint> findLastCalculated(Integer definitionId, Integer configVersion, Duration lookback) {
+        return findLastPue(definitionId, lookback);
+    }
+
     List<PueSeriesPoint> findPueSeries(Integer definitionId, Instant start, Instant end, String window);
 }

@@ -143,9 +143,13 @@ public class PuePageWidgetHandler {
 
     private PueDefinition findDefinition(Integer id) {
         if (id == null) {
-            throw new IllegalArgumentException("pueDefinitionId is required for PUE widget");
+            throw new IllegalArgumentException("calculated metric id is required for this widget");
         }
-        return pueDefinitionRepository.findById(id)
+        PueDefinition definition = pueDefinitionRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("PueDefinition not found: " + id));
+        if (definition.getFormula() == null) {
+            throw new IllegalArgumentException("widget requires a calculated metric definition");
+        }
+        return definition;
     }
 }

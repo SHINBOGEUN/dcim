@@ -18,6 +18,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Slf4j
@@ -139,6 +140,18 @@ public class InfluxPointQuery implements PointQuery {
     }
 
     @Override
+    public Optional<PueLastPoint> findLastCalculated(Integer definitionId, Integer configVersion, Duration lookback) {
+        String flux = LastFluxBuilder.buildCalculatedLastQuery(properties.getBucket(),
+                properties.getMeasurement(), definitionId, configVersion, lookback);
+        try {
+            return mapPueLast(query(flux));
+        } catch (RuntimeException exception) {
+            log.error("Query calculated metric failed definitionId={}: {}", definitionId, exception.getMessage(), exception);
+            throw new QueryException("InfluxDB query failed");
+        }
+    }
+
+    @Override
     public List<PueSeriesPoint> findPueSeries(Integer definitionId, Instant start, Instant end, String window) {
         String flux = PueFluxBuilder.buildSeriesQuery(
                 properties.getBucket(), properties.getMeasurement(), definitionId, start, end, window);
@@ -187,11 +200,19 @@ public class InfluxPointQuery implements PointQuery {
                 Double value = toDouble(record.getValueByKey("value"));
                 Instant time = record.getTime();
                 if (value != null && time != null) {
+                      Map<String, Double> inputs = new java.util.LinkedHashMap<>();
+                      for (Map.Entry<String, Object> entry : record.getValues().entrySet()) {
+                          if (entry.getKey().startsWith("input_")) {
+                              Double input = toDouble(entry.getValue());
+                              if (input != null) inputs.put(entry.getKey().substring(6), input);
+                          }
+                      }
                     return Optional.of(new PueLastPoint(
                             value,
                             toDouble(record.getValueByKey("total_power")),
                             toDouble(record.getValueByKey("cooler_power")),
-                            time
+                              time,
+                              Map.copyOf(inputs)
                     ));
                 }
             }
