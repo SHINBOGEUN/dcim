@@ -3,8 +3,8 @@ package net.vivans.dcim.module.query.infrastructure.influx;
 import lombok.extern.slf4j.Slf4j;
 import net.vivans.dcim.module.query.domain.LastPoint;
 import net.vivans.dcim.module.query.domain.PointQuery;
-import net.vivans.dcim.module.query.domain.PueLastPoint;
-import net.vivans.dcim.module.query.domain.PueSeriesPoint;
+import net.vivans.dcim.module.query.domain.CalculatedMetricLastPoint;
+import net.vivans.dcim.module.query.domain.CalculatedMetricSeriesPoint;
 import net.vivans.dcim.module.query.domain.SeriesPoint;
 
 import java.time.Duration;
@@ -56,14 +56,14 @@ public class DisabledPointQuery implements PointQuery {
     }
 
     @Override
-    public Optional<PueLastPoint> findLastCalculated(Integer definitionId, Integer configVersion, Duration lookback) {
+    public Optional<CalculatedMetricLastPoint> findLastCalculated(Integer definitionId, Integer configVersion, Duration lookback) {
         log.warn("InfluxDB query disabled; returning empty calculated value definitionId={}", definitionId);
         return Optional.empty();
     }
 
     @Override
-    public List<PueSeriesPoint> findPueSeries(Integer definitionId, Instant start, Instant end, String window) {
-        log.warn("InfluxDB query disabled; returning empty PUE series definitionId={}", definitionId);
+    public List<CalculatedMetricSeriesPoint> findCalculatedSeries(Integer definitionId, Instant start, Instant end, String window) {
+        log.warn("InfluxDB query disabled; returning empty calculated metric series definitionId={}", definitionId);
         return List.of();
     }
 }

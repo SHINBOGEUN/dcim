@@ -14,8 +14,8 @@ import net.vivans.dcim.module.operations.api.dto.CollectionJobHealthResponse;
 import net.vivans.dcim.module.operations.api.dto.CollectionOperationsHealthResponse;
 import net.vivans.dcim.module.operations.api.dto.CollectionReconciliationResponse;
 import net.vivans.dcim.module.operations.config.OperationsHealthProperties;
-import net.vivans.dcim.module.pue.application.PueCollectorSyncService;
-import net.vivans.dcim.module.pue.domain.repository.PueDefinitionRepository;
+import net.vivans.dcim.module.calculated.application.CalculatedMetricCollectorSyncService;
+import net.vivans.dcim.module.calculated.domain.repository.CalculatedMetricRepository;
 import net.vivans.dcim.module.query.config.InfluxProperties;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
@@ -47,8 +47,8 @@ public class CollectionOperationsHealthService {
     private final CollectorJobClient collectorJobClient;
     private final CollectionTaskRepository collectionTaskRepository;
     private final CollectorSyncService collectorSyncService;
-    private final PueCollectorSyncService pueCollectorSyncService;
-    private final PueDefinitionRepository pueDefinitionRepository;
+    private final CalculatedMetricCollectorSyncService calculatedMetricCollectorSyncService;
+    private final CalculatedMetricRepository calculatedMetricRepository;
     private final OperationsHealthProperties properties;
 
     private volatile HttpClient httpClient;
@@ -86,12 +86,12 @@ public class CollectionOperationsHealthService {
     @Transactional
     public CollectionReconciliationResponse reconcile() {
         int synchronizedGroups = collectorSyncService.reconcileActiveGroups();
-        int activePueDefinitions = (int) pueDefinitionRepository.findAllByCollectionEnabled(true).size();
-        pueCollectorSyncService.repushActiveDefinitions();
+        int activeCalculatedMetrics = (int) calculatedMetricRepository.findAllByCollectionEnabled(true).size();
+        calculatedMetricCollectorSyncService.repushActiveDefinitions();
         return new CollectionReconciliationResponse(
                 Instant.now(),
                 synchronizedGroups,
-                activePueDefinitions,
+                activeCalculatedMetrics,
                 "활성 수집 그룹과 PUE 정의를 Collector에 다시 동기화했습니다."
         );
     }

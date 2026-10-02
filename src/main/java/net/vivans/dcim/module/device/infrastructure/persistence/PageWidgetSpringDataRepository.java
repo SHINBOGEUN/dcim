@@ -11,7 +11,7 @@ public interface PageWidgetSpringDataRepository extends JpaRepository<PageWidget
 
     @EntityGraph(attributePaths = {
             "pageCode", "pageCode.codeGroup", "points", "layout",
-            "aggregate", "count", "chart", "pue", "pue.pueDefinition", "psychrometric", "psychrometric.sources", "psychrometric.sources.device",
+            "aggregate", "count", "chart", "calculated", "calculated.calculatedMetric", "psychrometric", "psychrometric.sources", "psychrometric.sources.device",
             "powerDistribution", "powerDistribution.groups", "powerDistribution.groups.sources", "powerDistribution.groups.sources.device",
             "devices", "devices.device", "devices.device.deviceModel",
             "devices.device.deviceModel.deviceType", "devices.device.locationNode",
@@ -27,7 +27,7 @@ public interface PageWidgetSpringDataRepository extends JpaRepository<PageWidget
 
     @EntityGraph(attributePaths = {
             "pageCode", "pageCode.codeGroup", "points", "layout",
-            "aggregate", "count", "chart", "pue", "pue.pueDefinition", "psychrometric", "psychrometric.sources", "psychrometric.sources.device",
+            "aggregate", "count", "chart", "calculated", "calculated.calculatedMetric", "psychrometric", "psychrometric.sources", "psychrometric.sources.device",
             "powerDistribution", "powerDistribution.groups", "powerDistribution.groups.sources", "powerDistribution.groups.sources.device",
             "devices", "devices.device", "devices.device.deviceModel",
             "devices.device.deviceModel.deviceType", "devices.device.locationNode",
@@ -45,5 +45,5 @@ public interface PageWidgetSpringDataRepository extends JpaRepository<PageWidget
 
     boolean existsByPageCode_IdAndNameAndIdNot(Integer pageCodeId, String name, Integer id);
 
-    boolean existsByPue_PueDefinition_Id(Integer pueDefinitionId);
+    boolean existsByCalculated_CalculatedMetric_Id(Integer calculatedMetricId);
 }
