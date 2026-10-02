@@ -52,7 +52,7 @@ public class WidgetTrendQueryService {
             case psychrometric -> psychrometricTrend(widget, preset, resolvedWindow, range);
             case power_distribution -> powerDistributionTrend(widget, preset, resolvedWindow, range);
             case chart -> throw new IllegalArgumentException("chart widget must use /query/chart");
-            case pue -> throw new IllegalArgumentException("pue widget must use /query/pue");
+            case calculated -> throw new IllegalArgumentException("calculated widget must use /query/calculated");
             case count -> throw new IllegalArgumentException("count widget has no time-series data");
         };
     }

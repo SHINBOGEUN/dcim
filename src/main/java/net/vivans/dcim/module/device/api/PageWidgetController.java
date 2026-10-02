@@ -8,8 +8,6 @@ import lombok.RequiredArgsConstructor;
 import net.vivans.dcim.module.device.api.dto.PageWidgetCreateRequest;
 import net.vivans.dcim.module.device.api.dto.PageWidgetEnabledRequest;
 import net.vivans.dcim.module.device.api.dto.PageWidgetLayoutRequest;
-import net.vivans.dcim.module.device.api.dto.PageWidgetPueCreateRequest;
-import net.vivans.dcim.module.device.api.dto.PageWidgetPueUpdateRequest;
 import net.vivans.dcim.module.device.api.dto.PageWidgetPageResponse;
 import net.vivans.dcim.module.device.api.dto.PageWidgetPsychrometricCreateRequest;
 import net.vivans.dcim.module.device.api.dto.PageWidgetPsychrometricUpdateRequest;

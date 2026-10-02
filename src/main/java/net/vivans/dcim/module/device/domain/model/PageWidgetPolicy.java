@@ -65,7 +65,7 @@ final class PageWidgetPolicy {
             int deviceGroupCount,
             int modelCount
     ) {
-        if (queryKind == PageWidgetQueryKind.count || queryKind == PageWidgetQueryKind.pue
+        if (queryKind == PageWidgetQueryKind.count || queryKind == PageWidgetQueryKind.calculated
                 || queryKind == PageWidgetQueryKind.psychrometric
                 || queryKind == PageWidgetQueryKind.power_distribution) {
             return;

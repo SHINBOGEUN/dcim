@@ -37,7 +37,7 @@ class CalculatedMetricStatusServiceTest {
         when(collector.calculatedJobStatus(12)).thenReturn(new CollectorCalculatedJobResponse(
                 12, 1, false, null, failureAt, 2, "read timed out"));
         when(points.findLastCalculated(eq(12), eq(1), eq(Duration.ofDays(30))))
-                .thenReturn(Optional.of(new PueLastPoint(42, null, null,
+                .thenReturn(Optional.of(new PueLastPoint(42,
                         Instant.parse("2026-10-01T00:00:00Z"), Map.of("A", 42D))));
 
         var status = new CalculatedMetricStatusService(definitions, collector, points).getStatus(12);

@@ -9,7 +9,6 @@ import net.vivans.dcim.module.query.api.dto.ChartWidgetResponse;
 import net.vivans.dcim.module.query.api.dto.CollectionStatusResponse;
 import net.vivans.dcim.module.query.api.dto.CountWidgetResponse;
 import net.vivans.dcim.module.query.api.dto.LastWidgetResponse;
-import net.vivans.dcim.module.query.api.dto.PueQueryRequest;
 import net.vivans.dcim.module.query.api.dto.PueQueryResponse;
 import net.vivans.dcim.module.query.api.dto.PsychrometricWidgetResponse;
 import net.vivans.dcim.module.query.api.dto.PowerDistributionWidgetResponse;
@@ -128,7 +127,7 @@ public class QueryController {
                 aggregateQueryService.getAggregate(widgetId, rangePreset)));
     }
 
-    @GetMapping({"/pue", "/calculated"})
+    @GetMapping("/calculated")
     @Operation(summary = "저장된 계산 지표 위젯 조회", description = "rangePreset과 window를 함께 보내면 저장된 계산 시계열 trend도 반환합니다.")
     public ResponseEntity<ApiResponse<PueQueryResponse>> getPue(
             @RequestParam Integer widgetId,

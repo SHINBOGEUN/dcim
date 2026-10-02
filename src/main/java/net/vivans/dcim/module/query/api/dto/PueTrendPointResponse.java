@@ -5,8 +5,6 @@ import java.time.Instant;
 
 public record PueTrendPointResponse(
         Instant time,
-        BigDecimal value,
-        BigDecimal totalPower,
-        BigDecimal coolerPower
+        BigDecimal value
 ) {
 }
