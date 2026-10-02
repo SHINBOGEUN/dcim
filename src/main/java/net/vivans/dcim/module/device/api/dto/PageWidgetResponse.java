@@ -25,7 +25,7 @@ public record PageWidgetResponse(
         String pueRangePreset,
         Integer pueFreshnessMinutes,
         Integer pueDefinitionId,
-        List<PageWidgetPueSourceResponse> pueSources,
+        List<PageWidgetCalculatedSourceResponse> pueSources,
         List<PageWidgetLastSourceResponse> lastSources,
         List<PageWidgetPsychrometricSourceResponse> psychrometricSources,
         List<PageWidgetPowerDistributionGroupResponse> powerDistributionGroups,
@@ -55,13 +55,13 @@ public record PageWidgetResponse(
                 widget.getChartSeriesMode() == null ? null : widget.getChartSeriesMode().name(),
                 widget.getChartRangePreset() == null ? null : widget.getChartRangePreset().name(),
                 widget.getChartWindow(),
-                widget.getPueRangePreset() == null ? null : widget.getPueRangePreset().name(),
-                widget.getPueFreshnessMinutes(),
-                widget.getPueDefinitionId(),
-                widget.getPue() == null || widget.getPue().getPueDefinition() == null
+                widget.getCalculatedRangePreset() == null ? null : widget.getCalculatedRangePreset().name(),
+                widget.getCalculatedFreshnessMinutes(),
+                widget.getCalculatedMetricId(),
+                widget.getCalculated() == null || widget.getCalculated().getCalculatedMetric() == null
                         ? List.of()
-                        : widget.getPue().getPueDefinition().calculatedSources().stream()
-                            .map(PageWidgetPueSourceResponse::from).toList(),
+                        : widget.getCalculated().getCalculatedMetric().calculatedSources().stream()
+                            .map(PageWidgetCalculatedSourceResponse::from).toList(),
                 widget.getQueryKind().name().equals("last")
                         ? widget.lastSourceDefinitions().stream()
                         .map(PageWidgetLastSourceResponse::from)

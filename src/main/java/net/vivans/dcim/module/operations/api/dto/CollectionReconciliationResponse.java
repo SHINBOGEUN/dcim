@@ -5,7 +5,7 @@ import java.time.Instant;
 public record CollectionReconciliationResponse(
         Instant reconciledAt,
         int synchronizedGroupCount,
-        int activePueDefinitionCount,
+        int activeCalculatedMetricCount,
         String message
 ) {
 }

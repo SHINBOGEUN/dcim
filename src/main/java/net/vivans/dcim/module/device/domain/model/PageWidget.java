@@ -21,7 +21,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import net.vivans.dcim.module.common.domain.model.CommonCode;
 import net.vivans.dcim.module.devicegroup.domain.model.DeviceGroup;
-import net.vivans.dcim.module.pue.domain.model.PueDefinition;
+import net.vivans.dcim.module.calculated.domain.model.CalculatedMetric;
 import net.vivans.dcim.shared.persistence.BaseEntity;
 
 import java.util.ArrayList;
@@ -78,7 +78,7 @@ public class PageWidget extends BaseEntity {
     private PageWidgetChart chart;
 
     @OneToOne(mappedBy = "widget", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    private PageWidgetPue pue;
+    private PageWidgetCalculated calculated;
 
     @OneToOne(mappedBy = "widget", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private PageWidgetPsychrometric psychrometric;
@@ -168,16 +168,16 @@ public class PageWidget extends BaseEntity {
                 pointNames, devices, List.of(), itDevices, modelIds);
     }
 
-    public static PageWidget createPue(
+    public static PageWidget createCalculated(
             CommonCode pageCode,
             String name,
             boolean enabled,
-            PueDefinition pueDefinition,
+            CalculatedMetric calculatedMetric,
             PageWidgetChartRangePreset rangePreset,
             Integer freshnessMinutes
     ) {
         PageWidget widget = new PageWidget(pageCode, name, enabled, PageWidgetQueryKind.calculated, null);
-        widget.pue = PageWidgetPue.create(widget, pueDefinition, rangePreset, freshnessMinutes);
+        widget.calculated = PageWidgetCalculated.create(widget, calculatedMetric, rangePreset, freshnessMinutes);
         return widget;
     }
 
@@ -306,14 +306,14 @@ public class PageWidget extends BaseEntity {
         return chart == null ? null : chart.getChartWindow();
     }
 
-    public PageWidgetChartRangePreset getPueRangePreset() {
-        return pue == null ? null : pue.getRangePreset();
+    public PageWidgetChartRangePreset getCalculatedRangePreset() {
+        return calculated == null ? null : calculated.getRangePreset();
     }
 
-    public Integer getPueFreshnessMinutes() {
-        return pue == null ? null : pue.getFreshnessMinutes();
+    public Integer getCalculatedFreshnessMinutes() {
+        return calculated == null ? null : calculated.getFreshnessMinutes();
     }
-    public Integer getPueDefinitionId() { return pue == null ? null : pue.getPueDefinition().getId(); }
+    public Integer getCalculatedMetricId() { return calculated == null ? null : calculated.getCalculatedMetric().getId(); }
 
     public void updatePsychrometric(
             String name,
@@ -329,20 +329,20 @@ public class PageWidget extends BaseEntity {
         psychrometric.update(sources);
     }
 
-    public void updatePue(
+    public void updateCalculated(
             String name,
             boolean enabled,
-            PueDefinition pueDefinition,
+            CalculatedMetric calculatedMetric,
             PageWidgetChartRangePreset rangePreset,
             Integer freshnessMinutes
     ) {
-        if (queryKind != PageWidgetQueryKind.calculated || pue == null) {
+        if (queryKind != PageWidgetQueryKind.calculated || calculated == null) {
             throw new IllegalArgumentException("queryKind must be calculated");
         }
         PageWidgetPolicy.validateName(name);
         this.name = name.trim();
         this.enabled = enabled;
-        pue.update(pueDefinition, rangePreset, freshnessMinutes);
+        calculated.update(calculatedMetric, rangePreset, freshnessMinutes);
     }
 
     public void updatePowerDistribution(
@@ -481,7 +481,7 @@ public class PageWidget extends BaseEntity {
             this.chart = null;
         }
         if (queryKind != PageWidgetQueryKind.calculated) {
-            this.pue = null;
+            this.calculated = null;
         }
         if (queryKind != PageWidgetQueryKind.psychrometric) {
             this.psychrometric = null;

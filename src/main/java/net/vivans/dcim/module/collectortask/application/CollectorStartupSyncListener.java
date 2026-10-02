@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.vivans.dcim.module.collectortask.infrastructure.collector.CollectorHealthResponse;
 import net.vivans.dcim.module.collectortask.infrastructure.collector.CollectorJobClient;
-import net.vivans.dcim.module.pue.application.PueCollectorSyncService;
+import net.vivans.dcim.module.calculated.application.CalculatedMetricCollectorSyncService;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -16,7 +16,7 @@ import org.springframework.stereotype.Component;
 public class CollectorStartupSyncListener {
 
     private final CollectorSyncService collectorSyncService;
-    private final PueCollectorSyncService pueCollectorSyncService;
+    private final CalculatedMetricCollectorSyncService calculatedMetricCollectorSyncService;
     private final CollectorJobClient collectorJobClient;
     private volatile String collectorInstanceId;
 
@@ -44,6 +44,6 @@ public class CollectorStartupSyncListener {
         collectorInstanceId = health.instanceId();
         log.info("collector instance changed; repushing active collection jobs: instanceId={}", collectorInstanceId);
         collectorSyncService.repushActiveGroups();
-        pueCollectorSyncService.repushActiveDefinitions();
+        calculatedMetricCollectorSyncService.repushActiveDefinitions();
     }
 }

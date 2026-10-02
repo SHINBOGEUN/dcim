@@ -96,12 +96,12 @@ public class CollectorJobClient {
                 .toBodilessEntity());
     }
 
-    public void upsertPue(Integer definitionId, String specJson) {
+    public void upsertCalculated(Integer definitionId, String specJson) {
         withRetryVoid(() -> restClient.put().uri("/api/calculated-jobs/{id}", definitionId)
                 .contentType(MediaType.APPLICATION_JSON).body(specJson).retrieve().toBodilessEntity());
     }
 
-    public void deletePue(Integer definitionId) {
+    public void deleteCalculated(Integer definitionId) {
         withRetryVoid(() -> restClient.delete().uri("/api/calculated-jobs/{id}", definitionId).retrieve().toBodilessEntity());
     }
 

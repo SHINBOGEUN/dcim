@@ -9,7 +9,7 @@ import net.vivans.dcim.module.query.api.dto.ChartWidgetResponse;
 import net.vivans.dcim.module.query.api.dto.CollectionStatusResponse;
 import net.vivans.dcim.module.query.api.dto.CountWidgetResponse;
 import net.vivans.dcim.module.query.api.dto.LastWidgetResponse;
-import net.vivans.dcim.module.query.api.dto.PueQueryResponse;
+import net.vivans.dcim.module.query.api.dto.CalculatedMetricQueryResponse;
 import net.vivans.dcim.module.query.api.dto.PsychrometricWidgetResponse;
 import net.vivans.dcim.module.query.api.dto.PowerDistributionWidgetResponse;
 import net.vivans.dcim.module.query.application.AggregateQueryService;
@@ -17,7 +17,7 @@ import net.vivans.dcim.module.query.application.ChartQueryService;
 import net.vivans.dcim.module.query.application.CollectionStatusQueryService;
 import net.vivans.dcim.module.query.application.CountQueryService;
 import net.vivans.dcim.module.query.application.LastQueryService;
-import net.vivans.dcim.module.query.application.PueQueryService;
+import net.vivans.dcim.module.query.application.CalculatedMetricQueryService;
 import net.vivans.dcim.module.query.application.PsychrometricQueryService;
 import net.vivans.dcim.module.query.application.PowerDistributionQueryService;
 import net.vivans.dcim.module.query.application.WidgetTrendQueryService;
@@ -42,7 +42,7 @@ public class QueryController {
     private final ChartQueryService chartQueryService;
     private final CollectionStatusQueryService collectionStatusQueryService;
     private final AggregateQueryService aggregateQueryService;
-    private final PueQueryService pueQueryService;
+    private final CalculatedMetricQueryService calculatedMetricQueryService;
     private final PsychrometricQueryService psychrometricQueryService;
     private final PowerDistributionQueryService powerDistributionQueryService;
     private final WidgetTrendQueryService widgetTrendQueryService;
@@ -129,12 +129,12 @@ public class QueryController {
 
     @GetMapping("/calculated")
     @Operation(summary = "저장된 계산 지표 위젯 조회", description = "rangePreset과 window를 함께 보내면 저장된 계산 시계열 trend도 반환합니다.")
-    public ResponseEntity<ApiResponse<PueQueryResponse>> getPue(
+    public ResponseEntity<ApiResponse<CalculatedMetricQueryResponse>> getCalculated(
             @RequestParam Integer widgetId,
             @RequestParam(required = false) String rangePreset,
             @RequestParam(required = false) String window
     ) {
-        return ResponseEntity.ok(ApiResponse.ok(pueQueryService.getPue(widgetId, rangePreset, window)));
+        return ResponseEntity.ok(ApiResponse.ok(calculatedMetricQueryService.getCalculated(widgetId, rangePreset, window)));
     }
 
     @GetMapping("/psychrometric")

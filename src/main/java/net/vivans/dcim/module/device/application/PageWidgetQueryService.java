@@ -56,7 +56,7 @@ public class PageWidgetQueryService {
     private final DeviceModelRepository deviceModelRepository;
     private final DeviceModelSnmpPointRepository deviceModelSnmpPointRepository;
     private final PageWidgetSpecializedSupport widgetSupport;
-    private final PuePageWidgetHandler pueWidgetHandler;
+    private final CalculatedMetricPageWidgetHandler calculatedMetricWidgetHandler;
     private final PsychrometricPageWidgetHandler psychrometricWidgetHandler;
     private final PowerDistributionPageWidgetHandler powerDistributionWidgetHandler;
 
@@ -102,7 +102,7 @@ public class PageWidgetQueryService {
 
         PageWidgetQueryKind kind = PageWidgetQueryKind.from(request.queryKind());
         if (kind == PageWidgetQueryKind.calculated) {
-            return pueWidgetHandler.createLinked(pageCode, request);
+            return calculatedMetricWidgetHandler.createLinked(pageCode, request);
         }
         if (kind == PageWidgetQueryKind.psychrometric) {
             throw new IllegalArgumentException("psychrometric widget must be created with /widgets/psychrometric");
@@ -191,7 +191,7 @@ public class PageWidgetQueryService {
 
         PageWidgetQueryKind kind = PageWidgetQueryKind.from(request.queryKind());
         if (kind == PageWidgetQueryKind.calculated) {
-            return pueWidgetHandler.updateLinked(widget, request);
+            return calculatedMetricWidgetHandler.updateLinked(widget, request);
         }
         if (kind == PageWidgetQueryKind.psychrometric) {
             if (widget.getQueryKind() != PageWidgetQueryKind.psychrometric) {

@@ -16,7 +16,7 @@ import net.vivans.dcim.module.device.domain.model.DeviceAssetHistoryAction;
 import net.vivans.dcim.module.device.domain.repository.DeviceAssetHistoryRepository;
 import net.vivans.dcim.module.device.domain.repository.DeviceRepository;
 import net.vivans.dcim.module.device.infrastructure.persistence.DeviceAssetSpringDataRepository;
-import net.vivans.dcim.module.pue.application.PueCollectorSyncService;
+import net.vivans.dcim.module.calculated.application.CalculatedMetricCollectorSyncService;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -49,7 +49,7 @@ public class DeviceAssetLifecycleService {
     private final DeviceAssetHistoryRepository assetHistoryRepository;
     private final CommonCodeRepository commonCodeRepository;
     private final CollectionScriptSyncService collectionScriptSyncService;
-    private final PueCollectorSyncService pueCollectorSyncService;
+    private final CalculatedMetricCollectorSyncService calculatedMetricCollectorSyncService;
 
     public List<DeviceAssetHistoryResponse> getAssetHistory(Integer deviceId) {
         findDevice(deviceId);
@@ -104,7 +104,7 @@ public class DeviceAssetLifecycleService {
         DeviceResponse response = DeviceResponse.from(deviceRepository.save(device));
         recordAssetChange(device, previous, DeviceAssetHistoryAction.STATUS_CHANGED, request.reason());
         collectionScriptSyncService.regenerateByModelId(modelId);
-        pueCollectorSyncService.repushActiveDefinitions();
+        calculatedMetricCollectorSyncService.repushActiveDefinitions();
         return response;
     }
 

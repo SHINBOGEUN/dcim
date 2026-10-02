@@ -9,8 +9,8 @@ import lombok.extern.slf4j.Slf4j;
 import net.vivans.dcim.module.query.config.InfluxProperties;
 import net.vivans.dcim.module.query.domain.LastPoint;
 import net.vivans.dcim.module.query.domain.PointQuery;
-import net.vivans.dcim.module.query.domain.PueLastPoint;
-import net.vivans.dcim.module.query.domain.PueSeriesPoint;
+import net.vivans.dcim.module.query.domain.CalculatedMetricLastPoint;
+import net.vivans.dcim.module.query.domain.CalculatedMetricSeriesPoint;
 import net.vivans.dcim.module.query.domain.SeriesPoint;
 import net.vivans.dcim.shared.exception.QueryException;
 
@@ -124,11 +124,11 @@ public class InfluxPointQuery implements PointQuery {
     }
 
     @Override
-    public Optional<PueLastPoint> findLastCalculated(Integer definitionId, Integer configVersion, Duration lookback) {
+    public Optional<CalculatedMetricLastPoint> findLastCalculated(Integer definitionId, Integer configVersion, Duration lookback) {
         String flux = LastFluxBuilder.buildCalculatedLastQuery(properties.getBucket(),
                 properties.getMeasurement(), definitionId, configVersion, lookback);
         try {
-            return mapPueLast(query(flux));
+            return mapCalculatedLast(query(flux));
         } catch (RuntimeException exception) {
             log.error("Query calculated metric failed definitionId={}: {}", definitionId, exception.getMessage(), exception);
             throw new QueryException("InfluxDB query failed");
@@ -136,14 +136,14 @@ public class InfluxPointQuery implements PointQuery {
     }
 
     @Override
-    public List<PueSeriesPoint> findPueSeries(Integer definitionId, Instant start, Instant end, String window) {
-        String flux = PueFluxBuilder.buildSeriesQuery(
+    public List<CalculatedMetricSeriesPoint> findCalculatedSeries(Integer definitionId, Instant start, Instant end, String window) {
+        String flux = CalculatedMetricFluxBuilder.buildSeriesQuery(
                 properties.getBucket(), properties.getMeasurement(), definitionId, start, end, window);
         try {
-            return mapPueSeries(query(flux));
+            return mapCalculatedSeries(query(flux));
         } catch (RuntimeException exception) {
-            log.error("Query PUE series failed definitionId={}: {}", definitionId, exception.getMessage(), exception);
-            throw new QueryException("InfluxDB PUE series query failed");
+            log.error("Query calculated metric series failed definitionId={}: {}", definitionId, exception.getMessage(), exception);
+            throw new QueryException("InfluxDB calculated metric series query failed");
         }
     }
 
@@ -178,7 +178,7 @@ public class InfluxPointQuery implements PointQuery {
         return points;
     }
 
-    private static Optional<PueLastPoint> mapPueLast(List<FluxTable> tables) {
+    private static Optional<CalculatedMetricLastPoint> mapCalculatedLast(List<FluxTable> tables) {
         for (FluxTable table : tables) {
             for (FluxRecord record : table.getRecords()) {
                 Double value = toDouble(record.getValueByKey("value"));
@@ -191,7 +191,7 @@ public class InfluxPointQuery implements PointQuery {
                               if (input != null) inputs.put(entry.getKey().substring(6), input);
                           }
                       }
-                    return Optional.of(new PueLastPoint(
+                    return Optional.of(new CalculatedMetricLastPoint(
                             value,
                             time,
                             Map.copyOf(inputs)
@@ -202,14 +202,14 @@ public class InfluxPointQuery implements PointQuery {
         return Optional.empty();
     }
 
-    private static List<PueSeriesPoint> mapPueSeries(List<FluxTable> tables) {
-        List<PueSeriesPoint> points = new ArrayList<>();
+    private static List<CalculatedMetricSeriesPoint> mapCalculatedSeries(List<FluxTable> tables) {
+        List<CalculatedMetricSeriesPoint> points = new ArrayList<>();
         for (FluxTable table : tables) {
             for (FluxRecord record : table.getRecords()) {
                 Double value = toDouble(record.getValueByKey("value"));
                 Instant time = record.getTime();
                 if (value != null && time != null) {
-                    points.add(new PueSeriesPoint(
+                    points.add(new CalculatedMetricSeriesPoint(
                             value,
                             time
                     ));
