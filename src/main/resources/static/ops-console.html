@@ -1911,7 +1911,7 @@
                 <option value="count">개수 (count)</option>
                 <option value="chart">차트 (chart)</option>
                 <option value="aggregate">집계 (aggregate)</option>
-                <option value="pue">계산 지표</option>
+                <option value="calculated">계산 지표</option>
                 <option value="psychrometric">사이코메트릭 (psychrometric)</option>
                 <option value="power_distribution">전력 분배 (power distribution)</option>
               </select>
@@ -5554,10 +5554,10 @@
       $("wDeviceBlock").style.display = showDevices ? "block" : "none";
       $("wModelBlock").style.display = showModels ? "block" : "none";
       $("wAggBlock").style.display = kind === "aggregate" ? "block" : "none";
-      $("wPueBlock").style.display = kind === "pue" ? "block" : "none";
+      $("wPueBlock").style.display = kind === "calculated" ? "block" : "none";
       $("wPsychrometricBlock").style.display = kind === "psychrometric" ? "block" : "none";
       $("wPowerDistributionBlock").style.display = kind === "power_distribution" ? "block" : "none";
-      $("wDataFreshnessBlock").style.display = kind !== "count" && kind !== "pue" ? "grid" : "none";
+      $("wDataFreshnessBlock").style.display = kind !== "count" && kind !== "calculated" ? "grid" : "none";
       arrangeWidgetForm(kind);
       const pointStepLabel = $("wPointsBlock")?.querySelector(":scope > .muted");
       if (pointStepLabel) pointStepLabel.textContent = kind === "aggregate"
@@ -5586,7 +5586,7 @@
         return;
       }
 
-      if (kind === "count" || kind === "pue" || kind === "last") {
+      if (kind === "count" || kind === "calculated" || kind === "last") {
         state.widgetPointCatalog = [];
         state.widgetPointNamesByModel = new Map();
         if (kind === "last") fillWidgetDevicePick();
@@ -8330,7 +8330,7 @@
           queryBtn = `<button type="button" class="ghost" data-chart="${w.id}">차트</button>`;
         } else if (w.queryKind === "aggregate") {
           queryBtn = `<button type="button" class="ghost" data-agg="${w.id}">집계</button>`;
-        } else if (w.queryKind === "pue") {
+        } else if (w.queryKind === "calculated") {
           queryBtn = `<button type="button" class="ghost" data-pue="${w.id}">계산값</button>`;
         } else if (w.queryKind === "psychrometric") {
           queryBtn = `<button type="button" class="ghost" data-psychrometric="${w.id}">습공기선</button>`;
@@ -8352,7 +8352,7 @@
                 last_24h: "최근 24시간",
                 last_7d: "최근 7일",
               })[w.aggregateRangePreset] || w.aggregateRangePreset) : ""}</div>`
-            : w.queryKind === "pue"
+            : w.queryKind === "calculated"
               ? `<div class="muted">계산 지표 #${esc(w.pueDefinitionId || "–")} · ${esc(w.pueRangePreset || "last_24h")} · 최신 ${esc(w.pueFreshnessMinutes || 15)}분</div>`
               : w.queryKind === "psychrometric"
                 ? `<div class="muted">온도·상대습도 소스 ${esc((w.psychrometricSources || []).length)}개 · 최근 5개 평균</div>`
@@ -8366,7 +8366,7 @@
               `#${esc(source.deviceId)}: ${esc((source.pointNames || []).join(", "))}`).join("<br>") || "–"
           : w.queryKind === "chart" && (w.chartScope || "devices") === "models"
             ? ((w.modelIds || []).join(", ") || "–")
-            : w.queryKind === "pue"
+            : w.queryKind === "calculated"
               ? `계산 지표 #${esc(w.pueDefinitionId || "–")}`
               : w.queryKind === "psychrometric"
                 ? `소스 ${(w.psychrometricSources || []).length}개`
@@ -9159,9 +9159,9 @@
           : [];
         const pointNames = kind === "last"
           ? [...new Set(lastSources.flatMap((source) => source.pointNames))]
-          : (kind === "count" || kind === "pue") ? [] : selectedWidgetPoints();
-        const pueDefinitionId = kind === "pue" ? Number($("wPueDefinition").value) || null : null;
-        if (kind === "pue" && !pueDefinitionId) throw new Error("표시할 계산 지표를 선택하세요");
+          : (kind === "count" || kind === "calculated") ? [] : selectedWidgetPoints();
+        const pueDefinitionId = kind === "calculated" ? Number($("wPueDefinition").value) || null : null;
+        if (kind === "calculated" && !pueDefinitionId) throw new Error("표시할 계산 지표를 선택하세요");
         if (kind === "last" && !lastSources.length) {
           throw new Error("장비마다 측정항목을 하나 이상 선택해 추가하세요");
         }
@@ -9179,7 +9179,7 @@
           deviceIds = [];
           modelIds = [...state.widgetModelIds];
           if (!modelIds.length) throw new Error("모델을 하나 이상 추가하세요");
-        } else if (kind !== "pue") {
+        } else if (kind !== "calculated") {
           deviceIds = [...state.widgetDeviceIds];
           if (!deviceIds.length && !state.widgetDeviceGroupIds.length) throw new Error("장비 또는 장비 그룹을 하나 이상 추가하세요");
         }
@@ -9209,8 +9209,8 @@
           chartRangePreset: kind === "chart" ? $("wChartRangePreset").value : null,
           chartWindow: kind === "chart" ? $("wChartWindow").value : null,
           pueDefinitionId,
-          pueRangePreset: kind === "pue" ? $("wPueRangePreset").value : null,
-          pueFreshnessMinutes: kind === "pue" ? Number($("wPueFreshnessMinutes").value) : null,
+          pueRangePreset: kind === "calculated" ? $("wPueRangePreset").value : null,
+          pueFreshnessMinutes: kind === "calculated" ? Number($("wPueFreshnessMinutes").value) : null,
           op,
           aggregateRangePreset: kind === "aggregate" ? ($("wAggRangePreset").value || null) : null,
           groupBy: null,

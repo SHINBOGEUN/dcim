@@ -1144,7 +1144,7 @@
       if (state.editMode) return;
       const widget = state.widgets.find((item) => Number(item.id) === Number(widgetId));
       if (!widget) return;
-      if (widget.queryKind === "pue") {
+      if (widget.queryKind === "calculated") {
         return openPueTrendModal(widgetId);
       }
       if (widget.queryKind === "count") return;
@@ -1182,7 +1182,7 @@
     async function openPueTrendModal(widgetId) {
       if (state.editMode) return;
       const widget = state.widgets.find((item) => Number(item.id) === Number(widgetId));
-      if (!widget || widget.queryKind !== "pue") return;
+      if (!widget || widget.queryKind !== "calculated") return;
       const data = await api(`/api/manager/query/calculated?widgetId=${widget.id}&rangePreset=last_3d&window=15m`);
       if (!data.trend?.length) {
         log(`trend skipped #${widget.id}: 최근 3일 계산 결과 없음`);
@@ -1215,7 +1215,7 @@
         const units = data?.units || (data?.unit ? [data.unit] : []);
         return units.length <= 2 && (data?.series || []).some((series) => (series.values || []).length);
       }
-      if (widget.queryKind === "pue") return state.pueByWidget.get(widget.id)?.value != null;
+      if (widget.queryKind === "calculated") return state.pueByWidget.get(widget.id)?.value != null;
       if (widget.queryKind === "psychrometric") return psychrometricPoints(state.psychrometricByWidget.get(widget.id)).length > 0;
       if (widget.queryKind === "power_distribution") return state.powerDistributionByWidget.get(widget.id)?.totalPowerW != null;
       return false;
@@ -1381,7 +1381,7 @@
         const countWidgets = enabled.filter((w) => w.queryKind === "count");
         const chartWidgets = enabled.filter((w) => w.queryKind === "chart");
         const aggregateWidgets = enabled.filter((w) => w.queryKind === "aggregate");
-        const pueWidgets = enabled.filter((w) => w.queryKind === "pue");
+        const pueWidgets = enabled.filter((w) => w.queryKind === "calculated");
         const psychrometricWidgets = enabled.filter((w) => w.queryKind === "psychrometric");
         const powerDistributionWidgets = enabled.filter((w) => w.queryKind === "power_distribution");
         const [lastResults, countResults, chartResults, aggregateResults, pueResults, psychrometricResults, powerDistributionResults] = await Promise.all([
@@ -1453,7 +1453,7 @@
           dataStatus = aggregate?.dataStatus;
           body = renderAggregateBody(aggregate);
           subExtra = ` · ${escapeHtml(aggregatePresetLabel(w.op))} · ${escapeHtml(w.aggregateRangePreset || "")}`;
-        } else if (w.queryKind === "pue") {
+        } else if (w.queryKind === "calculated") {
           const pue = state.pueByWidget.get(w.id);
           dataStatus = pue?.dataStatus;
           body = renderPueBody(pue);
