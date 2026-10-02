@@ -56,8 +56,8 @@ public class DisabledPointQuery implements PointQuery {
     }
 
     @Override
-    public Optional<PueLastPoint> findLastPue(Integer definitionId, Duration lookback) {
-        log.warn("InfluxDB query disabled; returning empty last PUE value definitionId={}", definitionId);
+    public Optional<PueLastPoint> findLastCalculated(Integer definitionId, Integer configVersion, Duration lookback) {
+        log.warn("InfluxDB query disabled; returning empty calculated value definitionId={}", definitionId);
         return Optional.empty();
     }
 

@@ -27,7 +27,7 @@ sql/
 2. **기준 카탈로그** — 빈 DB에서만 `seed/model_catalog.sql` 실행
 3. **공통코드·위치** — Ops Console(`/ops-console.html`)에서 현장별 위치·`UNASSIGNED` 노드 등록
 4. **로그인 계정** — Ops Console 또는 API로 `users` 생성
-5. **현장 데이터** — 실제 장비·Endpoint·수집 작업·PUE·위젯·자산을 등록
+5. **현장 데이터** — 실제 장비·Endpoint·수집 작업·계산 지표·위젯·자산을 등록
 
 ```bash
 for f in sql/schema/[0-9][0-9]_*.sql; do
@@ -100,10 +100,10 @@ mysql -h HOST -P PORT -u dcim -p dcim < sql/schema/42_device_asset_document.sql
 | 21 | `21_page_widget_model.sql` | page_widget_model |
 | 22 | `22_page_widget_layout.sql` | page_widget_layout |
 | 23 | `23_device_endpoint_modbus.sql` | device_endpoint_modbus |
-| 24~26 | PUE 정의·소스·위젯 | pue_definition 계열 |
+| 24~26 | 계산 지표 정의·소스·위젯 | calculated_metric 계열 |
 | 27~29 | Psychrometric·last 소스 | page_widget_psychrometric / last_source |
 | 30~32 | Power distribution | page_widget_power_distribution 계열 |
-| 33~36 | 장비 그룹·PUE 그룹 연결 | device_group / widget / PUE 연결 |
+| 33~35 | 장비 그룹·위젯 연결 | device_group / widget |
 | 37~39 | Rack 배치·이미지·배치 이력 | device_rack_placement / device_image |
 | 40~42 | 자산 이력·상세·문서 | device_asset 계열 |
 | 43 | `43_device_modbus_reading.sql` | device_modbus_reading (Modbus 회선 매핑) |
@@ -111,7 +111,6 @@ mysql -h HOST -P PORT -u dcim -p dcim < sql/schema/42_device_asset_document.sql
 | 46~49 | LoRa/Dragino 매핑 | device_lora_endpoint / device_model_lora_point / (49는 lora_ingest_error_log 제거용 DROP만 포함, 기능 제거됨) |
 | 50~51 | LoRa MQTT 수집 소스·상태 | lora_mqtt_source / lora_mqtt_source_status |
 | 52 | `52_device_modbus_bit_field.sql` | Modbus 원본 reading의 비트 구간별 파생 point |
-| 53 | `53_calculated_metric_reset.sql` | 계산 지표 컬럼 추가 및 기존 PUE 정의·연결 위젯 초기화 (1회 적용) |
 
 ---
 
@@ -121,4 +120,4 @@ mysql -h HOST -P PORT -u dcim -p dcim < sql/schema/42_device_asset_document.sql
 |------|---------|-----------|
 | 2026-09-02 | — | `schema/01~22` baseline 확정. 구 `history/`, `seed/`, `dumps/` 제거 |
 | 2026-09-03 | — | `schema/23_device_endpoint_modbus.sql` 추가 (Modbus endpoint 확장, unit_id) |
-| 2026-10-02 | `dcim` 개발 DB | `schema/53_calculated_metric_reset.sql` 적용: 기존 PUE 정의 1건·연결 위젯 1건 정리 |
+| 2026-10-02 | `dcim` 개발 DB | 계산 지표 테이블 최종 구조로 전환. 기존 계산 지표 정의·위젯은 보존하고 구 PUE 그룹 연결 구조는 제거 |

@@ -1,7 +1,22 @@
 package net.vivans.dcim.module.pue.api.dto;
-import net.vivans.dcim.module.pue.domain.model.*; import java.util.List;
-public record PueDefinitionResponse(Integer id,String name,String calculationCron,boolean collectionEnabled,int configVersion,String collectorJobId,List<Source> sources,List<DeviceGroup> deviceGroups,String formula,String resultUnit) {
- public record Source(Integer deviceId,String deviceName,String role,String pointName,String alias,String protocol) {}
- public record DeviceGroup(Integer deviceGroupId,String deviceGroupName,String role,String pointName,int deviceCount) {}
- public static PueDefinitionResponse from(PueDefinition d){return new PueDefinitionResponse(d.getId(),d.getName(),d.getCalculationCron(),d.isCollectionEnabled(),d.getConfigVersion(),d.getCollectorJobId(),d.getSources().stream().map(s->new Source(s.getDevice().getId(),s.getDevice().getName(),s.getRole()==null?null:s.getRole().name(),s.getPointName(),s.getAlias(),s.getProtocol())).toList(),d.getDeviceGroups().stream().map(g->new DeviceGroup(g.getDeviceGroup().getId(),g.getDeviceGroup().getName(),g.getRole().name(),g.getPointName(),g.getDeviceGroup().getDevices().size())).toList(),d.getFormula(),d.getResultUnit());}
+
+import net.vivans.dcim.module.pue.domain.model.PueDefinition;
+import java.util.List;
+
+public record PueDefinitionResponse(Integer id, String name, String calculationCron,
+                                    boolean collectionEnabled, int configVersion,
+                                    String collectorJobId, List<Source> sources,
+                                    String formula, String resultUnit) {
+    public record Source(Integer deviceId, String deviceName, String pointName,
+                         String alias, String protocol) {}
+
+    public static PueDefinitionResponse from(PueDefinition definition) {
+        return new PueDefinitionResponse(definition.getId(), definition.getName(),
+                definition.getCalculationCron(), definition.isCollectionEnabled(),
+                definition.getConfigVersion(), definition.getCollectorJobId(),
+                definition.getSources().stream().map(source -> new Source(
+                        source.getDevice().getId(), source.getDevice().getName(),
+                        source.getPointName(), source.getAlias(), source.getProtocol())).toList(),
+                definition.getFormula(), definition.getResultUnit());
+    }
 }

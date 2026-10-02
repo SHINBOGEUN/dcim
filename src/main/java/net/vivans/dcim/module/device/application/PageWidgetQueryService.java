@@ -8,8 +8,6 @@ import net.vivans.dcim.module.device.api.dto.PageWidgetCreateRequest;
 import net.vivans.dcim.module.device.api.dto.PageWidgetEnabledRequest;
 import net.vivans.dcim.module.device.api.dto.PageWidgetLayoutRequest;
 import net.vivans.dcim.module.device.api.dto.PageWidgetLastSourceRequest;
-import net.vivans.dcim.module.device.api.dto.PageWidgetPueCreateRequest;
-import net.vivans.dcim.module.device.api.dto.PageWidgetPueUpdateRequest;
 import net.vivans.dcim.module.device.api.dto.PageWidgetPageResponse;
 import net.vivans.dcim.module.device.api.dto.PageWidgetPsychrometricCreateRequest;
 import net.vivans.dcim.module.device.api.dto.PageWidgetPsychrometricUpdateRequest;
@@ -103,7 +101,7 @@ public class PageWidgetQueryService {
         }
 
         PageWidgetQueryKind kind = PageWidgetQueryKind.from(request.queryKind());
-        if (kind == PageWidgetQueryKind.pue) {
+        if (kind == PageWidgetQueryKind.calculated) {
             return pueWidgetHandler.createLinked(pageCode, request);
         }
         if (kind == PageWidgetQueryKind.psychrometric) {
@@ -164,16 +162,6 @@ public class PageWidgetQueryService {
     }
 
     @Transactional
-    public PageWidgetResponse createPueWidget(PageWidgetPueCreateRequest request) {
-        return pueWidgetHandler.create(request);
-    }
-
-    @Transactional
-    public PageWidgetResponse updatePueWidget(Integer id, PageWidgetPueUpdateRequest request) {
-        return pueWidgetHandler.update(id, request);
-    }
-
-    @Transactional
     public PageWidgetResponse createPsychrometricWidget(PageWidgetPsychrometricCreateRequest request) {
         return psychrometricWidgetHandler.create(request);
     }
@@ -202,7 +190,7 @@ public class PageWidgetQueryService {
         }
 
         PageWidgetQueryKind kind = PageWidgetQueryKind.from(request.queryKind());
-        if (kind == PageWidgetQueryKind.pue) {
+        if (kind == PageWidgetQueryKind.calculated) {
             return pueWidgetHandler.updateLinked(widget, request);
         }
         if (kind == PageWidgetQueryKind.psychrometric) {
@@ -300,7 +288,7 @@ public class PageWidgetQueryService {
             PageWidgetOp op
     ) {
         if (deviceIds == null || deviceIds.isEmpty()) {
-            if (queryKind == PageWidgetQueryKind.count || queryKind == PageWidgetQueryKind.pue
+            if (queryKind == PageWidgetQueryKind.count || queryKind == PageWidgetQueryKind.calculated
                     || queryKind == PageWidgetQueryKind.psychrometric || queryKind == PageWidgetQueryKind.aggregate) {
                 return List.of();
             }

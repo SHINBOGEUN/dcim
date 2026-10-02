@@ -370,11 +370,11 @@ class PageWidgetControllerIntegrationTest {
                         .header("Authorization", bearerToken(accessToken))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"pageCode":"dashboard","name":"사업장 계산 지표","queryKind":"pue",
+                                {"pageCode":"dashboard","name":"사업장 계산 지표","queryKind":"calculated",
                                  "pueDefinitionId":%d,"pueRangePreset":"last_24h","pueFreshnessMinutes":30}
                                 """.formatted(definitionId)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.queryKind").value("pue"))
+                .andExpect(jsonPath("$.data.queryKind").value("calculated"))
                 .andExpect(jsonPath("$.data.pueFreshnessMinutes").value(30))
                 .andExpect(jsonPath("$.data.pueSources", hasSize(2)))
                 .andReturn().getResponse().getContentAsString();
@@ -396,7 +396,7 @@ class PageWidgetControllerIntegrationTest {
                         .header("Authorization", bearerToken(accessToken))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"name":"사업장 계산 지표 수정","enabled":true,"queryKind":"pue",
+                                {"name":"사업장 계산 지표 수정","enabled":true,"queryKind":"calculated",
                                  "pueDefinitionId":%d,"pueRangePreset":"today","pueFreshnessMinutes":60}
                                 """.formatted(definitionId)))
                 .andExpect(status().isOk())

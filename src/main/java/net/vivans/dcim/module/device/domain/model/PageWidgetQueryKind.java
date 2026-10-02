@@ -5,7 +5,7 @@ public enum PageWidgetQueryKind {
     aggregate,
     count,
     chart,
-    pue,
+    calculated,
     psychrometric,
     power_distribution;
 
@@ -16,7 +16,7 @@ public enum PageWidgetQueryKind {
         try {
             return valueOf(raw.trim());
         } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("queryKind must be last, aggregate, count, chart, pue, psychrometric, or power_distribution");
+            throw new IllegalArgumentException("queryKind must be last, aggregate, count, chart, calculated, psychrometric, or power_distribution");
         }
     }
 }

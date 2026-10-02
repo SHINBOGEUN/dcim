@@ -97,17 +97,17 @@ public class CollectorJobClient {
     }
 
     public void upsertPue(Integer definitionId, String specJson) {
-        withRetryVoid(() -> restClient.put().uri("/api/pue-jobs/{id}", definitionId)
+        withRetryVoid(() -> restClient.put().uri("/api/calculated-jobs/{id}", definitionId)
                 .contentType(MediaType.APPLICATION_JSON).body(specJson).retrieve().toBodilessEntity());
     }
 
     public void deletePue(Integer definitionId) {
-        withRetryVoid(() -> restClient.delete().uri("/api/pue-jobs/{id}", definitionId).retrieve().toBodilessEntity());
+        withRetryVoid(() -> restClient.delete().uri("/api/calculated-jobs/{id}", definitionId).retrieve().toBodilessEntity());
     }
 
     public CollectorCalculatedJobResponse calculatedJobStatus(Integer definitionId) {
         CollectorApiResponse<CollectorCalculatedJobResponse> response = restClient.get()
-                .uri("/api/pue-jobs/{id}", definitionId).retrieve().body(CALCULATED_JOB_TYPE);
+                .uri("/api/calculated-jobs/{id}", definitionId).retrieve().body(CALCULATED_JOB_TYPE);
         return response == null ? null : response.data();
     }
 

@@ -124,22 +124,6 @@ public class InfluxPointQuery implements PointQuery {
     }
 
     @Override
-    public Optional<PueLastPoint> findLastPue(Integer definitionId, Duration lookback) {
-        String flux = LastFluxBuilder.buildPueLastQuery(
-                properties.getBucket(),
-                properties.getMeasurement(),
-                definitionId,
-                lookback
-        );
-        try {
-            return mapPueLast(query(flux));
-        } catch (RuntimeException exception) {
-            log.error("Query last PUE failed definitionId={}: {}", definitionId, exception.getMessage(), exception);
-            throw new QueryException("InfluxDB query failed");
-        }
-    }
-
-    @Override
     public Optional<PueLastPoint> findLastCalculated(Integer definitionId, Integer configVersion, Duration lookback) {
         String flux = LastFluxBuilder.buildCalculatedLastQuery(properties.getBucket(),
                 properties.getMeasurement(), definitionId, configVersion, lookback);
@@ -209,10 +193,8 @@ public class InfluxPointQuery implements PointQuery {
                       }
                     return Optional.of(new PueLastPoint(
                             value,
-                            toDouble(record.getValueByKey("total_power")),
-                            toDouble(record.getValueByKey("cooler_power")),
-                              time,
-                              Map.copyOf(inputs)
+                            time,
+                            Map.copyOf(inputs)
                     ));
                 }
             }
@@ -229,8 +211,6 @@ public class InfluxPointQuery implements PointQuery {
                 if (value != null && time != null) {
                     points.add(new PueSeriesPoint(
                             value,
-                            toDouble(record.getValueByKey("total_power")),
-                            toDouble(record.getValueByKey("cooler_power")),
                             time
                     ));
                 }

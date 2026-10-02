@@ -18,7 +18,7 @@ import net.vivans.dcim.shared.persistence.BaseEntity;
 import net.vivans.dcim.module.pue.domain.model.PueDefinition;
 
 @Entity
-@Table(name = "page_widget_pue")
+@Table(name = "page_widget_calculated")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class PageWidgetPue extends BaseEntity {
@@ -38,7 +38,7 @@ public class PageWidgetPue extends BaseEntity {
     private int freshnessMinutes;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "pue_definition_id", nullable = false)
+    @JoinColumn(name = "calculated_metric_id", nullable = false)
     private PueDefinition pueDefinition;
 
     private PageWidgetPue(PageWidget widget, PueDefinition pueDefinition, PageWidgetChartRangePreset rangePreset, Integer freshnessMinutes) {
