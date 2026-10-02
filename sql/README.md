@@ -111,6 +111,7 @@ mysql -h HOST -P PORT -u dcim -p dcim < sql/schema/42_device_asset_document.sql
 | 46~49 | LoRa/Dragino 매핑 | device_lora_endpoint / device_model_lora_point / (49는 lora_ingest_error_log 제거용 DROP만 포함, 기능 제거됨) |
 | 50~51 | LoRa MQTT 수집 소스·상태 | lora_mqtt_source / lora_mqtt_source_status |
 | 52 | `52_device_modbus_bit_field.sql` | Modbus 원본 reading의 비트 구간별 파생 point |
+| 53 | `53_calculated_metric_reset.sql` | 계산 지표 컬럼 추가 및 기존 PUE 정의·연결 위젯 초기화 (1회 적용) |
 
 ---
 
@@ -120,3 +121,4 @@ mysql -h HOST -P PORT -u dcim -p dcim < sql/schema/42_device_asset_document.sql
 |------|---------|-----------|
 | 2026-09-02 | — | `schema/01~22` baseline 확정. 구 `history/`, `seed/`, `dumps/` 제거 |
 | 2026-09-03 | — | `schema/23_device_endpoint_modbus.sql` 추가 (Modbus endpoint 확장, unit_id) |
+| 2026-10-02 | `dcim` 개발 DB | `schema/53_calculated_metric_reset.sql` 적용: 기존 PUE 정의 1건·연결 위젯 1건 정리 |
