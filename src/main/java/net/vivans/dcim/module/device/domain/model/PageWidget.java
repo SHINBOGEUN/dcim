@@ -176,7 +176,7 @@ public class PageWidget extends BaseEntity {
             PageWidgetChartRangePreset rangePreset,
             Integer freshnessMinutes
     ) {
-        PageWidget widget = new PageWidget(pageCode, name, enabled, PageWidgetQueryKind.pue, null);
+        PageWidget widget = new PageWidget(pageCode, name, enabled, PageWidgetQueryKind.calculated, null);
         widget.pue = PageWidgetPue.create(widget, pueDefinition, rangePreset, freshnessMinutes);
         return widget;
     }
@@ -336,8 +336,8 @@ public class PageWidget extends BaseEntity {
             PageWidgetChartRangePreset rangePreset,
             Integer freshnessMinutes
     ) {
-        if (queryKind != PageWidgetQueryKind.pue || pue == null) {
-            throw new IllegalArgumentException("queryKind must be pue");
+        if (queryKind != PageWidgetQueryKind.calculated || pue == null) {
+            throw new IllegalArgumentException("queryKind must be calculated");
         }
         PageWidgetPolicy.validateName(name);
         this.name = name.trim();
@@ -480,7 +480,7 @@ public class PageWidget extends BaseEntity {
         if (queryKind != PageWidgetQueryKind.chart) {
             this.chart = null;
         }
-        if (queryKind != PageWidgetQueryKind.pue) {
+        if (queryKind != PageWidgetQueryKind.calculated) {
             this.pue = null;
         }
         if (queryKind != PageWidgetQueryKind.psychrometric) {
@@ -529,7 +529,7 @@ public class PageWidget extends BaseEntity {
             List<Device> itDevices,
             List<Integer> modelIds
     ) {
-        if (queryKind == PageWidgetQueryKind.count || queryKind == PageWidgetQueryKind.pue
+        if (queryKind == PageWidgetQueryKind.count || queryKind == PageWidgetQueryKind.calculated
                 || queryKind == PageWidgetQueryKind.psychrometric || queryKind == PageWidgetQueryKind.power_distribution) {
             replacePoints(List.of());
             replaceDevices(List.of(), List.of());
