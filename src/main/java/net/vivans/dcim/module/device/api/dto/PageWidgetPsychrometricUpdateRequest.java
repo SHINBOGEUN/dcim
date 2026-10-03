@@ -8,6 +8,7 @@ import jakarta.validation.constraints.Size;
 import java.util.List;
 
 public record PageWidgetPsychrometricUpdateRequest(
+        String pageCode,
         @NotBlank(message = "name is required") @Size(max = 100) String name,
         Boolean enabled,
         Integer dataFreshnessMinutes,

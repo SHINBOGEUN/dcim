@@ -8,6 +8,9 @@ import jakarta.validation.constraints.Size;
 import java.util.List;
 
 public record PageWidgetUpdateRequest(
+        @Schema(description = "이동할 DEVICE_PAGE 코드. 생략하면 기존 페이지 유지", example = "dashboard")
+        String pageCode,
+
         @Schema(description = "위젯 표시명", example = "칠러")
         @NotBlank(message = "name is required")
         @Size(max = 100, message = "name must be at most 100 characters")

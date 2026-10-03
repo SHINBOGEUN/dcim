@@ -50,20 +50,34 @@ final class LastFluxBuilder {
 
     static String buildCalculatedLastQuery(String bucket, String measurement, Integer definitionId,
                                            Integer configVersion, Duration lookback) {
+        String versionFilter = "|> filter(fn: (r) => r[\"calculated_config_version\"] == %s)"
+                .formatted(quote(String.valueOf(configVersion)));
+        return buildCalculatedLastQuery(bucket, measurement, definitionId, lookback, versionFilter);
+    }
+
+    static String buildCalculatedLastPreviousVersionQuery(String bucket, String measurement, Integer definitionId,
+                                                          Integer currentConfigVersion, Duration lookback) {
+        String versionFilter = "|> filter(fn: (r) => r[\"calculated_config_version\"] != %s)"
+                .formatted(quote(String.valueOf(currentConfigVersion)));
+        return buildCalculatedLastQuery(bucket, measurement, definitionId, lookback, versionFilter);
+    }
+
+    private static String buildCalculatedLastQuery(String bucket, String measurement, Integer definitionId,
+                                                   Duration lookback, String versionFilter) {
         return """
                 from(bucket: %s)
                   |> range(start: -%s)
                   |> filter(fn: (r) => r["_measurement"] == %s)
                   |> filter(fn: (r) => r["metric_kind"] == "calculated")
                   |> filter(fn: (r) => r["calculated_metric_id"] == %s)
-                  |> filter(fn: (r) => r["calculated_config_version"] == %s)
+                  %s
                   |> filter(fn: (r) => r["_field"] == "value" or r["_field"] =~ /^input_/)
                   |> group()
                   |> pivot(rowKey: ["_time", "calculated_metric_id"], columnKey: ["_field"], valueColumn: "_value")
                   |> sort(columns: ["_time"], desc: true)
                   |> limit(n: 1)
                 """.formatted(quote(bucket), toFluxDuration(lookback), quote(measurement),
-                quote(String.valueOf(definitionId)), quote(String.valueOf(configVersion)));
+                quote(String.valueOf(definitionId)), versionFilter);
     }
 
     private static String orEquals(String tag, List<String> values) {

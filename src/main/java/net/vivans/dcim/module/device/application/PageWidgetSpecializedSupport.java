@@ -40,11 +40,13 @@ public class PageWidgetSpecializedSupport {
         }
     }
 
-    public void validateUpdateName(PageWidget widget, String name) {
+    public void updatePage(PageWidget widget, String pageCode, String name) {
+        CommonCode targetPage = pageCode == null ? widget.getPageCode() : findPageCode(pageCode);
         if (pageWidgetRepository.existsByPageCodeIdAndNameAndIdNot(
-                widget.getPageCode().getId(), name, widget.getId())) {
+                targetPage.getId(), name, widget.getId())) {
             throw new ConflictException(DUPLICATE_NAME_MESSAGE);
         }
+        widget.moveToPage(targetPage);
     }
 
     public void applyLayout(PageWidget widget, PageWidgetLayoutRequest layout) {

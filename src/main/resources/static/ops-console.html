@@ -1199,9 +1199,27 @@
     .calculated-ratio-source button.selected { border-color:var(--accent); background:var(--accent-soft); color:var(--text); }
     /* 위젯 페이지는 목록/편집 영역 아래에 계산 지표 카드가 이어지므로 패널 내부를 스크롤한다. */
     #tab-widgets.panel.active { display:block; overflow-x:hidden; overflow-y:auto; scrollbar-gutter:stable; padding-bottom:24px; }
-    #tab-widgets > .grid2 { height:auto; min-height:0; overflow:visible; align-items:start; }
+    #tab-widgets > .grid2 { height:auto; min-height:0; overflow:visible; align-items:start; grid-template-columns:minmax(0,1fr); }
     #tab-widgets > .grid2 > * { height:auto; min-height:0; overflow:visible; }
     #tab-widgets > .card:last-child { margin-bottom:16px; }
+    #tab-widgets .widget-list-card { min-height:0; }
+    #tab-widgets .widget-list-card > div[style*="overflow:auto"] { max-height:calc(100vh - 360px) !important; min-height:200px; }
+    #wEditorBackdrop { display:none; position:fixed; inset:0; z-index:170; background:rgba(2,8,18,.76); }
+    #wEditorBackdrop.open { display:block; }
+    #tab-widgets #wEditorCard { display:none; position:fixed; z-index:171; top:50%; left:50%; transform:translate(-50%,-50%); width:min(1050px,calc(100vw - 36px)); max-height:min(92vh,900px); margin:0; padding:0 22px 18px; overflow-y:auto; overflow-x:hidden; box-shadow:0 32px 90px rgba(0,0,0,.55); scrollbar-gutter:stable; }
+    #tab-widgets #wEditorCard.open { display:block; }
+    .widget-editor-head { display:flex; justify-content:space-between; align-items:center; gap:12px; position:sticky; top:0; z-index:4; margin:0 -22px; padding:14px 22px; background:var(--surface); border-bottom:1px solid var(--line); }
+    .widget-editor-head h2 { margin:2px 0 0; font-size:18px; }
+    .widget-editor-steps { display:flex; gap:8px; flex-wrap:wrap; margin:16px 0 12px; }
+    .widget-editor-steps button { flex:1 1 160px; min-height:42px; text-align:left; background:var(--surface2); border:1px solid var(--line); color:var(--muted); }
+    .widget-editor-steps button.active { border-color:var(--accent); color:var(--text); background:var(--accent-soft); }
+    .widget-editor-steps button:disabled { opacity:.6; cursor:not-allowed; }
+    .widget-step-description { margin:0 0 16px; font-size:13px; line-height:1.5; }
+    #wEditorCard [data-widget-stage].widget-step-hidden { display:none !important; }
+    .widget-review { padding:16px; margin-top:15px; border:1px solid var(--line); border-radius:12px; background:var(--surface2); line-height:1.7; }
+    .widget-review .pick-item { margin-top:6px; }
+    .widget-editor-footer { display:flex; justify-content:space-between; align-items:center; gap:10px; position:sticky; bottom:-18px; z-index:4; margin:18px -22px -18px; padding:12px 22px; border-top:1px solid var(--line); background:var(--surface); }
+    @media (max-width:700px) { #tab-widgets #wEditorCard { width:100vw; max-height:100vh; height:100vh; border-radius:0; } .widget-editor-footer { flex-wrap:wrap; } }
   </style>
 </head>
 <body>
@@ -1855,12 +1873,6 @@
             </label>
           </div>
 
-          <div id="wDataFreshnessBlock" class="fields" style="margin-top:14px">
-            <label class="field">데이터 최신성 기준 (분)
-              <input id="wDataFreshnessMinutes" type="number" min="1" max="1440" value="15" />
-            </label>
-            <div class="muted" style="align-self:end;font-size:12px;padding-bottom:8px">이 시간이 지나면 위젯에 수집 지연 상태로 표시됩니다.</div>
-          </div>
           <button type="button" class="primary" style="margin-top:12px" id="taskCreate" data-role-gate="admin">만들고 collector에 반영</button>
           <details class="raw"><summary>응답 상세</summary><pre id="taskOut"></pre></details>
         </div>
@@ -1872,8 +1884,11 @@
       <h1 class="page-title">화면 위젯</h1>
       <p class="page-desc">페이지에 무엇을 보여줄지 정의합니다. 배치는 <a href="/widget-dashboard.html">위젯 보드</a>에서 조절하세요.</p>
       <div class="grid2">
-        <div class="card">
-          <h2>위젯 목록</h2>
+        <div class="card widget-list-card">
+          <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px">
+            <h2 style="margin:0">위젯 목록</h2>
+            <button type="button" class="primary" id="wOpenEditor" data-role-gate="admin">+ 위젯 만들기</button>
+          </div>
           <div class="row" style="margin-bottom:12px">
             <label class="field">페이지
               <select id="wPage"></select>
@@ -1888,17 +1903,19 @@
           </div>
           <div id="wLastOut" style="margin-top:12px"></div>
         </div>
-        <div class="card">
-          <h2 id="wFormTitle">위젯 만들기</h2>
-          <p class="muted" style="margin-top:-4px;margin-bottom:12px;font-size:13px">
-            <b>last</b>: 장비 + 측정 항목 → 최신값.
-            <b>count</b>: 장비 선택 없음 · <code>devices.enabled=1</code> 전체 · 집계 방식(전체/모델별/특정 모델)만 선택.
-            <b>chart</b>: 대상 방식 → 장비/모델 → 측정 항목 → 기간. 누적 ENERGY는 제외.
-            <b>aggregate</b>: 측정 항목 → 호환 장비 → 기간. 유형에 따라 usage/power 자동 결정.
-            <b>계산 지표</b>: 같은 수집 주기에 측정한 값으로 계산된 결과를 표시.
-            <b>사이코메트릭</b>: 온도·상대습도 소스를 각각 선택해 InfluxDB 평균값을 습공기선으로 표시.
-          </p>
-          <div class="fields">
+        <div id="wEditorBackdrop" aria-hidden="true"></div>
+        <div class="card widget-editor-card" id="wEditorCard" role="dialog" aria-modal="true" aria-labelledby="wFormTitle" aria-hidden="true" data-step="1">
+          <div class="widget-editor-head">
+            <div><div class="muted" style="font-size:11px;letter-spacing:.08em">WIDGET SETUP</div><h2 id="wFormTitle">위젯 만들기</h2></div>
+            <button type="button" class="ghost" id="wCloseEditor" aria-label="위젯 편집 닫기">닫기 ×</button>
+          </div>
+          <nav class="widget-editor-steps" aria-label="위젯 등록 단계">
+            <button type="button" data-widget-step-nav="1">1 · 종류와 이름</button>
+            <button type="button" data-widget-step-nav="2">2 · 표시할 값</button>
+            <button type="button" data-widget-step-nav="3">3 · 표시 설정과 확인</button>
+          </nav>
+          <p class="muted widget-step-description" id="wStepDescription">위젯 종류와 표시 이름을 정하세요. 다음 단계에서 장비와 측정항목을 선택합니다.</p>
+          <div class="fields" data-widget-stage="1">
             <label class="field">페이지
               <select id="wCreatePage"></select>
             </label>
@@ -1916,9 +1933,10 @@
                 <option value="power_distribution">전력 분배 (power distribution)</option>
               </select>
             </label>
+            <p class="muted full" id="wKindHint" style="margin:0;font-size:13px;line-height:1.5"></p>
           </div>
 
-          <div id="wCountBlock" style="margin-top:14px;display:none">
+          <div id="wCountBlock" data-widget-stage="2" style="margin-top:14px;display:none">
             <div class="muted" style="font-size:12px;font-weight:650;margin-bottom:6px">
               count 집계 방식 (대상 = DB enabled 장비 전체 · 장비 추가 불필요)
             </div>
@@ -1937,7 +1955,7 @@
             </div>
           </div>
 
-          <div id="wChartBlock" style="margin-top:14px;display:none">
+          <div id="wChartBlock" data-widget-stage="2" style="margin-top:14px;display:none">
             <div class="muted" style="font-size:12px;font-weight:650;margin-bottom:6px">
               1. 차트 대상 방식
             </div>
@@ -1951,11 +1969,13 @@
             </div>
           </div>
 
-          <div id="wDeviceBlock" style="margin-top:14px">
+          <div id="wDeviceBlock" data-widget-stage="2" style="margin-top:14px">
             <div id="wDeviceLabel" class="muted" style="font-size:12px;font-weight:650;margin-bottom:6px">1. 장비 추가</div>
+            <input id="wDeviceSearch" type="search" placeholder="장비 이름·모델 검색" aria-label="위젯 장비 검색" style="width:100%;margin-bottom:8px" />
             <div id="wDeviceGroupPick" style="margin-bottom:8px;display:none">
               <div class="muted" style="font-size:12px;font-weight:650;margin-bottom:6px">장비 그룹 추가 <span class="muted">(그룹 구성 변경이 위젯에 자동 반영됩니다)</span></div>
               <div class="row"><select id="wPickDeviceGroup" style="flex:1;min-width:180px"></select><button type="button" class="ghost" id="wAddDeviceGroup">그룹 추가</button></div>
+              <div id="wDeviceGroupHint" class="muted" style="font-size:12px;margin-top:6px"></div>
               <div id="wDeviceGroupList" class="pick-list"></div>
             </div>
             <div class="row">
@@ -1964,13 +1984,14 @@
             </div>
             <div id="wDevicePointPick" style="margin-top:8px;display:none">
               <div class="muted" style="font-size:12px;font-weight:650;margin-bottom:6px">이 장비의 측정항목 (하나 이상 선택)</div>
+              <input id="wPointSearch" type="search" placeholder="측정항목 이름·프로토콜 검색" aria-label="측정항목 검색" style="width:100%;margin-bottom:8px" />
               <div id="wPickDevicePoints" class="point-grid" style="display:grid"></div>
               <div class="muted" style="font-size:12px;margin-top:5px">측정항목을 고른 뒤 추가하면, 다음 장비도 같은 방식으로 이어서 추가할 수 있습니다.</div>
             </div>
             <div id="wDeviceList" class="pick-list"></div>
           </div>
 
-          <div id="wModelBlock" style="margin-top:14px;display:none">
+          <div id="wModelBlock" data-widget-stage="2" style="margin-top:14px;display:none">
             <div class="muted" style="font-size:12px;font-weight:650;margin-bottom:6px">2. 대상 모델 선택</div>
             <div class="row">
               <select id="wPickModel" style="flex:1;min-width:180px"></select>
@@ -1979,13 +2000,14 @@
             <div id="wModelList" class="pick-list"></div>
           </div>
 
-          <div id="wPointsBlock" style="margin-top:14px">
+          <div id="wPointsBlock" data-widget-stage="2" style="margin-top:14px">
             <div class="muted" style="font-size:12px;font-weight:650;margin-bottom:6px">2. 측정 항목 선택</div>
             <div id="wPointsHint" class="muted" style="font-size:12px">장비를 추가하면 항목이 나타납니다.</div>
+            <input id="wCatalogSearch" type="search" placeholder="측정항목 검색" aria-label="위젯 측정항목 검색" style="width:100%;margin:8px 0" />
             <div id="wPointGrid" class="point-grid" style="display:none"></div>
           </div>
 
-          <div id="wChartOptionsBlock" style="margin-top:14px;display:none">
+          <div id="wChartOptionsBlock" data-widget-stage="3" style="margin-top:14px;display:none">
             <div class="muted" style="font-size:12px;font-weight:650;margin-bottom:6px">4. 표시 방식과 기간</div>
             <div id="wChartSeriesHint" class="muted" style="font-size:12px;margin-bottom:8px">측정항목을 선택하면 사용할 수 있는 표시 방식이 나타납니다.</div>
             <div class="fields">
@@ -2020,7 +2042,7 @@
             </div>
           </div>
 
-          <div id="wAggBlock" style="margin-top:14px;display:none">
+          <div id="wAggBlock" data-widget-stage="3" style="margin-top:14px;display:none">
             <div class="muted" style="font-size:12px;font-weight:650;margin-bottom:6px">3. 집계 기간</div>
             <div class="fields">
               <label class="field" id="wOpWrap">집계 방식
@@ -2046,7 +2068,7 @@
             </div>
           </div>
 
-          <div id="wPueBlock" style="margin-top:14px;display:none">
+          <div id="wPueBlock" data-widget-stage="2" style="margin-top:14px;display:none">
             <div class="muted" style="font-size:12px;font-weight:650;margin-bottom:6px">계산 지표 선택</div>
             <div class="fields">
               <label class="field full">계산 정의
@@ -2069,7 +2091,7 @@
             <div class="muted" style="font-size:12px;margin-top:6px">위젯을 꺼도 계산 수집은 계속됩니다. 계산 정의에서 별도로 중지하세요.</div>
           </div>
 
-          <div id="wPsychrometricBlock" style="margin-top:14px;display:none">
+          <div id="wPsychrometricBlock" data-widget-stage="2" style="margin-top:14px;display:none">
             <div class="muted" style="font-size:12px;font-weight:650;margin-bottom:6px">온도·습도 데이터 선택</div>
             <div class="muted" style="font-size:12px;margin-bottom:10px">
               선택한 소스의 최근 5개 시간 평균과 최신 평균을 InfluxDB에서 조회합니다. 온도는 °C, 습도는 상대습도(%)를 선택하세요.
@@ -2096,7 +2118,7 @@
             </div>
           </div>
 
-          <div id="wPowerDistributionBlock" style="margin-top:14px;display:none">
+          <div id="wPowerDistributionBlock" data-widget-stage="2" style="margin-top:14px;display:none">
             <div class="muted" style="font-size:12px;font-weight:650;margin-bottom:6px">전력 그룹 구성</div>
             <div class="muted" style="font-size:12px;margin-bottom:10px">
               POWER 데이터 유형이며 InfluxDB에 W 단위로 저장되는 측정항목만 등록할 수 있습니다. 모든 그룹의 최신값 합으로 전체 전력과 비율을 계산합니다.
@@ -2116,12 +2138,23 @@
             </div>
           </div>
 
-          <div class="row" style="margin-top:14px;gap:8px">
+          <div id="wDataFreshnessBlock" class="fields" data-widget-stage="3" style="margin-top:14px">
+            <label class="field">데이터 최신성 기준 (분)
+              <input id="wDataFreshnessMinutes" type="number" min="1" max="1440" value="15" />
+            </label>
+            <div class="muted" style="align-self:end;font-size:12px;padding-bottom:8px">기준을 넘은 값은 수집 지연으로 표시됩니다.</div>
+          </div>
+          <div class="widget-review" id="wReview" data-widget-stage="3" aria-live="polite"></div>
+          <div class="widget-editor-footer">
+            <button type="button" class="ghost" id="wStepBack">이전</button>
+            <div class="row" style="gap:8px">
+              <button type="button" class="primary" id="wStepNext">다음</button>
             <button type="button" class="primary" id="wCreate" data-role-gate="admin">만들기</button>
             <button type="button" class="ghost" id="wCancelEdit" style="display:none">수정 취소</button>
             <button type="button" class="danger" id="wDeleteEdit" style="display:none">삭제</button>
+            </div>
           </div>
-          <details class="raw"><summary>응답 상세</summary><pre id="wOut"></pre></details>
+          <details class="raw" data-widget-stage="3"><summary>응답 상세</summary><pre id="wOut"></pre></details>
         </div>
       </div>
       <div class="card" style="margin-top:16px">
@@ -2854,6 +2887,8 @@
       widgetPendingPointName: "",
       widgetItDeviceIds: [],
       widgetModelIds: [],
+      widgetSources: [],
+      widgetSourcesLoaded: false,
       widgetPointCatalog: [], // [{name, unit, models:[]}]
       widgetPointNamesByModel: new Map(),
       psychrometricTemperatureSources: [],
@@ -5238,15 +5273,166 @@
       } catch (e) { toast(e.message, true); }
     }
 
+    async function loadWidgetSources() {
+      state.widgetSources = await api("/api/manager/widgets/sources") || [];
+      state.widgetSourcesLoaded = true;
+      return state.widgetSources;
+    }
+
+    function widgetDeviceOptions() {
+      const devices = new Map();
+      for (const source of state.widgetSources) {
+        if (devices.has(Number(source.deviceId))) continue;
+        const known = state.devices.find((device) => Number(device.id) === Number(source.deviceId));
+        devices.set(Number(source.deviceId), known || {
+          id: Number(source.deviceId), name: source.deviceName, modelId: source.modelId,
+          modelName: state.models.find((model) => Number(model.id) === Number(source.modelId))?.name || "",
+        });
+      }
+      return [...devices.values()].sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    function widgetSourcesForDevice(deviceId) {
+      return state.widgetSources.filter((source) => Number(source.deviceId) === Number(deviceId));
+    }
+
+    function widgetPointLabel(source) {
+      const origin = source.origin === "BIT_FIELD" ? "비트 항목"
+        : source.origin === "READING" ? "회선 매핑" : "모델 항목";
+      const polling = source.sourceDeviceId && Number(source.sourceDeviceId) !== Number(source.deviceId)
+        ? ` · 원본 장비 #${source.sourceDeviceId}` : "";
+      return `${source.pointName} · ${String(source.protocol || "").toUpperCase()} · ${source.unit || "단위 없음"} · ${origin}${polling}`;
+    }
+
+    function showWidgetEditorStep(step) {
+      const editor = $("wEditorCard");
+      if (!editor) return;
+      const current = Math.min(3, Math.max(1, Number(step) || 1));
+      editor.dataset.step = String(current);
+      editor.querySelectorAll("[data-widget-stage]").forEach((element) => {
+        element.classList.toggle("widget-step-hidden", Number(element.dataset.widgetStage) !== current);
+      });
+      editor.querySelectorAll("[data-widget-step-nav]").forEach((button) => {
+        const active = Number(button.dataset.widgetStepNav) === current;
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-current", active ? "step" : "false");
+      });
+      const kind = $("wKind").value;
+      const sourceHint = kind === "count" ? "집계 방식과 대상 모델을 선택하세요. 측정항목은 필요하지 않습니다."
+        : kind === "calculated" ? "미리 만든 계산 지표를 선택하세요. 위젯은 계산 결과를 조회합니다."
+        : kind === "psychrometric" ? "온도와 습도의 장비·측정항목을 각각 추가하세요."
+        : kind === "power_distribution" ? "전력 그룹을 두 개 이상 만들고 각 그룹에 W 단위 항목을 추가하세요."
+        : "장비를 선택하면 실제 저장 대상 기준의 SNMP·Modbus 항목이 나타납니다.";
+      $("wStepDescription").textContent = [
+        "", "위젯 종류·페이지·표시 이름을 정하세요.", sourceHint,
+        "표시 설정과 선택한 값을 확인한 뒤 저장하세요.",
+      ][current];
+      $("wStepBack").style.visibility = current === 1 ? "hidden" : "visible";
+      $("wStepNext").style.display = current === 3 ? "none" : "inline-flex";
+      $("wCreate").style.display = current === 3 ? "inline-flex" : "none";
+      if (current === 3) renderWidgetReview();
+      editor.scrollTop = 0;
+    }
+
+    function openWidgetEditor(editing = false) {
+      if (!editing) clearWidgetForm(false);
+      $("wEditorBackdrop").classList.add("open");
+      $("wEditorCard").classList.add("open");
+      $("wEditorCard").setAttribute("aria-hidden", "false");
+      showWidgetEditorStep(1);
+      loadWidgetSources().then(() => {
+        if ($("wPickDevice")?.value) loadDevicePointPicker();
+        refreshWidgetPoints();
+      }).catch((error) => toast("측정항목을 불러오지 못했습니다: " + error.message, true));
+      $("wKind").focus();
+    }
+
+    function closeWidgetEditor() {
+      $("wEditorBackdrop").classList.remove("open");
+      $("wEditorCard").classList.remove("open");
+      $("wEditorCard").setAttribute("aria-hidden", "true");
+      $("wOpenEditor").focus();
+    }
+
+    function validateWidgetEditorStep(step) {
+      const kind = $("wKind").value;
+      if (step === 1) {
+        if (!$("wCreatePage").value) throw new Error("표시할 페이지를 선택하세요");
+        if (!$("wName").value.trim()) throw new Error("위젯 이름을 입력하세요");
+      }
+      if (step !== 2) return;
+      if (kind === "last" && !state.lastWidgetSources.length) throw new Error("장비와 측정항목을 하나 이상 추가하세요");
+      if (kind === "chart") {
+        const scope = $("wChartScope").value;
+        if (scope === "models" ? !state.widgetModelIds.length
+          : !selectedWidgetTargetDeviceIds().length) throw new Error("차트 대상 장비 또는 모델을 추가하세요");
+        if (!selectedWidgetPoints().length) throw new Error("차트 측정항목을 하나 이상 선택하세요");
+      }
+      if (kind === "aggregate") {
+        if (!selectedAggregatePoint()) throw new Error("집계할 측정항목을 선택하세요");
+        if (!selectedWidgetTargetDeviceIds().length) throw new Error("집계 대상 장비를 추가하세요");
+      }
+      if (kind === "calculated" && !$("wPueDefinition").value) throw new Error("계산 지표를 선택하세요");
+      if (kind === "psychrometric" && (!state.psychrometricTemperatureSources.length
+          || !state.psychrometricHumiditySources.length)) throw new Error("온도와 습도 소스를 각각 추가하세요");
+      if (kind === "power_distribution" && (state.powerDistributionGroups.length < 2
+          || state.powerDistributionGroups.some((group) => !group.sources.length))) {
+        throw new Error("전력 그룹을 2개 이상 만들고 각 그룹에 측정항목을 추가하세요");
+      }
+      if (kind === "count" && $("wCountMode").value === "model" && !$("wCountModel").value) {
+        throw new Error("집계할 모델을 선택하세요");
+      }
+    }
+
+    async function renderWidgetReview() {
+      const box = $("wReview");
+      const kind = $("wKind").value;
+      const selectedTargets = new Set(selectedWidgetTargetDeviceIds().map(Number));
+      const selectedNames = new Set(selectedWidgetPoints());
+      const sourcePairs = kind === "last"
+        ? state.lastWidgetSources.flatMap((source) => source.pointNames.map((pointName) => ({ deviceId: source.deviceId, pointName })))
+        : kind === "chart" && $("wChartScope").value === "models"
+          ? state.widgetSources.filter((source) => state.widgetModelIds.includes(Number(source.modelId))
+              && selectedNames.has(source.pointName) && !source.ambiguous)
+        : kind === "chart" || kind === "aggregate"
+          ? state.widgetSources.filter((source) => selectedTargets.has(Number(source.deviceId))
+              && selectedNames.has(source.pointName) && !source.ambiguous)
+          : kind === "psychrometric"
+            ? [...state.psychrometricTemperatureSources, ...state.psychrometricHumiditySources]
+            : kind === "power_distribution"
+              ? state.powerDistributionGroups.flatMap((group) => group.sources)
+              : [];
+      const kindLabel = { last: "최신값", chart: "차트", aggregate: "집계", count: "장비 수",
+        calculated: "계산 지표", psychrometric: "온습도", power_distribution: "전력 분배" }[kind] || kind;
+      box.innerHTML = `<b>${esc($("wName").value || "이름 없음")}</b> · ${esc(kindLabel)}<div class="muted">${sourcePairs.length ? `선택한 장비·항목 ${sourcePairs.length}개` : "별도 측정항목 선택 없음"} · 최근 값은 최대 6개까지 표시합니다.</div><div id="wReviewValues" class="pick-list"></div>`;
+      const values = $("wReviewValues");
+      if (!sourcePairs.length) return;
+      values.innerHTML = '<div class="muted">최근 저장값 확인 중…</div>';
+      const rows = await Promise.all(sourcePairs.slice(0, 6).map(async ({ deviceId, pointName }) => {
+        const source = state.widgetSources.find((item) => Number(item.deviceId) === Number(deviceId) && item.pointName === pointName);
+        const label = `${source?.deviceName || `장비 #${deviceId}`} · ${pointName}`;
+        if (!source || source.ambiguous) return { label, value: "항목 확인 필요" };
+        try {
+          const query = new URLSearchParams({ deviceId: String(deviceId), pointName, protocol: source.protocol });
+          const point = await api(`/api/manager/widgets/sources/preview?${query}`);
+          return { label, value: point ? `${point.value} ${source.unit || ""} · ${new Date(point.time).toLocaleString()}` : "최근 24시간 저장값 없음" };
+        } catch (error) { return { label, value: `조회 불가: ${error.message}` }; }
+      }));
+      if (Number($("wEditorCard").dataset.step) !== 3) return;
+      values.innerHTML = rows.map((row) => `<div class="pick-item"><span>${esc(row.label)}</span><b>${esc(row.value)}</b></div>`).join("");
+    }
+
     function fillWidgetDevicePick() {
       if (!$("wPickDevice")) return;
       const selected = new Set([...selectedWidgetTargetDeviceIds(), ...state.widgetItDeviceIds]);
       const kind = $("wKind")?.value;
       const aggregatePoint = kind === "aggregate" ? selectedAggregatePoint() : null;
-      const compatibleModelIds = aggregatePoint?.modelIds || new Set();
-      const available = state.devices.filter((d) =>
+      const compatibleDeviceIds = aggregatePoint?.deviceIds || new Set();
+      const search = ($("wDeviceSearch")?.value || "").trim().toLocaleLowerCase();
+      const available = widgetDeviceOptions().filter((d) =>
         !selected.has(d.id)
-        && (kind !== "aggregate" || compatibleModelIds.has(Number(d.modelId))));
+        && (kind !== "aggregate" || compatibleDeviceIds.has(Number(d.id)))
+        && (!search || `${d.name} ${d.modelName || ""} ${d.id}`.toLocaleLowerCase().includes(search)));
       const emptyLabel = kind === "aggregate" && !aggregatePoint
         ? "측정항목을 먼저 선택하세요"
         : available.length ? null : "추가할 장비 없음";
@@ -5283,14 +5469,29 @@
       if (!visible) return;
       const point = kind === "aggregate" ? selectedAggregatePoint() : null;
       const selected = new Set(state.widgetDeviceGroupIds.map(Number));
-      const available = state.deviceGroups.filter((group) => {
-        if (!group.enabled || selected.has(Number(group.id)) || !(group.devices || []).length) return false;
-        return !point || (group.devices || []).every((device) => point.modelIds.has(Number(device.modelId)));
-      });
-      fillSelect(select, available,
-        (group) => `<option value="${group.id}">${esc(group.name)} · ${group.deviceCount || 0}대</option>`,
-        point || kind !== "aggregate" ? "추가할 장비 그룹 없음" : "측정항목을 먼저 선택하세요");
-      $("wAddDeviceGroup").disabled = !select.value;
+      const groups = state.deviceGroups.filter((group) => group.enabled
+        && !selected.has(Number(group.id)) && (group.devices || []).length);
+      const ready = kind !== "aggregate" || Boolean(point);
+      const compatible = groups.filter((group) => !point || (group.devices || []).every(
+        (device) => point.deviceIds.has(Number(device.id))));
+      const placeholder = !ready ? "집계할 측정항목을 먼저 선택하세요"
+        : !groups.length ? "추가할 장비 그룹 없음"
+        : !compatible.length ? "선택한 측정항목에 맞는 그룹 없음" : "장비 그룹 선택";
+      select.innerHTML = `<option value="">${esc(placeholder)}</option>` + groups.map((group) => {
+        const count = (group.devices || []).length;
+        const matched = point ? group.devices.filter((device) => point.deviceIds.has(Number(device.id))).length : count;
+        const usable = ready && matched === count;
+        const suffix = kind === "aggregate" && point ? ` · 호환 ${matched}/${count}대` : ` · ${count}대`;
+        return `<option value="${group.id}" ${usable ? "" : "disabled"}>${esc(group.name + suffix)}${usable ? "" : " · 추가 불가"}</option>`;
+      }).join("");
+      select.disabled = !ready || !groups.length;
+      $("wAddDeviceGroup").disabled = true;
+      $("wDeviceGroupHint").textContent = kind === "aggregate"
+        ? !point ? "집계 측정항목을 먼저 고르면 같은 항목·단위를 가진 그룹을 선택할 수 있습니다."
+          : groups.some((group) => (group.devices || []).some((device) => !point.deviceIds.has(Number(device.id))))
+            ? "호환되지 않는 장비가 포함된 그룹은 선택할 수 없습니다. 그룹의 모든 장비에 같은 측정항목·단위가 필요합니다."
+            : "그룹 구성 변경 시 위젯 대상도 함께 바뀝니다."
+        : "그룹 구성 변경 시 위젯 대상도 함께 바뀝니다.";
     }
 
     function renderWidgetDeviceGroups() {
@@ -5316,6 +5517,13 @@
         .filter(Boolean);
     }
 
+    function filterWidgetPointLabels(gridId, searchId) {
+      const query = ($(searchId)?.value || "").trim().toLocaleLowerCase();
+      $(gridId)?.querySelectorAll("label").forEach((label) => {
+        label.style.display = !query || label.textContent.toLocaleLowerCase().includes(query) ? "" : "none";
+      });
+    }
+
     function syncLastWidgetDeviceIds() {
       state.widgetDeviceIds = state.lastWidgetSources.map((source) => Number(source.deviceId));
     }
@@ -5324,26 +5532,20 @@
       const deviceId = Number($("wPickDevice")?.value);
       const wrap = $("wDevicePointPick");
       const grid = $("wPickDevicePoints");
-      if (!deviceId) {
+      if (!deviceId || $("wKind")?.value !== "last") {
         wrap.style.display = "none";
         grid.innerHTML = "";
-        $("wAddDevice").disabled = true;
-        return;
-      }
-      if ($("wKind")?.value === "chart" || $("wKind")?.value === "aggregate") {
-        state.widgetPendingPointName = "";
-        wrap.style.display = "none";
-        grid.innerHTML = "";
-        $("wAddDevice").disabled = !$("wPickDevice").value;
+        $("wAddDevice").disabled = !deviceId;
         return;
       }
       try {
-        const device = state.devices.find((d) => d.id === deviceId);
-        const points = await loadSnmpPointsForModel(device.modelId);
+        if (!state.widgetSourcesLoaded) await loadWidgetSources();
+        if ($("wKind")?.value !== "last" || Number($("wPickDevice")?.value) !== deviceId) return;
+        const points = widgetSourcesForDevice(deviceId);
         grid.innerHTML = points.length ? points.map((point) => `
-          <label><input type="checkbox" data-last-point="${esc(point.name)}" />
-            <span><b>${esc(formatPointLabel(point))}</b></span>
-          </label>`).join("") : '<div class="empty" style="grid-column:1/-1;padding:12px">사용 가능한 측정항목이 없습니다.</div>';
+          <label><input type="checkbox" data-last-point="${esc(point.pointName)}" ${point.ambiguous ? "disabled" : ""} />
+            <span><b>${esc(widgetPointLabel(point))}</b>${point.ambiguous ? '<small class="muted"> · 프로토콜 간 이름 중복 — 선택 불가</small>' : ""}</span>
+          </label>`).join("") : '<div class="empty" style="grid-column:1/-1;padding:12px">이 장비에 활성 측정항목이 없습니다. 수집 설정을 확인하세요.</div>';
         wrap.style.display = "block";
         $("wAddDevice").disabled = true;
         grid.querySelectorAll("input[data-last-point]").forEach((input) => {
@@ -5351,6 +5553,7 @@
             $("wAddDevice").disabled = selectedLastDevicePoints().length === 0;
           });
         });
+        filterWidgetPointLabels("wPickDevicePoints", "wPointSearch");
       } catch (e) {
         wrap.style.display = "block";
         grid.innerHTML = '<div class="empty" style="grid-column:1/-1;padding:12px">측정항목을 불러오지 못했습니다.</div>';
@@ -5393,7 +5596,8 @@
         return;
       }
       box.innerHTML = state.widgetDeviceIds.map((id) => {
-        const d = state.devices.find((x) => x.id === id);
+        const d = widgetDeviceOptions().find((x) => x.id === id)
+          || state.devices.find((x) => x.id === id);
         const source = state.lastWidgetSources.find((item) => Number(item.deviceId) === Number(id));
         const pointLabel = isLast && source
           ? `<div class="muted" style="font-size:12px;margin-top:3px">측정항목: ${esc((source.pointNames || []).join(", "))}</div>`
@@ -5442,16 +5646,6 @@
       });
     }
 
-    async function loadSnmpPointsForModel(modelId) {
-      let model = state.models.find((m) => m.id === modelId);
-      if (!model) model = await api(`/api/manager/device-models/${modelId}`);
-      const snmp = (model.protocols || []).find((p) => (p.protocolCode || "").toLowerCase() === "snmp")
-        || (model.protocols || [])[0];
-      if (!snmp) return [];
-      const points = await api(`/api/manager/device-models/${modelId}/protocols/${snmp.id}/snmp-points`);
-      return (points || []).filter((p) => p.enabled !== false);
-    }
-
     function selectedAggregatePoint() {
       if ($("wKind")?.value !== "aggregate") return null;
       const input = $("wPointGrid")?.querySelector('input[data-point-index]:checked');
@@ -5462,7 +5656,9 @@
     function fillWidgetModelPick() {
       if (!$("wPickModel")) return;
       const selected = new Set(state.widgetModelIds);
-      const available = (state.models || []).filter((m) => !selected.has(m.id));
+      const sourceModels = new Set(state.widgetSources.filter((source) => !source.ambiguous)
+        .map((source) => Number(source.modelId)));
+      const available = (state.models || []).filter((m) => !selected.has(m.id) && sourceModels.has(Number(m.id)));
       fillSelect(
         $("wPickModel"),
         available,
@@ -5519,19 +5715,20 @@
     }
 
     function formatPointLabel(point) {
-      const details = [point.unit, point.dataPointType].filter(Boolean).join(" · ");
+      const units = point.units?.size ? [...point.units].join(" / ") : point.unit;
+      const details = [units, point.dataPointType].filter(Boolean).join(" · ");
       return details ? `${point.name} (${details})` : point.name;
     }
 
     function arrangeWidgetForm(kind) {
       const points = $("wPointsBlock");
       const devices = $("wDeviceBlock");
-      const chartOptions = $("wChartOptionsBlock");
-      if (!points || !devices || !chartOptions) return;
+      const models = $("wModelBlock");
+      if (!points || !devices || !models) return;
       if (kind === "aggregate") {
         devices.parentNode.insertBefore(points, devices);
       } else {
-        chartOptions.parentNode.insertBefore(points, chartOptions);
+        models.parentNode.insertBefore(points, models.nextSibling);
       }
     }
 
@@ -5539,13 +5736,32 @@
       const hint = $("wPointsHint");
       const grid = $("wPointGrid");
       if (!hint || !grid) return;
+      if (!state.widgetSourcesLoaded) {
+        try { await loadWidgetSources(); }
+        catch (error) { hint.textContent = "측정항목 로드 실패: " + error.message; return; }
+      }
       const kind = $("wKind").value;
+      const kindHints = {
+        last: "장비별 최신 측정값을 보여줍니다. 한 장비에서 여러 항목을 고를 수 있습니다.",
+        count: "등록된 장비 수를 전체·모델별·특정 모델로 집계합니다.",
+        chart: "시간에 따른 값 변화를 보여줍니다. 장비나 모델을 고른 뒤 측정항목을 선택하세요.",
+        aggregate: "여러 장비의 전력(W 계열) 합계 또는 누적 에너지(Wh 계열) 사용량을 보여줍니다.",
+        calculated: "별도로 수집 중인 사용자 계산 지표의 저장값을 보여줍니다.",
+        psychrometric: "온도와 상대습도 측정값으로 공기 상태를 보여줍니다.",
+        power_distribution: "그룹별 전력(W) 비중을 비교합니다. 서로 다른 전력원을 그룹에 묶으세요.",
+      };
+      $("wKindHint").textContent = kindHints[kind] || "";
+      const previousChartPoints = kind === "chart" ? new Set(selectedWidgetPoints()) : new Set();
       const previousAggregatePoint = kind === "aggregate" ? selectedAggregatePoint() : null;
       const chartScope = $("wChartScope")?.value || "devices";
       const aggOp = $("wOp")?.value || "";
       const showDevices = kind === "last" || kind === "aggregate" || (kind === "chart" && chartScope === "devices");
       const showModels = kind === "chart" && chartScope === "models";
       const showPoints = kind === "chart" || kind === "aggregate";
+      if (kind !== "last") {
+        $("wDevicePointPick").style.display = "none";
+        $("wPickDevicePoints").innerHTML = "";
+      }
 
       $("wPointsBlock").style.display = showPoints ? "block" : "none";
       $("wCountBlock").style.display = kind === "count" ? "block" : "none";
@@ -5589,15 +5805,17 @@
       if (kind === "count" || kind === "calculated" || kind === "last") {
         state.widgetPointCatalog = [];
         state.widgetPointNamesByModel = new Map();
-        if (kind === "last") fillWidgetDevicePick();
+        if (kind === "last") {
+          fillWidgetDevicePick();
+          loadDevicePointPicker();
+        }
         return;
       }
 
       let sourceIds = [];
       let sourceKind = "device";
       if (kind === "aggregate") {
-        sourceIds = [...new Set(state.devices.map((device) => Number(device.modelId)).filter(Number.isFinite))];
-        sourceKind = "aggregate-model";
+        sourceIds = [...new Set(state.widgetSources.map((source) => Number(source.deviceId)).filter(Number.isFinite))];
       } else if (kind === "chart" && chartScope === "models") {
         sourceIds = [...state.widgetModelIds];
         sourceKind = "model";
@@ -5609,7 +5827,7 @@
       if (!sourceIds.length) {
         state.widgetPointCatalog = [];
         state.widgetPointNamesByModel = new Map();
-        hint.textContent = sourceKind === "aggregate-model"
+        hint.textContent = kind === "aggregate"
           ? "집계할 수 있는 등록 장비와 측정항목이 없습니다."
           : sourceKind === "model"
           ? "모델을 추가하면 측정 항목이 나타납니다."
@@ -5620,7 +5838,7 @@
         return;
       }
 
-      hint.textContent = "모델에서 측정 항목을 불러오는 중…";
+      hint.textContent = "장비의 측정항목을 불러오는 중…";
       hint.style.display = "block";
       grid.style.display = "none";
 
@@ -5630,64 +5848,71 @@
         for (const id of sourceIds) {
           let modelId = id;
           let modelLabel = String(id);
+          let points;
           if (sourceKind === "device") {
-            let d = state.devices.find((x) => x.id === id);
-            if (!d) d = await api(`/api/manager/devices/${id}`);
-            modelId = d.modelId;
-            modelLabel = d.modelName || String(d.modelId);
+            const d = widgetDeviceOptions().find((device) => Number(device.id) === Number(id));
+            modelId = d?.modelId;
+            modelLabel = d?.name || `장비 #${id}`;
+            points = widgetSourcesForDevice(id);
           } else {
             const m = state.models.find((x) => x.id === id);
             modelLabel = m ? m.name : String(id);
+            points = state.widgetSources.filter((source) => Number(source.modelId) === Number(id));
           }
-          const points = await loadSnmpPointsForModel(modelId);
           if (!state.widgetPointNamesByModel.has(Number(modelId))) {
             state.widgetPointNamesByModel.set(Number(modelId), new Set());
           }
           const modelPointNames = state.widgetPointNamesByModel.get(Number(modelId));
           for (const p of points) {
+            if (p.ambiguous) continue;
             const dataPointType = String(p.dataPointType || "").toUpperCase();
-            if (kind === "chart" && String(p.dataPointType || "").toUpperCase() === "ENERGY") {
+            if (kind === "chart" && dataPointType === "ENERGY") {
               continue;
             }
             if (kind === "aggregate" && dataPointType !== "POWER" && dataPointType !== "ENERGY") {
               continue;
             }
-            modelPointNames.add(p.name);
+            modelPointNames.add(p.pointName);
             const unit = String(p.unit || "").trim();
-            const key = `${p.name}\u0000${dataPointType}\u0000${unit}`;
+            const key = kind === "chart" ? p.pointName : `${p.pointName}\u0000${dataPointType}\u0000${unit}`;
             if (!byName.has(key)) {
               byName.set(key, {
                 key,
-                name: p.name,
+                name: p.pointName,
                 unit,
+                units: new Set(),
                 dataPointType,
                 models: new Set(),
                 modelIds: new Set(),
-                count: 0,
+                deviceIds: new Set(),
+                sourceIds: new Set(),
               });
             }
             const row = byName.get(key);
-            row.count += 1;
+            if (unit) row.units.add(unit);
+            row.sourceIds.add(Number(id));
             row.models.add(modelLabel);
             row.modelIds.add(Number(modelId));
+            row.deviceIds.add(Number(p.deviceId));
           }
         }
         const catalog = [...byName.values()].sort((a, b) => a.name.localeCompare(b.name));
+        for (const point of catalog) point.count = point.sourceIds.size;
         state.widgetPointCatalog = catalog;
         const allHave = catalog.filter((p) => p.count === sourceIds.length);
         const partial = catalog.filter((p) => p.count < sourceIds.length);
-        const unitLabel = sourceKind === "model" || sourceKind === "aggregate-model" ? "모델" : "대";
+        const unitLabel = sourceKind === "model" ? "모델" : "대";
 
         if (!catalog.length) {
-          hint.textContent = sourceKind === "aggregate-model"
-            ? "POWER 또는 ENERGY로 분류된 집계 측정항목이 없습니다."
+          hint.textContent = kind === "aggregate"
+            ? "POWER 또는 ENERGY 항목이 없습니다. Modbus는 W/Wh 계열 단위로 유형을 판별합니다."
             : sourceKind === "model"
             ? kind === "chart"
               ? "선택한 모델에 차트로 표시할 측정 항목이 없습니다. 누적 ENERGY는 사용량 집계를 이용하세요."
-              : "선택한 모델에 SNMP 측정 항목이 없습니다."
+              : "선택한 모델에 측정항목이 없습니다."
             : kind === "chart"
               ? "선택한 장비 모델에 차트로 표시할 측정 항목이 없습니다. 누적 ENERGY는 사용량 집계를 이용하세요."
-              : "선택한 장비 모델에 SNMP 측정 항목이 없습니다.";
+              : "선택한 장비에 측정항목이 없습니다.";
           grid.innerHTML = "";
           return;
         }
@@ -5705,11 +5930,9 @@
         grid.innerHTML = catalog.map((p, index) => {
           const shared = p.count === sourceIds.length;
           const label = formatPointLabel(p);
-          const compatibleDeviceCount = isAggregate
-            ? state.devices.filter((device) => p.modelIds.has(Number(device.modelId))).length
-            : 0;
+          const compatibleDeviceCount = isAggregate ? p.deviceIds.size : 0;
           return `<label title="${esc([...p.models].join(", "))}">
-            <input type="${isAggregate ? "radio" : "checkbox"}" ${isAggregate ? 'name="wAggPoint"' : ""} data-point="${esc(p.name)}" data-point-index="${index}" />
+            <input type="${isAggregate ? "radio" : "checkbox"}" ${isAggregate ? 'name="wAggPoint"' : ""} data-point="${esc(p.name)}" data-point-index="${index}" ${!isAggregate && previousChartPoints.has(p.name) ? "checked" : ""} />
             <span><b>${esc(label)}</b>
               ${isAggregate
                 ? `<span class="u"> · 호환 장비 ${compatibleDeviceCount}대</span>`
@@ -5717,18 +5940,16 @@
             </span>
           </label>`;
         }).join("");
+        filterWidgetPointLabels("wPointGrid", "wCatalogSearch");
         if (isAggregate) {
-          const targetModelIds = new Set(state.widgetDeviceIds
-            .map((deviceId) => state.devices.find((device) => Number(device.id) === Number(deviceId))?.modelId)
-            .filter((modelId) => modelId != null)
-            .map(Number));
+          const targetDeviceIds = new Set(state.widgetDeviceIds.map(Number));
           let selectedIndex = previousAggregatePoint
             ? catalog.findIndex((point) => point.key === previousAggregatePoint.key)
             : -1;
           if (selectedIndex < 0 && aggOp) {
             const suggested = suggestAggregatePoint(catalog, aggOp);
             selectedIndex = catalog.findIndex((point) => point.name === suggested
-              && [...targetModelIds].every((modelId) => point.modelIds.has(modelId)));
+              && [...targetDeviceIds].every((deviceId) => point.deviceIds.has(deviceId)));
           }
           if (selectedIndex >= 0) {
             const input = grid.querySelector(`input[data-point-index="${selectedIndex}"]`);
@@ -5778,7 +5999,8 @@
         const el = $("wPointGrid").querySelector('input[data-point]:checked');
         return el ? [el.dataset.point] : [];
       }
-      return [...$("wPointGrid").querySelectorAll("input[data-point]:checked")].map((el) => el.dataset.point);
+      return [...new Set([...$("wPointGrid").querySelectorAll("input[data-point]:checked")]
+        .map((el) => el.dataset.point))];
     }
 
     function syncChartPointFamily(input) {
@@ -5807,13 +6029,10 @@
 
     function syncChartPointUnit(input) {
       if ($("wKind")?.value !== "chart" || !input?.checked) return true;
-      const selectedPoint = state.widgetPointCatalog.find((point) => point.name === input.dataset.point);
-      const unit = String(selectedPoint?.unit || "").trim();
-      if (!unit) return true;
-      const units = new Set(selectedWidgetPoints()
-        .map((name) => state.widgetPointCatalog.find((point) => point.name === name)?.unit)
-        .filter(Boolean)
-        .map((other) => String(other).trim()));
+      const units = new Set(selectedWidgetPoints().flatMap((name) => {
+        const point = state.widgetPointCatalog.find((item) => item.name === name);
+        return point?.units ? [...point.units] : point?.unit ? [point.unit] : [];
+      }).filter(Boolean).map((unit) => String(unit).trim()));
       if (units.size > 2) {
         input.checked = false;
         toast(`하나의 차트에는 최대 두 단위만 선택할 수 있습니다. 현재 단위: ${[...units].join(", ")}`, true);
@@ -5841,10 +6060,10 @@
       const select = $("wChartSeriesMode");
       const hint = $("wChartSeriesHint");
       let points = selectedWidgetPoints();
-      const selectedUnits = [...new Set(points
-        .map((name) => state.widgetPointCatalog.find((point) => point.name === name)?.unit)
-        .filter(Boolean)
-        .map((unit) => String(unit).trim()))];
+      const selectedUnits = [...new Set(points.flatMap((name) => {
+        const point = state.widgetPointCatalog.find((item) => item.name === name);
+        return point?.units ? [...point.units] : point?.unit ? [point.unit] : [];
+      }).filter(Boolean).map((unit) => String(unit).trim()))];
       const hasTwoUnits = selectedUnits.length === 2;
       select.disabled = points.length === 0;
       if (!points.length) {
@@ -8185,6 +8404,9 @@
       $("wCancelEdit").style.display = "none";
       $("wDeleteEdit").style.display = "none";
       $("wName").value = "";
+      $("wDeviceSearch").value = "";
+      $("wPointSearch").value = "";
+      $("wCatalogSearch").value = "";
       $("wKind").value = "last";
       $("wCountMode").value = "by_model";
       $("wChartScope").value = "devices";
@@ -8212,10 +8434,12 @@
       renderPowerDistributionGroups();
       fillPowerDistributionPicks();
       refreshWidgetPoints();
+      closeWidgetEditor();
     }
 
     async function startEditWidget(id) {
       try {
+        await loadWidgetSources();
         const w = await api(`/api/manager/widgets/${id}`);
         state.editingWidgetId = w.id;
         state.editingLayout = w.layout || null;
@@ -8276,13 +8500,10 @@
         }
         const wanted = new Set(w.pointNames || []);
         if (w.queryKind === "aggregate") {
-          const targetModelIds = new Set(state.widgetDeviceIds
-            .map((deviceId) => state.devices.find((device) => Number(device.id) === Number(deviceId))?.modelId)
-            .filter((modelId) => modelId != null)
-            .map(Number));
+          const targetDeviceIds = new Set(state.widgetDeviceIds.map(Number));
           const index = state.widgetPointCatalog.findIndex((point) =>
             wanted.has(point.name)
-            && [...targetModelIds].every((modelId) => point.modelIds.has(modelId)));
+            && [...targetDeviceIds].every((deviceId) => point.deviceIds.has(deviceId)));
           const input = $("wPointGrid")?.querySelector(`input[data-point-index="${index}"]`);
           if (input) {
             input.checked = true;
@@ -8296,7 +8517,10 @@
         }
         refreshChartSeriesOptions();
         toast(`위젯 #${w.id} 수정 모드`);
-        $("tab-widgets")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        $("wEditorBackdrop").classList.add("open");
+        $("wEditorCard").classList.add("open");
+        $("wEditorCard").setAttribute("aria-hidden", "false");
+        showWidgetEditorStep(1);
       } catch (e) {
         toast(e.message, true);
       }
@@ -8655,10 +8879,13 @@
 
     function renderPueResult(data, fromInflux = false) {
       const value = data.value == null ? "계산 불가" : Number(data.value).toFixed(4);
-      const statusLabel = { OK: "정상", MISSING_DATA: "계산 결과 없음", STALE_DATA: "저장값 오래됨" }[data.calculationStatus] || data.calculationStatus;
+      const previous = data.calculationStatus === "PREVIOUS_VERSION";
+      const statusLabel = { OK: "정상", MISSING_DATA: "계산 결과 없음", STALE_DATA: "저장값 오래됨", PREVIOUS_VERSION: "이전 설정 결과 · 새 수집 대기" }[data.calculationStatus] || data.calculationStatus;
+      const savedAt = data.dataStatus?.latestCollectedAt ? new Date(data.dataStatus.latestCollectedAt).toLocaleString("ko-KR") : "";
       $("pueResult").innerHTML = `<div class="stats"><div class="stat"><div class="k">계산 결과</div><div class="v">${esc(value)} ${esc(data.unit || "")}</div></div></div>`
         + `<p class="muted">${fromInflux ? "같은 수집 회차에 읽은 값으로 계산한 InfluxDB 저장 결과" : "계산 결과"} · 상태: ${esc(statusLabel)} · 기간: ${esc(data.rangePreset)}</p>`
-        + `<div class="muted mono">${esc(data.formula || "")}</div>`
+        + (previous ? `<div class="muted">이전 결과 저장: ${esc(savedAt)} · 저장 당시 단위 정보 없음</div>` : "")
+        + `<div class="muted mono">${previous ? "현재 공식(새 결과 대기): " : ""}${esc(data.formula || "")}</div>`
         + (Object.keys(data.inputs || {}).length ? `<div class="muted" style="margin-top:8px">입력값: ${Object.entries(data.inputs).map(([alias, input]) => `${esc(alias)}=${esc(input)}`).join(" · ")}</div>` : "");
     }
 
@@ -8672,8 +8899,11 @@
 
     function fillPsychrometricDevicePicks() {
       if (!$("wPsychTemperatureDevice")) return;
-      const available = state.devices.filter((d) => d.enabled !== false);
       for (const role of ["temperature", "humidity"]) {
+        const available = widgetDeviceOptions().filter((device) =>
+          widgetSourcesForDevice(device.id).some((source) => !source.ambiguous && (role === "temperature"
+            ? String(source.dataPointType).toUpperCase() === "TEMPERATURE"
+            : String(source.dataPointType).toUpperCase() === "HUMIDITY")));
         const prefix = psychrometricPrefix(role);
         const select = $(prefix + "Device");
         fillSelect(select, available, (d) =>
@@ -8700,17 +8930,11 @@
       const add = $(prefix + "Add");
       if (!deviceId) return resetPsychrometricPointPick(role);
       try {
-        const device = state.devices.find((d) => Number(d.id) === deviceId);
-        const points = (await loadSnmpPointsForModel(Number(device.modelId))).filter((p) => {
-          const type = String(p.dataPointType || "").toUpperCase();
-          const unit = String(p.unit || "").trim();
-          return role === "temperature"
-            ? type === "TEMPERATURE" || unit === "°C" || unit.toUpperCase() === "C"
-            : unit === "%" && type !== "POWER_FACTOR";
-        });
+        const points = widgetSourcesForDevice(deviceId).filter((source) => !source.ambiguous
+          && String(source.dataPointType).toUpperCase() === (role === "temperature" ? "TEMPERATURE" : "HUMIDITY"));
         const label = role === "temperature" ? "온도 측정항목 선택" : "상대습도(%) 측정항목 선택";
         fillSelect(point, points, (p) =>
-          `<option value="${esc(p.name)}" data-unit="${esc(p.unit || "")}">${esc(formatPointLabel(p))}</option>`,
+          `<option value="${esc(p.pointName)}" data-unit="${esc(p.unit || "")}">${esc(widgetPointLabel(p))}</option>`,
           points.length ? label : `${role === "temperature" ? "온도" : "상대습도"} 측정항목 없음`);
         point.value = "";
         point.disabled = !points.length;
@@ -8780,7 +9004,10 @@
         `<option value="${index}">${esc(item.name)}</option>`, "그룹 선택");
       if (selectedGroup !== "" && Number(selectedGroup) < state.powerDistributionGroups.length) group.value = selectedGroup;
       const selectedDevice = device.value;
-      const enabledDevices = state.devices.filter((item) => item.enabled !== false);
+      const enabledDevices = widgetDeviceOptions().filter((item) =>
+        widgetSourcesForDevice(item.id).some((source) => !source.ambiguous
+          && String(source.dataPointType).toUpperCase() === "POWER"
+          && String(source.unit || "").trim().toUpperCase() === "W"));
       fillSelect(device, enabledDevices, (item) =>
         `<option value="${item.id}">${esc(item.name)} · ${esc(item.modelName || "")} (#${item.id})</option>`, "장비 선택");
       if (selectedDevice && enabledDevices.some((item) => Number(item.id) === Number(selectedDevice))) device.value = selectedDevice;
@@ -8792,13 +9019,11 @@
       const point = $("wPowerPoint");
       if (!deviceId) return resetPowerDistributionPointPick();
       try {
-        const device = state.devices.find((item) => Number(item.id) === deviceId);
-        if (!device) throw new Error("장비를 찾을 수 없습니다");
-        const points = (await loadSnmpPointsForModel(Number(device.modelId))).filter((item) =>
-          String(item.dataPointType || "").toUpperCase() === "POWER"
+        const points = widgetSourcesForDevice(deviceId).filter((item) => !item.ambiguous
+          && String(item.dataPointType || "").toUpperCase() === "POWER"
           && String(item.unit || "").trim().toUpperCase() === "W");
         fillSelect(point, points, (item) =>
-          `<option value="${esc(item.name)}">${esc(formatPointLabel(item))}</option>`,
+          `<option value="${esc(item.pointName)}">${esc(widgetPointLabel(item))}</option>`,
           points.length ? "W 단위 POWER 선택" : "W 단위 POWER 측정항목 없음");
         point.value = "";
         point.disabled = !points.length;
@@ -9005,6 +9230,32 @@
     renderPueGroups();
 
     $("wReload").onclick = () => loadWidgets().catch((e) => toast(e.message, true));
+    $("wOpenEditor").onclick = () => openWidgetEditor();
+    $("wDeviceSearch").addEventListener("input", () => fillWidgetDevicePick());
+    $("wPointSearch").addEventListener("input", () => filterWidgetPointLabels("wPickDevicePoints", "wPointSearch"));
+    $("wCatalogSearch").addEventListener("input", () => filterWidgetPointLabels("wPointGrid", "wCatalogSearch"));
+    $("wCloseEditor").onclick = () => closeWidgetEditor();
+    $("wEditorBackdrop").onclick = () => closeWidgetEditor();
+    $("wStepBack").onclick = () => showWidgetEditorStep(Number($("wEditorCard").dataset.step) - 1);
+    $("wStepNext").onclick = () => {
+      try {
+        const step = Number($("wEditorCard").dataset.step);
+        validateWidgetEditorStep(step);
+        showWidgetEditorStep(step + 1);
+      } catch (error) { toast(error.message, true); }
+    };
+    $("wEditorCard").querySelectorAll("[data-widget-step-nav]").forEach((button) => {
+      button.onclick = () => {
+        const target = Number(button.dataset.widgetStepNav);
+        try {
+          for (let step = Number($("wEditorCard").dataset.step); step < target; step++) validateWidgetEditorStep(step);
+          showWidgetEditorStep(target);
+        } catch (error) { toast(error.message, true); }
+      };
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && $("wEditorCard").classList.contains("open")) closeWidgetEditor();
+    });
     $("wPage").addEventListener("change", () => loadWidgets().catch(() => {}));
     $("wAddDevice").onclick = () => addWidgetDevice(Number($("wPickDevice").value));
     $("wAddDeviceGroup").onclick = async () => {
@@ -9015,6 +9266,9 @@
       fillWidgetDevicePick();
       await refreshWidgetPoints();
     };
+    $("wPickDeviceGroup").addEventListener("change", () => {
+      $("wAddDeviceGroup").disabled = !$("wPickDeviceGroup").value;
+    });
     $("wPickDevice")?.addEventListener("change", () => loadDevicePointPicker());
     $("wAddItDevice")?.addEventListener("click", () => addWidgetItDevice(Number($("wPickItDevice").value)));
     $("wAddModel")?.addEventListener("click", () => addWidgetModel(Number($("wPickModel").value)));
@@ -9093,16 +9347,11 @@
             })),
             layout: state.editingLayout || { gridX: 0, gridY: 0, w: 16, h: 10 },
           };
-          let powerRequestBody = powerBody;
-          if (state.editingWidgetId) {
-            const { pageCode, ...updateBody } = powerBody;
-            powerRequestBody = updateBody;
-          }
           const saved = await api(
             state.editingWidgetId
               ? `/api/manager/widgets/${state.editingWidgetId}/power-distribution`
               : "/api/manager/widgets/power-distribution",
-            { method: state.editingWidgetId ? "PUT" : "POST", body: JSON.stringify(powerRequestBody) }
+            { method: state.editingWidgetId ? "PUT" : "POST", body: JSON.stringify(powerBody) }
           );
           $("wOut").textContent = JSON.stringify(saved, null, 2);
           toast(state.editingWidgetId ? "전력 분배 위젯을 저장했습니다" : "전력 분배 위젯을 만들었습니다");
@@ -9126,18 +9375,13 @@
             humiditySources: state.psychrometricHumiditySources.map(({ deviceId, pointName }) => ({ deviceId, pointName })),
             layout: state.editingLayout || { gridX: 0, gridY: 0, w: 16, h: 16 },
           };
-        let psychRequestBody = psychBody;
-        if (state.editingWidgetId) {
-          const { pageCode, ...updateBody } = psychBody;
-          psychRequestBody = updateBody;
-        }
         const saved = await api(
           state.editingWidgetId
             ? `/api/manager/widgets/${state.editingWidgetId}/psychrometric`
             : "/api/manager/widgets/psychrometric",
           {
             method: state.editingWidgetId ? "PUT" : "POST",
-            body: JSON.stringify(psychRequestBody),
+            body: JSON.stringify(psychBody),
           }
         );
           $("wOut").textContent = JSON.stringify(saved, null, 2);
@@ -9225,10 +9469,9 @@
 
         let saved;
         if (state.editingWidgetId) {
-          const { pageCode, ...updateBody } = body;
           saved = await api(`/api/manager/widgets/${state.editingWidgetId}`, {
             method: "PUT",
-            body: JSON.stringify(updateBody),
+            body: JSON.stringify(body),
           });
           toast("위젯을 저장했습니다");
         } else {

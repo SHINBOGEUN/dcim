@@ -42,13 +42,27 @@ public class CalculatedMetricQueryService {
                 : PageWidgetChartRangePreset.from(rangePresetOverride);
         if (preset == null) preset = PageWidgetChartRangePreset.last_24h;
         QueryRanges.Range range = QueryRanges.resolve(preset);
-        CalculatedMetricLastPoint point = pointQuery.findLastCalculated(definition.getId(), definition.getConfigVersion(),
-                Duration.between(range.start(), range.end())).orElse(null);
-        boolean stale = point != null && widget.getCalculatedFreshnessMinutes() != null
-                && point.time().isBefore(Instant.now().minusSeconds(widget.getCalculatedFreshnessMinutes().longValue() * 60));
-        boolean complete = point != null && !stale;
-        WidgetDataStatusResponse status = widgetDataStatusResolver.resolve(
-                Collections.singletonList(point == null ? null : point.time()), widget.getCalculatedFreshnessMinutes());
+        Duration lookback = Duration.between(range.start(), range.end());
+        CalculatedMetricLastPoint currentPoint = pointQuery.findLastCalculated(
+                definition.getId(), definition.getConfigVersion(), lookback).orElse(null);
+        Duration previousLookback = lookback.compareTo(Duration.ofDays(3)) < 0 ? Duration.ofDays(3) : lookback;
+        CalculatedMetricLastPoint previousPoint = currentPoint == null
+                ? pointQuery.findLastCalculatedPreviousVersion(definition.getId(),
+                    definition.getConfigVersion(), previousLookback).orElse(null) : null;
+        boolean previousVersion = currentPoint == null && previousPoint != null;
+        boolean stale = currentPoint != null && widget.getCalculatedFreshnessMinutes() != null
+                && currentPoint.time().isBefore(Instant.now().minusSeconds(widget.getCalculatedFreshnessMinutes().longValue() * 60));
+        boolean complete = currentPoint != null && !stale;
+        CalculatedMetricLastPoint displayedPoint = previousVersion ? previousPoint : currentPoint;
+        WidgetDataStatusResponse resolvedStatus = widgetDataStatusResolver.resolve(
+                Collections.singletonList(displayedPoint == null ? null : displayedPoint.time()),
+                widget.getCalculatedFreshnessMinutes());
+        WidgetDataStatusResponse status = previousVersion
+                ? new WidgetDataStatusResponse("PREVIOUS", resolvedStatus.latestCollectedAt(),
+                    resolvedStatus.freshnessMinutes(), resolvedStatus.expectedSourceCount(),
+                    resolvedStatus.availableSourceCount(), resolvedStatus.missingSourceCount(),
+                    resolvedStatus.staleSourceCount())
+                : resolvedStatus;
         List<CalculatedMetricTrendPointResponse> trend = List.of();
         if ((rangePresetOverride != null && !rangePresetOverride.isBlank())
                 || (windowOverride != null && !windowOverride.isBlank())) {
@@ -60,10 +74,11 @@ public class CalculatedMetricQueryService {
                     .stream().map(item -> new CalculatedMetricTrendPointResponse(item.time(), QueryValues.round4(item.value())))
                     .toList();
         }
-        return new CalculatedMetricQueryResponse(complete ? QueryValues.round4(point.value()) : null,
-                definition.getResultUnit(), preset.name(), range.start(), range.end(), complete,
-                point == null ? "MISSING_DATA" : stale ? "STALE_DATA" : "OK",
+        return new CalculatedMetricQueryResponse(previousVersion ? QueryValues.round4(previousPoint.value())
+                    : complete ? QueryValues.round4(currentPoint.value()) : null,
+                previousVersion ? null : definition.getResultUnit(), preset.name(), range.start(), range.end(), complete,
+                previousVersion ? "PREVIOUS_VERSION" : currentPoint == null ? "MISSING_DATA" : stale ? "STALE_DATA" : "OK",
                 trend, status, definition.getFormula(),
-                complete ? point.inputs() : Map.of());
+                complete ? currentPoint.inputs() : Map.of());
     }
 }

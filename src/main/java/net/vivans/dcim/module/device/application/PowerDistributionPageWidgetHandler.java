@@ -14,8 +14,6 @@ import net.vivans.dcim.module.device.domain.model.PageWidgetPowerDistribution;
 import net.vivans.dcim.module.device.domain.model.PageWidgetQueryKind;
 import net.vivans.dcim.module.device.domain.repository.DeviceRepository;
 import net.vivans.dcim.module.device.domain.repository.PageWidgetRepository;
-import net.vivans.dcim.module.devicemodel.domain.model.DeviceModelSnmpPoint;
-import net.vivans.dcim.module.devicemodel.domain.repository.DeviceModelSnmpPointRepository;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,7 +32,7 @@ public class PowerDistributionPageWidgetHandler {
     private final PageWidgetSpecializedSupport support;
     private final PageWidgetRepository pageWidgetRepository;
     private final DeviceRepository deviceRepository;
-    private final DeviceModelSnmpPointRepository deviceModelSnmpPointRepository;
+    private final DeviceMeasurementSourceCatalog sourceCatalog;
 
     @Transactional
     public PageWidgetResponse create(PageWidgetPowerDistributionCreateRequest request) {
@@ -55,7 +53,7 @@ public class PowerDistributionPageWidgetHandler {
             throw new IllegalArgumentException("queryKind must be power_distribution");
         }
         String name = request.name().trim();
-        support.validateUpdateName(widget, name);
+        support.updatePage(widget, request.pageCode(), name);
         widget.updatePowerDistribution(name,
                 request.enabled() == null ? widget.isEnabled() : request.enabled(), resolveGroups(request.groups()));
         widget.updateDataFreshnessMinutes(request.dataFreshnessMinutes());
@@ -75,7 +73,6 @@ public class PowerDistributionPageWidgetHandler {
         List<PageWidgetPowerDistribution.GroupDefinition> groups = new ArrayList<>();
         Set<String> uniqueNames = new LinkedHashSet<>();
         Set<String> uniqueSources = new LinkedHashSet<>();
-        Set<Integer> modelIds = new LinkedHashSet<>();
         List<ResolvedPowerSource> resolvedSources = new ArrayList<>();
         for (PageWidgetPowerDistributionGroupRequest group : requests) {
             if (group == null || group.name() == null || group.name().isBlank()) {
@@ -105,27 +102,28 @@ public class PowerDistributionPageWidgetHandler {
                     throw new IllegalArgumentException("a power source can belong to only one group: device "
                             + device.getId() + ", point " + pointName);
                 }
-                modelIds.add(device.getDeviceModel().getId());
                 resolvedSources.add(new ResolvedPowerSource(device, pointName));
                 sources.add(new PageWidgetPowerDistribution.SourceDefinition(device, pointName));
             }
             groups.add(new PageWidgetPowerDistribution.GroupDefinition(groupName, group.color(), sources));
         }
 
-        Map<String, DeviceModelSnmpPoint> catalog = new HashMap<>();
-        for (DeviceModelSnmpPoint point : deviceModelSnmpPointRepository.findAllEnabledByDeviceModelIds(modelIds)) {
-            catalog.put(point.getModelProtocol().getDeviceModel().getId() + "|"
-                    + point.getName().toUpperCase(Locale.ROOT), point);
+        Map<String, DeviceMeasurementSourceCatalog.Source> catalog = new HashMap<>();
+        Set<Integer> deviceIds = new LinkedHashSet<>();
+        for (ResolvedPowerSource source : resolvedSources) deviceIds.add(source.device().getId());
+        for (DeviceMeasurementSourceCatalog.Source point : sourceCatalog.availableSources(deviceIds)) {
+            if (!point.ambiguous()) {
+                catalog.put(point.deviceId() + "|" + point.pointName().toUpperCase(Locale.ROOT), point);
+            }
         }
         for (ResolvedPowerSource source : resolvedSources) {
-            DeviceModelSnmpPoint point = catalog.get(source.device().getDeviceModel().getId() + "|"
+            DeviceMeasurementSourceCatalog.Source point = catalog.get(source.device().getId() + "|"
                     + source.pointName().toUpperCase(Locale.ROOT));
-            if (point == null || point.getDataPointType() == null
-                    || !"POWER".equalsIgnoreCase(point.getDataPointType().getCode())) {
+            if (point == null || !"POWER".equalsIgnoreCase(point.dataPointType())) {
                 throw new IllegalArgumentException("power distribution source must be an enabled POWER point: device "
                         + source.device().getId() + ", point " + source.pointName());
             }
-            if (!"W".equalsIgnoreCase(point.getUnit() == null ? "" : point.getUnit().trim())) {
+            if (!"W".equalsIgnoreCase(point.unit() == null ? "" : point.unit().trim())) {
                 throw new IllegalArgumentException("power distribution source unit must be W: device "
                         + source.device().getId() + ", point " + source.pointName());
             }

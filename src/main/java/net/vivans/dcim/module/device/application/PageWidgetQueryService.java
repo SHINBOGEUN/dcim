@@ -30,8 +30,6 @@ import net.vivans.dcim.module.device.domain.repository.PageWidgetRepository;
 import net.vivans.dcim.module.devicegroup.domain.model.DeviceGroup;
 import net.vivans.dcim.module.devicegroup.domain.repository.DeviceGroupRepository;
 import net.vivans.dcim.module.devicemodel.domain.repository.DeviceModelRepository;
-import net.vivans.dcim.module.devicemodel.domain.model.DeviceModelSnmpPoint;
-import net.vivans.dcim.module.devicemodel.domain.repository.DeviceModelSnmpPointRepository;
 import net.vivans.dcim.shared.exception.ConflictException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -54,7 +52,7 @@ public class PageWidgetQueryService {
     private final DeviceRepository deviceRepository;
     private final DeviceGroupRepository deviceGroupRepository;
     private final DeviceModelRepository deviceModelRepository;
-    private final DeviceModelSnmpPointRepository deviceModelSnmpPointRepository;
+    private final DeviceMeasurementSourceCatalog sourceCatalog;
     private final PageWidgetSpecializedSupport widgetSupport;
     private final CalculatedMetricPageWidgetHandler calculatedMetricWidgetHandler;
     private final PsychrometricPageWidgetHandler psychrometricWidgetHandler;
@@ -185,9 +183,7 @@ public class PageWidgetQueryService {
     public PageWidgetResponse updateWidget(Integer id, PageWidgetUpdateRequest request) {
         PageWidget widget = widgetSupport.findWidget(id);
         String name = request.name().trim();
-        if (pageWidgetRepository.existsByPageCodeIdAndNameAndIdNot(widget.getPageCode().getId(), name, id)) {
-            throw new ConflictException(DUPLICATE_NAME_MESSAGE);
-        }
+        widgetSupport.updatePage(widget, request.pageCode(), name);
 
         PageWidgetQueryKind kind = PageWidgetQueryKind.from(request.queryKind());
         if (kind == PageWidgetQueryKind.calculated) {
@@ -403,26 +399,34 @@ public class PageWidgetQueryService {
         if (kind != PageWidgetQueryKind.chart || pointNames == null || pointNames.isEmpty()) {
             return;
         }
-        Set<Integer> targetModelIds = new LinkedHashSet<>(modelIds);
-        for (Device device : devices) {
-            targetModelIds.add(device.getDeviceModel().getId());
-        }
-        if (targetModelIds.isEmpty()) {
+        if (modelIds.isEmpty() && devices.isEmpty()) {
             return;
         }
         Set<String> units = new LinkedHashSet<>();
-        for (DeviceModelSnmpPoint point
-                : deviceModelSnmpPointRepository.findAllEnabledByDeviceModelIds(targetModelIds)) {
-            if (!pointNames.contains(point.getName())) {
+        Set<Integer> targetDeviceIds = devices.stream().map(Device::getId).collect(java.util.stream.Collectors.toSet());
+        Set<Integer> selectedDeviceIds = new LinkedHashSet<>(targetDeviceIds);
+        if (!modelIds.isEmpty()) {
+            for (Device device : deviceRepository.findAllEnabled()) {
+                if (modelIds.contains(device.getDeviceModel().getId())) selectedDeviceIds.add(device.getId());
+            }
+        }
+        for (DeviceMeasurementSourceCatalog.Source point : sourceCatalog.availableSources(selectedDeviceIds)) {
+            if (!targetDeviceIds.contains(point.deviceId()) && !modelIds.contains(point.modelId())) {
                 continue;
             }
-            CommonCode dataPointType = point.getDataPointType();
-            if (dataPointType != null && "ENERGY".equalsIgnoreCase(dataPointType.getCode())) {
+            if (!pointNames.contains(point.pointName())) {
+                continue;
+            }
+            if (point.ambiguous()) {
+                throw new IllegalArgumentException("같은 장비에 프로토콜별 동명 항목이 있어 구분할 수 없습니다: "
+                        + point.deviceName() + " / " + point.pointName());
+            }
+            if ("ENERGY".equalsIgnoreCase(point.dataPointType())) {
                 throw new IllegalArgumentException(
                         "누적 ENERGY 측정항목은 차트에서 사용할 수 없습니다. 사용량 집계 위젯을 사용하세요: "
-                                + point.getName());
+                                + point.pointName());
             }
-            String unit = point.getUnit();
+            String unit = point.unit();
             if (unit != null && !unit.isBlank()) {
                 units.add(unit.trim());
             }

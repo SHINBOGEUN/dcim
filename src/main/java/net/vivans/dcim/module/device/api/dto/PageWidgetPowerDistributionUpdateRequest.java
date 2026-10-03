@@ -8,6 +8,7 @@ import jakarta.validation.constraints.Size;
 import java.util.List;
 
 public record PageWidgetPowerDistributionUpdateRequest(
+        String pageCode,
         @NotBlank @Size(max = 100) String name,
         Boolean enabled,
         Integer dataFreshnessMinutes,

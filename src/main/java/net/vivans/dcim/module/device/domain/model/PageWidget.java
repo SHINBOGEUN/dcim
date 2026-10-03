@@ -248,6 +248,11 @@ public class PageWidget extends BaseEntity {
         applyBindings(pointNames, devices, deviceGroups, itDevices, modelIds);
     }
 
+    public void moveToPage(CommonCode pageCode) {
+        PageWidgetPolicy.validateIdentity(pageCode, name, queryKind);
+        this.pageCode = pageCode;
+    }
+
     /** 기존 호출부 호환용. 장비 그룹을 사용하지 않는 위젯 수정. */
     public void update(
             String name, boolean enabled, PageWidgetQueryKind queryKind, PageWidgetOp op,
@@ -561,56 +566,67 @@ public class PageWidget extends BaseEntity {
     }
 
     private void replacePoints(List<String> pointNames) {
-        points.clear();
-        if (pointNames == null) {
-            return;
-        }
         Set<String> unique = new LinkedHashSet<>();
-        for (String raw : pointNames) {
-            if (raw != null && !raw.isBlank()) {
-                unique.add(raw.trim());
+        if (pointNames != null) {
+            for (String raw : pointNames) {
+                if (raw != null && !raw.isBlank()) {
+                    unique.add(raw.trim());
+                }
             }
         }
+        points.removeIf(point -> !unique.contains(point.getPointName()));
+        Set<String> existing = new LinkedHashSet<>();
+        for (PageWidgetPoint point : points) existing.add(point.getPointName());
         for (String pointName : unique) {
-            points.add(PageWidgetPoint.create(this, pointName));
+            if (existing.add(pointName)) points.add(PageWidgetPoint.create(this, pointName));
         }
+        java.util.Map<String, Integer> order = new java.util.HashMap<>();
+        int index = 0;
+        for (String pointName : unique) order.put(pointName, index++);
+        points.sort(java.util.Comparator.comparingInt(point -> order.get(point.getPointName())));
     }
 
     private void replaceDevices(List<Device> devices, List<Device> itDevices) {
-        this.devices.clear();
-        if (devices == null) {
-            return;
+        java.util.Map<Integer, Device> selected = new java.util.LinkedHashMap<>();
+        if (devices != null) {
+            for (Device device : devices) {
+                requireDevice(device);
+                selected.putIfAbsent(device.getId(), device);
+            }
         }
-        Set<Integer> uniqueIds = new LinkedHashSet<>();
-        for (Device device : devices) {
-            requireDevice(device);
-            if (uniqueIds.add(device.getId())) {
+        this.devices.removeIf(mapping -> !selected.containsKey(mapping.getDevice().getId()));
+        Set<Integer> existing = new LinkedHashSet<>();
+        for (PageWidgetDevice mapping : this.devices) existing.add(mapping.getDevice().getId());
+        for (Device device : selected.values()) {
+            if (existing.add(device.getId())) {
                 this.devices.add(PageWidgetDevice.create(this, device, PageWidgetDeviceRole.DEFAULT));
             }
         }
     }
 
     private void replaceDeviceGroups(List<DeviceGroup> groups) {
-        deviceGroups.clear();
-        if (groups == null) {
-            return;
-        }
-        Set<Integer> uniqueIds = new LinkedHashSet<>();
-        for (DeviceGroup group : groups) {
-            if (group != null && group.getId() != null && uniqueIds.add(group.getId())) {
-                deviceGroups.add(PageWidgetDeviceGroup.create(this, group));
+        java.util.Map<Integer, DeviceGroup> selected = new java.util.LinkedHashMap<>();
+        if (groups != null) {
+            for (DeviceGroup group : groups) {
+                if (group != null && group.getId() != null) selected.putIfAbsent(group.getId(), group);
             }
+        }
+        deviceGroups.removeIf(mapping -> !selected.containsKey(mapping.getDeviceGroup().getId()));
+        Set<Integer> existing = new LinkedHashSet<>();
+        for (PageWidgetDeviceGroup mapping : deviceGroups) existing.add(mapping.getDeviceGroup().getId());
+        for (DeviceGroup group : selected.values()) {
+            if (existing.add(group.getId())) deviceGroups.add(PageWidgetDeviceGroup.create(this, group));
         }
     }
 
     private void replaceLastSources(List<LastSourceDefinition> sources) {
-        this.lastSources.clear();
         if (sources == null || sources.isEmpty()) {
             throw new IllegalArgumentException("lastSources is required for last");
         }
         List<Device> selectedDevices = new ArrayList<>();
         List<String> selectedPointNames = new ArrayList<>();
         Set<String> unique = new LinkedHashSet<>();
+        java.util.Map<String, Device> selected = new java.util.LinkedHashMap<>();
         for (LastSourceDefinition source : sources) {
             if (source == null) {
                 continue;
@@ -627,9 +643,21 @@ public class PageWidget extends BaseEntity {
                 String normalized = pointName.trim();
                 String key = source.device().getId() + "\u0000" + normalized;
                 if (unique.add(key)) {
-                    this.lastSources.add(PageWidgetLastSource.create(this, source.device(), normalized));
+                    selected.put(key, source.device());
                     selectedPointNames.add(normalized);
                 }
+            }
+        }
+        this.lastSources.removeIf(mapping -> !selected.containsKey(
+                mapping.getDevice().getId() + "\u0000" + mapping.getPointName()));
+        Set<String> existing = new LinkedHashSet<>();
+        for (PageWidgetLastSource mapping : this.lastSources) {
+            existing.add(mapping.getDevice().getId() + "\u0000" + mapping.getPointName());
+        }
+        for (java.util.Map.Entry<String, Device> entry : selected.entrySet()) {
+            if (existing.add(entry.getKey())) {
+                String pointName = entry.getKey().substring(entry.getKey().indexOf('\u0000') + 1);
+                this.lastSources.add(PageWidgetLastSource.create(this, entry.getValue(), pointName));
             }
         }
         if (this.lastSources.isEmpty()) {
@@ -647,18 +675,20 @@ public class PageWidget extends BaseEntity {
     }
 
     private void replaceModels(List<Integer> modelIds) {
-        this.models.clear();
-        if (modelIds == null) {
-            return;
-        }
         Set<Integer> uniqueIds = new LinkedHashSet<>();
-        for (Integer modelId : modelIds) {
-            if (modelId == null || modelId <= 0) {
-                throw new IllegalArgumentException("modelIds must contain positive integers");
+        if (modelIds != null) {
+            for (Integer modelId : modelIds) {
+                if (modelId == null || modelId <= 0) {
+                    throw new IllegalArgumentException("modelIds must contain positive integers");
+                }
+                uniqueIds.add(modelId);
             }
-            if (uniqueIds.add(modelId)) {
-                this.models.add(PageWidgetModel.create(this, modelId));
-            }
+        }
+        this.models.removeIf(mapping -> !uniqueIds.contains(mapping.getModelId()));
+        Set<Integer> existing = new LinkedHashSet<>();
+        for (PageWidgetModel mapping : this.models) existing.add(mapping.getModelId());
+        for (Integer modelId : uniqueIds) {
+            if (existing.add(modelId)) this.models.add(PageWidgetModel.create(this, modelId));
         }
     }
 

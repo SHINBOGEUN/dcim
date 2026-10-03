@@ -62,6 +62,14 @@ public class DisabledPointQuery implements PointQuery {
     }
 
     @Override
+    public Optional<CalculatedMetricLastPoint> findLastCalculatedPreviousVersion(Integer definitionId,
+                                                                                 Integer currentConfigVersion,
+                                                                                 Duration lookback) {
+        log.warn("InfluxDB query disabled; returning empty previous calculated value definitionId={}", definitionId);
+        return Optional.empty();
+    }
+
+    @Override
     public List<CalculatedMetricSeriesPoint> findCalculatedSeries(Integer definitionId, Instant start, Instant end, String window) {
         log.warn("InfluxDB query disabled; returning empty calculated metric series definitionId={}", definitionId);
         return List.of();

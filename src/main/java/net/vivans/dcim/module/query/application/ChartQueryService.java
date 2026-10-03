@@ -10,8 +10,7 @@ import net.vivans.dcim.module.device.domain.model.PageWidgetDevice;
 import net.vivans.dcim.module.device.domain.model.PageWidgetQueryKind;
 import net.vivans.dcim.module.device.domain.repository.DeviceRepository;
 import net.vivans.dcim.module.device.domain.repository.PageWidgetRepository;
-import net.vivans.dcim.module.devicemodel.domain.model.DeviceModelSnmpPoint;
-import net.vivans.dcim.module.devicemodel.domain.repository.DeviceModelSnmpPointRepository;
+import net.vivans.dcim.module.device.application.DeviceMeasurementSourceCatalog;
 import net.vivans.dcim.module.query.api.dto.ChartSeriesResponse;
 import net.vivans.dcim.module.query.api.dto.ChartWidgetResponse;
 import net.vivans.dcim.module.query.api.dto.WidgetDataStatusResponse;
@@ -44,7 +43,7 @@ public class ChartQueryService {
     private final PageWidgetRepository pageWidgetRepository;
     private final DeviceRepository deviceRepository;
     private final PointQuery pointQuery;
-    private final DeviceModelSnmpPointRepository deviceModelSnmpPointRepository;
+    private final DeviceMeasurementSourceCatalog sourceCatalog;
     private final WidgetDataStatusResolver widgetDataStatusResolver;
 
     public ChartWidgetResponse getChart(
@@ -322,10 +321,11 @@ public class ChartQueryService {
         Set<Integer> modelIds = devices.stream()
                 .map(device -> device.getDeviceModel().getId())
                 .collect(Collectors.toSet());
+        Set<Integer> deviceIds = devices.stream().map(Device::getId).collect(Collectors.toSet());
         Map<Integer, Set<String>> namesByModel = new HashMap<>();
-        for (DeviceModelSnmpPoint point : deviceModelSnmpPointRepository.findAllEnabledByDeviceModelIds(modelIds)) {
-            Integer modelId = point.getModelProtocol().getDeviceModel().getId();
-            namesByModel.computeIfAbsent(modelId, ignored -> new HashSet<>()).add(point.getName());
+        for (DeviceMeasurementSourceCatalog.Source point : sourceCatalog.availableSources(deviceIds)) {
+            if (!modelIds.contains(point.modelId()) || point.ambiguous()) continue;
+            namesByModel.computeIfAbsent(point.modelId(), ignored -> new HashSet<>()).add(point.pointName());
         }
         Set<Integer> phaseModelIds = new HashSet<>();
         for (Map.Entry<Integer, Set<String>> entry : namesByModel.entrySet()) {
@@ -431,30 +431,20 @@ public class ChartQueryService {
     }
 
     private ChartUnitContext buildUnitContext(List<Device> devices, List<String> pointNames) {
-        Set<Integer> modelIds = devices.stream()
-                .map(d -> d.getDeviceModel().getId())
+        Set<Integer> deviceIds = devices.stream()
+                .map(Device::getId)
                 .collect(Collectors.toCollection(LinkedHashSet::new));
-        Map<Integer, Map<String, String>> unitsByModel = new HashMap<>();
         LinkedHashSet<String> units = new LinkedHashSet<>();
-        for (DeviceModelSnmpPoint point : deviceModelSnmpPointRepository.findAllEnabledByDeviceModelIds(modelIds)) {
-            if (!pointNames.contains(point.getName())) {
+        Map<String, String> unitsBySource = new HashMap<>();
+        for (DeviceMeasurementSourceCatalog.Source point : sourceCatalog.availableSources(deviceIds)) {
+            if (!deviceIds.contains(point.deviceId()) || point.ambiguous()
+                    || !pointNames.contains(point.pointName())) {
                 continue;
             }
-            String candidate = blankToNull(point.getUnit());
+            String candidate = blankToNull(point.unit());
             if (candidate != null) {
-                Integer modelId = point.getModelProtocol().getDeviceModel().getId();
-                unitsByModel.computeIfAbsent(modelId, ignored -> new HashMap<>()).put(point.getName(), candidate);
-            }
-        }
-        Map<String, String> unitsBySource = new HashMap<>();
-        for (Device device : devices) {
-            Map<String, String> byPoint = unitsByModel.getOrDefault(device.getDeviceModel().getId(), Map.of());
-            for (String pointName : pointNames) {
-                String unit = byPoint.get(pointName);
-                if (unit != null) {
-                    unitsBySource.put(sourceKey(device.getId(), pointName), unit);
-                    units.add(unit);
-                }
+                unitsBySource.put(sourceKey(point.deviceId(), point.pointName()), candidate);
+                units.add(candidate);
             }
         }
         return new ChartUnitContext(unitsBySource, List.copyOf(units));

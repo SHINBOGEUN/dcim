@@ -7,9 +7,7 @@ import net.vivans.dcim.module.device.domain.model.Device;
 import net.vivans.dcim.module.device.domain.repository.DeviceRepository;
 import net.vivans.dcim.module.device.domain.repository.PageWidgetRepository;
 import net.vivans.dcim.module.devicemodel.domain.model.DeviceModel;
-import net.vivans.dcim.module.devicemodel.domain.model.DeviceModelSnmpPoint;
 import net.vivans.dcim.module.devicemodel.domain.repository.DeviceModelRepository;
-import net.vivans.dcim.module.devicemodel.domain.repository.DeviceModelSnmpPointRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -20,7 +18,6 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -35,7 +32,7 @@ class PageWidgetQueryServiceTest {
     @Mock
     private DeviceModelRepository deviceModelRepository;
     @Mock
-    private DeviceModelSnmpPointRepository deviceModelSnmpPointRepository;
+    private DeviceMeasurementSourceCatalog sourceCatalog;
     @Mock
     private PageWidgetSpecializedSupport widgetSupport;
     @InjectMocks
@@ -44,22 +41,14 @@ class PageWidgetQueryServiceTest {
     @Test
     void createChart_rejectsCumulativeEnergyPoint() {
         CommonCode pageCode = org.mockito.Mockito.mock(CommonCode.class);
-        CommonCode energyType = org.mockito.Mockito.mock(CommonCode.class);
         Device device = org.mockito.Mockito.mock(Device.class);
-        DeviceModel model = org.mockito.Mockito.mock(DeviceModel.class);
-        DeviceModelSnmpPoint energyPoint = org.mockito.Mockito.mock(DeviceModelSnmpPoint.class);
 
         when(widgetSupport.findPageCode("POWER")).thenReturn(pageCode);
         when(pageCode.getId()).thenReturn(1);
         when(pageWidgetRepository.existsByPageCodeIdAndName(1, "누적 전력량")).thenReturn(false);
         when(deviceRepository.findById(7)).thenReturn(Optional.of(device));
-        when(device.getDeviceModel()).thenReturn(model);
-        when(model.getId()).thenReturn(3);
-        when(deviceModelSnmpPointRepository.findAllEnabledByDeviceModelIds(anyCollection()))
-                .thenReturn(List.of(energyPoint));
-        when(energyPoint.getName()).thenReturn("TOTAL_KWH");
-        when(energyPoint.getDataPointType()).thenReturn(energyType);
-        when(energyType.getCode()).thenReturn("ENERGY");
+        when(device.getId()).thenReturn(7);
+        when(sourceCatalog.availableSources(org.mockito.ArgumentMatchers.anySet())).thenReturn(List.of(source("TOTAL_KWH", "kWh", "ENERGY")));
 
         PageWidgetCreateRequest request = new PageWidgetCreateRequest(
                 "POWER", "누적 전력량", true, null, "chart",
@@ -78,25 +67,15 @@ class PageWidgetQueryServiceTest {
     void createChart_rejectsMoreThanTwoUnits() {
         CommonCode pageCode = org.mockito.Mockito.mock(CommonCode.class);
         Device device = org.mockito.Mockito.mock(Device.class);
-        DeviceModel model = org.mockito.Mockito.mock(DeviceModel.class);
-        DeviceModelSnmpPoint power = org.mockito.Mockito.mock(DeviceModelSnmpPoint.class);
-        DeviceModelSnmpPoint temperature = org.mockito.Mockito.mock(DeviceModelSnmpPoint.class);
-        DeviceModelSnmpPoint humidity = org.mockito.Mockito.mock(DeviceModelSnmpPoint.class);
 
         when(widgetSupport.findPageCode("POWER")).thenReturn(pageCode);
         when(pageCode.getId()).thenReturn(1);
         when(pageWidgetRepository.existsByPageCodeIdAndName(1, "혼합 단위")).thenReturn(false);
         when(deviceRepository.findById(7)).thenReturn(Optional.of(device));
-        when(device.getDeviceModel()).thenReturn(model);
-        when(model.getId()).thenReturn(3);
-        when(power.getName()).thenReturn("TOTAL_WT");
-        when(power.getUnit()).thenReturn("W");
-        when(temperature.getName()).thenReturn("IN_TEMP");
-        when(temperature.getUnit()).thenReturn("°C");
-        when(humidity.getName()).thenReturn("IN_HUM");
-        when(humidity.getUnit()).thenReturn("%");
-        when(deviceModelSnmpPointRepository.findAllEnabledByDeviceModelIds(anyCollection()))
-                .thenReturn(List.of(power, temperature, humidity));
+        when(device.getId()).thenReturn(7);
+        when(sourceCatalog.availableSources(org.mockito.ArgumentMatchers.anySet())).thenReturn(List.of(
+                source("TOTAL_WT", "W", "POWER"), source("IN_TEMP", "°C", "TEMPERATURE"),
+                source("IN_HUM", "%", "HUMIDITY")));
 
         PageWidgetCreateRequest request = new PageWidgetCreateRequest(
                 "POWER", "혼합 단위", true, null, "chart",
@@ -108,5 +87,10 @@ class PageWidgetQueryServiceTest {
         assertThatThrownBy(() -> service.createWidget(request))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("최대 두 단위");
+    }
+
+    private static DeviceMeasurementSourceCatalog.Source source(String name, String unit, String type) {
+        return new DeviceMeasurementSourceCatalog.Source(7, "PDU", 3, "snmp", name, unit,
+                type, 7, "MODEL_POINT", false);
     }
 }

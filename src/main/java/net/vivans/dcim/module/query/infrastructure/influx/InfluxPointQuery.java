@@ -136,6 +136,21 @@ public class InfluxPointQuery implements PointQuery {
     }
 
     @Override
+    public Optional<CalculatedMetricLastPoint> findLastCalculatedPreviousVersion(Integer definitionId,
+                                                                                 Integer currentConfigVersion,
+                                                                                 Duration lookback) {
+        String flux = LastFluxBuilder.buildCalculatedLastPreviousVersionQuery(properties.getBucket(),
+                properties.getMeasurement(), definitionId, currentConfigVersion, lookback);
+        try {
+            return mapCalculatedLast(query(flux));
+        } catch (RuntimeException exception) {
+            log.error("Query previous calculated metric failed definitionId={}: {}",
+                    definitionId, exception.getMessage(), exception);
+            throw new QueryException("InfluxDB query failed");
+        }
+    }
+
+    @Override
     public List<CalculatedMetricSeriesPoint> findCalculatedSeries(Integer definitionId, Instant start, Instant end, String window) {
         String flux = CalculatedMetricFluxBuilder.buildSeriesQuery(
                 properties.getBucket(), properties.getMeasurement(), definitionId, start, end, window);

@@ -11,8 +11,7 @@ import net.vivans.dcim.module.device.domain.model.PageWidgetPsychrometricSource;
 import net.vivans.dcim.module.device.domain.model.PageWidgetPsychrometricSourceRole;
 import net.vivans.dcim.module.device.domain.model.PageWidgetQueryKind;
 import net.vivans.dcim.module.device.domain.repository.PageWidgetRepository;
-import net.vivans.dcim.module.devicemodel.domain.model.DeviceModelSnmpPoint;
-import net.vivans.dcim.module.devicemodel.domain.repository.DeviceModelSnmpPointRepository;
+import net.vivans.dcim.module.device.application.DeviceMeasurementSourceCatalog;
 import net.vivans.dcim.module.query.api.dto.ChartSeriesResponse;
 import net.vivans.dcim.module.query.api.dto.ChartWidgetResponse;
 import net.vivans.dcim.module.query.domain.PointQuery;
@@ -38,7 +37,7 @@ public class WidgetTrendQueryService {
 
     private final PageWidgetRepository pageWidgetRepository;
     private final PointQuery pointQuery;
-    private final DeviceModelSnmpPointRepository deviceModelSnmpPointRepository;
+    private final DeviceMeasurementSourceCatalog sourceCatalog;
 
     public ChartWidgetResponse getTrend(Integer widgetId, String rangePresetRaw, String window) {
         PageWidget widget = PageWidgetFinder.findRequired(pageWidgetRepository, widgetId);
@@ -159,16 +158,18 @@ public class WidgetTrendQueryService {
     }
 
     private Map<String, String> unitsBySource(List<Source> sources) {
-        Set<Integer> modelIds = sources.stream().map(source -> source.device().getDeviceModel().getId())
+        Set<Integer> deviceIds = sources.stream().map(source -> source.device().getId())
                 .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
         Map<String, String> catalog = new HashMap<>();
-        for (DeviceModelSnmpPoint point : deviceModelSnmpPointRepository.findAllEnabledByDeviceModelIds(modelIds)) {
-            catalog.put(key(point.getModelProtocol().getDeviceModel().getId(), point.getName()), point.getUnit());
+        for (DeviceMeasurementSourceCatalog.Source point : sourceCatalog.availableSources(deviceIds)) {
+            if (deviceIds.contains(point.deviceId()) && !point.ambiguous()) {
+                catalog.put(key(point.deviceId(), point.pointName()), point.unit());
+            }
         }
         Map<String, String> result = new LinkedHashMap<>();
         for (Source source : sources) {
             result.put(key(source.device().getId(), source.pointName()),
-                    catalog.get(key(source.device().getDeviceModel().getId(), source.pointName())));
+                    catalog.get(key(source.device().getId(), source.pointName())));
         }
         return result;
     }

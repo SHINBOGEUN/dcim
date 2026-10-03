@@ -13,7 +13,7 @@ import net.vivans.dcim.module.device.domain.model.PageWidgetOp;
 import net.vivans.dcim.module.device.domain.model.PageWidgetQueryKind;
 import net.vivans.dcim.module.device.domain.repository.PageWidgetRepository;
 import net.vivans.dcim.module.devicemodel.domain.model.DeviceModel;
-import net.vivans.dcim.module.devicemodel.domain.repository.DeviceModelSnmpPointRepository;
+import net.vivans.dcim.module.device.application.DeviceMeasurementSourceCatalog;
 import net.vivans.dcim.module.query.api.dto.AggregateWidgetResponse;
 import net.vivans.dcim.module.query.domain.LastPoint;
 import net.vivans.dcim.module.query.domain.PointQuery;
@@ -53,7 +53,7 @@ class AggregateQueryServiceTest {
     private PointQuery pointQuery;
 
     @Mock
-    private DeviceModelSnmpPointRepository deviceModelSnmpPointRepository;
+    private DeviceMeasurementSourceCatalog sourceCatalog;
 
     @org.mockito.Spy
     private WidgetDataStatusResolver widgetDataStatusResolver = new WidgetDataStatusResolver();
@@ -70,7 +70,7 @@ class AggregateQueryServiceTest {
                 List.of(mapping(d1, PageWidgetDeviceRole.DEFAULT), mapping(d2, PageWidgetDeviceRole.DEFAULT)),
                 "TOTAL_KWH");
         when(pageWidgetRepository.findById(12)).thenReturn(Optional.of(widget));
-        when(deviceModelSnmpPointRepository.findAllEnabledByDeviceModelIds(any())).thenReturn(List.of());
+        when(sourceCatalog.availableSources(org.mockito.ArgumentMatchers.anySet())).thenReturn(List.of());
         when(pointQuery.findFirstInRange(eq(List.of(101, 102)), eq(List.of("TOTAL_KWH")), any(), any()))
                 .thenReturn(List.of(
                         new LastPoint(101, "TOTAL_KWH", 100.0, T0),
@@ -104,7 +104,7 @@ class AggregateQueryServiceTest {
                 List.of(mapping(d1, PageWidgetDeviceRole.DEFAULT)),
                 "TOTAL_KWH");
         when(pageWidgetRepository.findById(12)).thenReturn(Optional.of(widget));
-        when(deviceModelSnmpPointRepository.findAllEnabledByDeviceModelIds(any())).thenReturn(List.of());
+        when(sourceCatalog.availableSources(org.mockito.ArgumentMatchers.anySet())).thenReturn(List.of());
         when(pointQuery.findFirstInRange(anyList(), anyList(), any(), any()))
                 .thenReturn(List.of(new LastPoint(101, "TOTAL_KWH", 100.0, T0)));
         when(pointQuery.findLastInRange(anyList(), anyList(), any(), any()))
@@ -126,7 +126,7 @@ class AggregateQueryServiceTest {
                 List.of(mapping(d1, PageWidgetDeviceRole.DEFAULT), mapping(d2, PageWidgetDeviceRole.DEFAULT)),
                 "TOTAL_WT");
         when(pageWidgetRepository.findById(12)).thenReturn(Optional.of(widget));
-        when(deviceModelSnmpPointRepository.findAllEnabledByDeviceModelIds(any())).thenReturn(List.of());
+        when(sourceCatalog.availableSources(org.mockito.ArgumentMatchers.anySet())).thenReturn(List.of());
         when(pointQuery.findLastInRange(eq(List.of(101, 102)), eq(List.of("TOTAL_WT")), any(), any()))
                 .thenReturn(List.of(
                         new LastPoint(101, "TOTAL_WT", 200.0, T1),
@@ -153,7 +153,7 @@ class AggregateQueryServiceTest {
                 List.of(mapping(d1, PageWidgetDeviceRole.DEFAULT)),
                 "TOTAL_KWH");
         when(pageWidgetRepository.findById(12)).thenReturn(Optional.of(widget));
-        when(deviceModelSnmpPointRepository.findAllEnabledByDeviceModelIds(any())).thenReturn(List.of());
+        when(sourceCatalog.availableSources(org.mockito.ArgumentMatchers.anySet())).thenReturn(List.of());
         when(pointQuery.findFirstInRange(anyList(), anyList(), any(), any())).thenReturn(List.of());
         when(pointQuery.findLastInRange(anyList(), anyList(), any(), any())).thenReturn(List.of());
 

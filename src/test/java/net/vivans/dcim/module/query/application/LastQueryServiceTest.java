@@ -11,8 +11,8 @@ import net.vivans.dcim.module.device.domain.model.PageWidgetPoint;
 import net.vivans.dcim.module.device.domain.model.PageWidgetQueryKind;
 import net.vivans.dcim.module.device.domain.repository.PageWidgetRepository;
 import net.vivans.dcim.module.devicemodel.domain.model.DeviceModel;
-import net.vivans.dcim.module.devicemodel.domain.model.DeviceModelSnmpPoint;
 import net.vivans.dcim.module.devicemodel.domain.repository.DeviceModelSnmpPointRepository;
+import net.vivans.dcim.module.device.application.DeviceMeasurementSourceCatalog;
 import net.vivans.dcim.module.location.domain.model.LocationNode;
 import net.vivans.dcim.module.query.api.dto.LastWidgetResponse;
 import net.vivans.dcim.module.query.domain.LastPoint;
@@ -53,7 +53,10 @@ class LastQueryServiceTest {
     private PointQuery pointQuery;
 
     @Mock
-    private DeviceModelSnmpPointRepository deviceModelSnmpPointRepository;
+    private DeviceMeasurementSourceCatalog sourceCatalog;
+
+    @Mock
+    private DeviceModelSnmpPointRepository snmpPointRepository;
 
     @org.mockito.Spy
     private WidgetDataStatusResolver widgetDataStatusResolver = new WidgetDataStatusResolver();
@@ -67,8 +70,7 @@ class LastQueryServiceTest {
         Device second = device(101, "PDU-A", "RACK01", "랙1", "PDU");
         PageWidget widget = lastWidget(12, "dashboard", "칠러", List.of("temp", "V"), List.of(first, second));
         when(pageWidgetRepository.findById(12)).thenReturn(Optional.of(widget));
-        when(deviceModelSnmpPointRepository.findAllEnabledByDeviceModelIds(any()))
-                .thenReturn(List.of());
+        when(sourceCatalog.availableSources(org.mockito.ArgumentMatchers.anySet())).thenReturn(List.of());
         when(pointQuery.findLast(eq(List.of(102, 101)), eq(List.of("temp", "V")), eq(Duration.ofHours(24))))
                 .thenReturn(List.of(
                         new LastPoint(102, "temp", 24.1, TIME),
@@ -92,20 +94,10 @@ class LastQueryServiceTest {
     @Test
     void includesUnitFromDeviceModelSnmpPoint() {
         Device device = device(101, "PDU-A", "RACK01", "랙1", "PDU");
-        DeviceModel model = device.getDeviceModel();
-        when(model.getId()).thenReturn(55);
-
-        DeviceModelSnmpPoint snmpPoint = mock(DeviceModelSnmpPoint.class);
-        var protocol = mock(net.vivans.dcim.module.devicemodel.domain.model.DeviceModelProtocol.class);
-        when(snmpPoint.getName()).thenReturn("W");
-        when(snmpPoint.getUnit()).thenReturn("W");
-        when(snmpPoint.getModelProtocol()).thenReturn(protocol);
-        when(protocol.getDeviceModel()).thenReturn(model);
-
         PageWidget widget = lastWidget(12, "dashboard", "PDU", List.of("W"), List.of(device));
         when(pageWidgetRepository.findById(12)).thenReturn(Optional.of(widget));
-        when(deviceModelSnmpPointRepository.findAllEnabledByDeviceModelIds(any()))
-                .thenReturn(List.of(snmpPoint));
+        when(sourceCatalog.availableSources(org.mockito.ArgumentMatchers.anySet())).thenReturn(List.of(new DeviceMeasurementSourceCatalog.Source(
+                101, "PDU-A", 55, "snmp", "W", "W", "POWER", 101, "MODEL_POINT", false)));
         when(pointQuery.findLast(eq(List.of(101)), eq(List.of("W")), eq(Duration.ofHours(24))))
                 .thenReturn(List.of(new LastPoint(101, "W", 520.0, TIME)));
 
@@ -133,8 +125,7 @@ class LastQueryServiceTest {
                 )
         );
         when(pageWidgetRepository.findById(12)).thenReturn(Optional.of(widget));
-        when(deviceModelSnmpPointRepository.findAllEnabledByDeviceModelIds(any()))
-                .thenReturn(List.of());
+        when(sourceCatalog.availableSources(org.mockito.ArgumentMatchers.anySet())).thenReturn(List.of());
         when(pointQuery.findLast(eq(List.of(101, 102)), eq(List.of("temp", "V")), eq(Duration.ofHours(24))))
                 .thenReturn(List.of(
                         new LastPoint(101, "temp", 24.1, TIME),
@@ -159,8 +150,7 @@ class LastQueryServiceTest {
         when(disabled.isEnabled()).thenReturn(false);
         PageWidget widget = lastWidget(12, "dashboard", "PDU", List.of("W"), List.of(enabled, disabled));
         when(pageWidgetRepository.findById(12)).thenReturn(Optional.of(widget));
-        when(deviceModelSnmpPointRepository.findAllEnabledByDeviceModelIds(any()))
-                .thenReturn(List.of());
+        when(sourceCatalog.availableSources(org.mockito.ArgumentMatchers.anySet())).thenReturn(List.of());
         when(pointQuery.findLast(eq(List.of(101)), eq(List.of("W")), eq(Duration.ofHours(24))))
                 .thenReturn(List.of(new LastPoint(101, "W", 10.0, TIME)));
 
