@@ -17,6 +17,16 @@ class CalculatedMetricFluxBuilderTest {
     }
 
     @Test
+    void previousResultLookupExcludesCurrentConfigurationVersion() {
+        String flux = LastFluxBuilder.buildCalculatedLastPreviousVersionQuery("dcim", "dcim_sensor", 12,
+                3, Duration.ofDays(1));
+
+        assertThat(flux).contains("r[\"calculated_metric_id\"] == \"12\"");
+        assertThat(flux).contains("r[\"calculated_config_version\"] != \"3\"");
+        assertThat(flux).contains("|> sort(columns: [\"_time\"], desc: true)");
+    }
+
+    @Test
     void queriesOnlyStoredCalculatedResults() {
         String flux = CalculatedMetricFluxBuilder.buildSeriesQuery("dcim", "dcim_sensor", 12,
                 Instant.parse("2026-10-01T00:00:00Z"), Instant.parse("2026-10-02T00:00:00Z"), "15m");

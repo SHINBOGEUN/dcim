@@ -153,6 +153,7 @@
     .data-status::before { content:""; width:6px; height:6px; border-radius:50%; background:currentColor; }
     .data-status.NORMAL { color:var(--ok); background:rgba(62,207,142,.12); }
     .data-status.PARTIAL { color:var(--warn); background:rgba(240,180,41,.12); }
+    .data-status.PREVIOUS { color:var(--warn); background:rgba(240,180,41,.12); }
     .data-status.STALE, .data-status.MISSING { color:var(--bad); background:rgba(240,113,120,.12); }
     .device-block { border-top: 1px solid var(--line); padding-top: 8px; margin-top: 8px; }
     .device-block:first-of-type { border-top: 0; padding-top: 0; margin-top: 0; }
@@ -789,7 +790,7 @@
 
     function renderDataStatus(status) {
       if (!status) return "";
-      const label = ({ NORMAL: "정상", PARTIAL: "일부 지연", STALE: "수집 지연", MISSING: "데이터 없음" })[status.status] || status.status;
+      const label = ({ NORMAL: "정상", PARTIAL: "일부 지연", PREVIOUS: "새 수집 대기", STALE: "수집 지연", MISSING: "데이터 없음" })[status.status] || status.status;
       const details = [];
       if (status.missingSourceCount) details.push(`누락 ${status.missingSourceCount}`);
       if (status.staleSourceCount) details.push(`지연 ${status.staleSourceCount}`);
@@ -887,10 +888,13 @@
 
     function renderPueBody(pue) {
       if (!pue || pue.error) return `<div class="empty" style="padding:12px">${escapeHtml(pue?.error || "데이터 없음")}</div>`;
-      const status = ({ OK: "정상", MISSING_DATA: "계산 결과 없음", STALE_DATA: "저장값 오래됨" })[pue.calculationStatus] || pue.calculationStatus;
+      const previous = pue.calculationStatus === "PREVIOUS_VERSION";
+      const status = ({ OK: "정상", MISSING_DATA: "계산 결과 없음", STALE_DATA: "저장값 오래됨", PREVIOUS_VERSION: "이전 설정 결과 · 새 수집 대기" })[pue.calculationStatus] || pue.calculationStatus;
+      const savedAt = pue.dataStatus?.latestCollectedAt ? new Date(pue.dataStatus.latestCollectedAt).toLocaleString("ko-KR") : "";
       return `<div class="count-label">${escapeHtml(pue.rangePreset || "")} · ${escapeHtml(status || "")}</div>`
         + `<div class="count-total">${pue.value == null ? "–" : formatValue(pue.value)} ${escapeHtml(pue.unit || "")}</div>`
-        + `<div class="meta" style="margin-top:6px">${escapeHtml(pue.formula || "")}</div>`
+        + (previous ? `<div class="meta" style="margin-top:6px">이전 결과 저장: ${escapeHtml(savedAt)} · 저장 당시 단위 정보 없음</div>` : "")
+        + `<div class="meta" style="margin-top:6px">${previous ? "현재 공식(새 결과 대기): " : ""}${escapeHtml(pue.formula || "")}</div>`
         + (Object.keys(pue.inputs || {}).length ? `<details style="margin-top:9px"><summary class="meta">이번 회차 입력값</summary>${Object.entries(pue.inputs).map(([alias, value]) => `<div class="series-row"><b>${escapeHtml(alias)}</b> ${formatValue(value)}</div>`).join("")}</details>` : "");
     }
 

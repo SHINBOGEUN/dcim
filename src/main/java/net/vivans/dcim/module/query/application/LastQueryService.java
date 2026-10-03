@@ -7,7 +7,7 @@ import net.vivans.dcim.module.device.domain.model.PageWidgetDevice;
 import net.vivans.dcim.module.device.domain.model.PageWidgetPoint;
 import net.vivans.dcim.module.device.domain.model.PageWidgetQueryKind;
 import net.vivans.dcim.module.device.domain.repository.PageWidgetRepository;
-import net.vivans.dcim.module.devicemodel.domain.model.DeviceModelSnmpPoint;
+import net.vivans.dcim.module.device.application.DeviceMeasurementSourceCatalog;
 import net.vivans.dcim.module.devicemodel.domain.repository.DeviceModelSnmpPointRepository;
 import net.vivans.dcim.module.query.api.dto.LastDeviceResponse;
 import net.vivans.dcim.module.query.api.dto.LastPointValueResponse;
@@ -41,7 +41,8 @@ public class LastQueryService {
 
     private final PageWidgetRepository pageWidgetRepository;
     private final PointQuery pointQuery;
-    private final DeviceModelSnmpPointRepository deviceModelSnmpPointRepository;
+    private final DeviceMeasurementSourceCatalog sourceCatalog;
+    private final DeviceModelSnmpPointRepository snmpPointRepository;
     private final WidgetDataStatusResolver widgetDataStatusResolver;
 
     public LastWidgetResponse getLast(Integer widgetId, Integer lookbackHours) {
@@ -65,7 +66,7 @@ public class LastQueryService {
         List<Integer> deviceIds = devices.stream().map(Device::getId).toList();
         Map<Integer, Device> deviceById = devices.stream()
                 .collect(Collectors.toMap(Device::getId, device -> device, (a, b) -> a, LinkedHashMap::new));
-        Map<Integer, Map<String, String>> unitsByModelId = resolveUnitsByModelId(devices);
+        Map<Integer, Map<String, String>> unitsByDeviceId = resolveUnitsByDeviceId(devices);
 
         List<LastPoint> points = pointQuery.findLast(deviceIds, pointNames, lookback);
         Map<String, LastPoint> latestBySource = new HashMap<>();
@@ -89,8 +90,8 @@ public class LastQueryService {
                 continue;
             }
             Device device = entry.getValue();
-            Map<String, String> unitByPoint = unitsByModelId.getOrDefault(
-                    device.getDeviceModel().getId(),
+            Map<String, String> unitByPoint = unitsByDeviceId.getOrDefault(
+                    device.getId(),
                     Map.of()
             );
             List<LastPointValueResponse> pointResponses = new ArrayList<>();
@@ -158,18 +159,27 @@ public class LastQueryService {
         );
     }
 
-    private Map<Integer, Map<String, String>> resolveUnitsByModelId(List<Device> devices) {
-        Set<Integer> modelIds = devices.stream()
-                .map(device -> device.getDeviceModel().getId())
-                .collect(Collectors.toCollection(LinkedHashSet::new));
-        Map<Integer, Map<String, String>> unitsByModelId = new HashMap<>();
-        for (DeviceModelSnmpPoint point : deviceModelSnmpPointRepository.findAllEnabledByDeviceModelIds(modelIds)) {
-            Integer modelId = point.getModelProtocol().getDeviceModel().getId();
-            unitsByModelId
-                    .computeIfAbsent(modelId, ignored -> new HashMap<>())
-                    .putIfAbsent(point.getName(), blankToNull(point.getUnit()));
+    private Map<Integer, Map<String, String>> resolveUnitsByDeviceId(List<Device> devices) {
+        Set<Integer> deviceIds = devices.stream().map(Device::getId).collect(Collectors.toSet());
+        Map<Integer, Map<String, String>> units = new HashMap<>();
+        Set<Integer> modelIds = devices.stream().map(device -> device.getDeviceModel().getId())
+                .collect(Collectors.toSet());
+        Map<Integer, Map<String, String>> snmpUnitsByModel = new HashMap<>();
+        snmpPointRepository.findAllEnabledByDeviceModelIds(modelIds).forEach(point ->
+                snmpUnitsByModel.computeIfAbsent(point.getModelProtocol().getDeviceModel().getId(),
+                                ignored -> new HashMap<>())
+                        .putIfAbsent(point.getName(), blankToNull(point.getUnit())));
+        for (Device device : devices) {
+            units.put(device.getId(), new HashMap<>(snmpUnitsByModel.getOrDefault(
+                    device.getDeviceModel().getId(), Map.of())));
         }
-        return unitsByModelId;
+        for (DeviceMeasurementSourceCatalog.Source source : sourceCatalog.availableSources(deviceIds)) {
+            if (!deviceIds.contains(source.deviceId())) continue;
+            Map<String, String> deviceUnits = units.computeIfAbsent(source.deviceId(), ignored -> new HashMap<>());
+            if (source.ambiguous()) deviceUnits.remove(source.pointName());
+            else deviceUnits.put(source.pointName(), blankToNull(source.unit()));
+        }
+        return units;
     }
 
     private static boolean unitsEqual(String left, String right) {

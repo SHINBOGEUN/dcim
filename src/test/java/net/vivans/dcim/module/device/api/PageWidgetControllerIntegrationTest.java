@@ -285,6 +285,61 @@ class PageWidgetControllerIntegrationTest {
     }
 
     @Test
+    void updateWidget_movesPageAndRejectsDuplicateNameAtDestination() throws Exception {
+        String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, userRepository, "widget-move-page", "password123");
+        devicePageCodeId(accessToken, "COOLING", "Cooling", 1);
+        devicePageCodeId(accessToken, "POWER", "Power", 2);
+        int deviceId = createDevice(accessToken, "Widget-Move-Page");
+
+        String created = mockMvc.perform(post("/api/manager/widgets")
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"pageCode":"COOLING","name":"이동 대상","queryKind":"last",
+                                 "deviceIds":[%d],"pointNames":["W"]}
+                                """.formatted(deviceId)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        int id = objectMapper.readTree(created).path("data").path("id").asInt();
+
+        mockMvc.perform(put("/api/manager/widgets/{id}", id)
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"pageCode":"POWER","name":"이동 대상","queryKind":"last",
+                                 "deviceIds":[%d],"pointNames":["W"]}
+                                """.formatted(deviceId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.pageCode").value("POWER"));
+        mockMvc.perform(get("/api/manager/widgets").param("pageCode", "COOLING")
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data", hasSize(0)));
+        mockMvc.perform(get("/api/manager/widgets").param("pageCode", "POWER")
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data", hasSize(1)));
+
+        mockMvc.perform(post("/api/manager/widgets")
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"pageCode":"COOLING","name":"이동 대상","queryKind":"last",
+                                 "deviceIds":[%d],"pointNames":["W"]}
+                                """.formatted(deviceId)))
+                .andExpect(status().isOk());
+        mockMvc.perform(put("/api/manager/widgets/{id}", id)
+                        .header("Authorization", bearerToken(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"pageCode":"COOLING","name":"이동 대상","queryKind":"last",
+                                 "deviceIds":[%d],"pointNames":["W"]}
+                                """.formatted(deviceId)))
+                .andExpect(status().isConflict());
+        mockMvc.perform(get("/api/manager/widgets/{id}", id)
+                        .header("Authorization", bearerToken(accessToken)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.pageCode").value("POWER"));
+    }
+
+    @Test
     void replaceLayout_savesGridPosition() throws Exception {
         String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, userRepository, "widget-layout", "password123");
         devicePageCodeId(accessToken, "dashboard", "dashboard", 1);
@@ -330,6 +385,7 @@ class PageWidgetControllerIntegrationTest {
     void calculatedWidget_createUpdateToggleAndDelete() throws Exception {
         String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, userRepository, "widget-pue", "password123");
         devicePageCodeId(accessToken, "dashboard", "Dashboard", 1);
+        devicePageCodeId(accessToken, "POWER", "Power", 2);
         int totalDevice = createDevice(accessToken, "Pue-Total");
         int coolerDevice = createDevice(accessToken, "Pue-Cooler");
 
@@ -396,11 +452,12 @@ class PageWidgetControllerIntegrationTest {
                         .header("Authorization", bearerToken(accessToken))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"name":"사업장 계산 지표 수정","enabled":true,"queryKind":"calculated",
+                                {"pageCode":"POWER","name":"사업장 계산 지표 수정","enabled":true,"queryKind":"calculated",
                                  "pueDefinitionId":%d,"pueRangePreset":"today","pueFreshnessMinutes":60}
                                 """.formatted(definitionId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.name").value("사업장 계산 지표 수정"))
+                .andExpect(jsonPath("$.data.pageCode").value("POWER"))
                 .andExpect(jsonPath("$.data.pueFreshnessMinutes").value(60));
 
         mockMvc.perform(patch("/api/manager/widgets/{id}/enabled", widgetId)
@@ -421,6 +478,7 @@ class PageWidgetControllerIntegrationTest {
     void psychrometricWidget_createAndUpdate_keepsExistingSources() throws Exception {
         String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, userRepository, "widget-psychrometric", "password123");
         devicePageCodeId(accessToken, "dashboard", "Dashboard", 1);
+        devicePageCodeId(accessToken, "COOLING", "Cooling", 2);
         int temperatureDevice = createDevice(accessToken, "Psych-Temperature");
         int humidityDevice = createDevice(accessToken, "Psych-Humidity");
 
@@ -442,12 +500,13 @@ class PageWidgetControllerIntegrationTest {
                         .header("Authorization", bearerToken(accessToken))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"name":"센터 온습도 수정","enabled":true,
+                                {"pageCode":"COOLING","name":"센터 온습도 수정","enabled":true,
                                  "temperatureSources":[{"deviceId":%d,"pointName":"TEMP"}],
                                  "humiditySources":[{"deviceId":%d,"pointName":"HUM"}]}
                                 """.formatted(temperatureDevice, humidityDevice)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.name").value("센터 온습도 수정"))
+                .andExpect(jsonPath("$.data.pageCode").value("COOLING"))
                 .andExpect(jsonPath("$.data.psychrometricSources", hasSize(2)));
     }
 

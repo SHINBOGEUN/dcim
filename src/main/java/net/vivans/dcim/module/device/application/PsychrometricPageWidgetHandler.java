@@ -49,7 +49,7 @@ public class PsychrometricPageWidgetHandler {
             throw new IllegalArgumentException("queryKind must be psychrometric");
         }
         String name = request.name().trim();
-        support.validateUpdateName(widget, name);
+        support.updatePage(widget, request.pageCode(), name);
         widget.updatePsychrometric(name,
                 request.enabled() == null ? widget.isEnabled() : request.enabled(),
                 resolveSources(request.temperatureSources(), request.humiditySources()));

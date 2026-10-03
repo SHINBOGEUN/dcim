@@ -9,8 +9,7 @@ import net.vivans.dcim.module.device.domain.model.PageWidgetDeviceRole;
 import net.vivans.dcim.module.device.domain.model.PageWidgetOp;
 import net.vivans.dcim.module.device.domain.model.PageWidgetQueryKind;
 import net.vivans.dcim.module.device.domain.repository.PageWidgetRepository;
-import net.vivans.dcim.module.devicemodel.domain.model.DeviceModelSnmpPoint;
-import net.vivans.dcim.module.devicemodel.domain.repository.DeviceModelSnmpPointRepository;
+import net.vivans.dcim.module.device.application.DeviceMeasurementSourceCatalog;
 import net.vivans.dcim.module.query.api.dto.AggregateDeviceValueResponse;
 import net.vivans.dcim.module.query.api.dto.AggregateWidgetResponse;
 import net.vivans.dcim.module.query.api.dto.WidgetDataStatusResponse;
@@ -38,7 +37,7 @@ public class AggregateQueryService {
 
     private final PageWidgetRepository pageWidgetRepository;
     private final PointQuery pointQuery;
-    private final DeviceModelSnmpPointRepository deviceModelSnmpPointRepository;
+    private final DeviceMeasurementSourceCatalog sourceCatalog;
     private final WidgetDataStatusResolver widgetDataStatusResolver;
 
     public AggregateWidgetResponse getAggregate(Integer widgetId, String rangePresetOverride) {
@@ -181,15 +180,14 @@ public class AggregateQueryService {
     }
 
     private String resolveUnit(List<Device> devices, List<String> pointNames) {
-        Set<Integer> modelIds = devices.stream()
-                .map(d -> d.getDeviceModel().getId())
-                .collect(Collectors.toCollection(LinkedHashSet::new));
+        Set<Integer> deviceIds = devices.stream().map(Device::getId).collect(Collectors.toSet());
         String unit = null;
-        for (DeviceModelSnmpPoint point : deviceModelSnmpPointRepository.findAllEnabledByDeviceModelIds(modelIds)) {
-            if (!pointNames.contains(point.getName())) {
+        for (DeviceMeasurementSourceCatalog.Source point : sourceCatalog.availableSources(deviceIds)) {
+            if (!deviceIds.contains(point.deviceId()) || point.ambiguous()
+                    || !pointNames.contains(point.pointName())) {
                 continue;
             }
-            String candidate = blankToNull(point.getUnit());
+            String candidate = blankToNull(point.unit());
             if (candidate == null) {
                 continue;
             }

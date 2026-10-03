@@ -19,6 +19,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class CalculatedMetricQueryServiceTest {
@@ -39,12 +41,33 @@ class CalculatedMetricQueryServiceTest {
         assertThat(result.formula()).isEqualTo("A / B");
         assertThat(result.inputs()).containsEntry("A", 10.0).containsEntry("B", 4.0);
         assertThat(result.calculationStatus()).isEqualTo("OK");
+        verify(points, never()).findLastCalculatedPreviousVersion(eq(7), eq(3), any(Duration.class));
+    }
+
+    @Test
+    void showsPreviousResultUntilCurrentVersionIsCollected() {
+        widget(42, 7, 3);
+        Instant previousSavedAt = Instant.now().minusSeconds(120);
+        when(points.findLastCalculated(eq(7), eq(3), any(Duration.class))).thenReturn(Optional.empty());
+        when(points.findLastCalculatedPreviousVersion(eq(7), eq(3), eq(Duration.ofDays(3))))
+                .thenReturn(Optional.of(new CalculatedMetricLastPoint(2.5, previousSavedAt, Map.of("A", 10.0))));
+
+        var result = service.getCalculated(42, null, null);
+
+        assertThat(result.value()).isEqualByComparingTo("2.5000");
+        assertThat(result.calculationStatus()).isEqualTo("PREVIOUS_VERSION");
+        assertThat(result.complete()).isFalse();
+        assertThat(result.unit()).isNull();
+        assertThat(result.inputs()).isEmpty();
+        assertThat(result.dataStatus().status()).isEqualTo("PREVIOUS");
+        assertThat(result.dataStatus().latestCollectedAt()).isEqualTo(previousSavedAt);
     }
 
     @Test
     void reportsMissingCalculationWithoutLegacyPowerFields() {
         widget(42, 7, 3);
         when(points.findLastCalculated(eq(7), eq(3), any(Duration.class))).thenReturn(Optional.empty());
+        when(points.findLastCalculatedPreviousVersion(eq(7), eq(3), any(Duration.class))).thenReturn(Optional.empty());
 
         var result = service.getCalculated(42, null, null);
 
@@ -52,6 +75,19 @@ class CalculatedMetricQueryServiceTest {
         assertThat(result.value()).isNull();
         assertThat(result.inputs()).isEmpty();
         assertThat(result.calculationStatus()).isEqualTo("MISSING_DATA");
+    }
+
+    @Test
+    void staleCurrentVersionDoesNotFallBackToPreviousVersion() {
+        widget(42, 7, 3);
+        when(points.findLastCalculated(eq(7), eq(3), any(Duration.class)))
+                .thenReturn(Optional.of(new CalculatedMetricLastPoint(2.5, Instant.now().minusSeconds(3600), Map.of())));
+
+        var result = service.getCalculated(42, null, null);
+
+        assertThat(result.value()).isNull();
+        assertThat(result.calculationStatus()).isEqualTo("STALE_DATA");
+        verify(points, never()).findLastCalculatedPreviousVersion(eq(7), eq(3), any(Duration.class));
     }
 
     private void widget(int widgetId, int metricId, int version) {

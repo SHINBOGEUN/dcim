@@ -40,5 +40,8 @@ public interface PointQuery {
 
     Optional<CalculatedMetricLastPoint> findLastCalculated(Integer definitionId, Integer configVersion, Duration lookback);
 
+    Optional<CalculatedMetricLastPoint> findLastCalculatedPreviousVersion(Integer definitionId, Integer currentConfigVersion,
+                                                                        Duration lookback);
+
     List<CalculatedMetricSeriesPoint> findCalculatedSeries(Integer definitionId, Instant start, Instant end, String window);
 }
