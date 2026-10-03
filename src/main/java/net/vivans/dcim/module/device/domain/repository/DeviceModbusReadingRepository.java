@@ -3,6 +3,7 @@ package net.vivans.dcim.module.device.domain.repository;
 import net.vivans.dcim.module.device.domain.model.DeviceModbusReading;
 
 import java.util.List;
+import java.util.Collection;
 import java.util.Optional;
 
 public interface DeviceModbusReadingRepository {
@@ -12,6 +13,8 @@ public interface DeviceModbusReadingRepository {
     List<DeviceModbusReading> findAllByEndpointIdOrderByIdAsc(Integer endpointId);
 
     List<DeviceModbusReading> findAllByTargetDeviceIdOrderByIdAsc(Integer targetDeviceId);
+
+    List<DeviceModbusReading> findAllByTargetDeviceIds(Collection<Integer> targetDeviceIds);
 
     Optional<DeviceModbusReading> findByIdAndEndpointId(Integer id, Integer endpointId);
 
