@@ -6,6 +6,7 @@ import net.vivans.dcim.module.device.domain.repository.DeviceModbusReadingReposi
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Collection;
 import java.util.Optional;
 
 @Repository
@@ -30,6 +31,11 @@ public class DeviceModbusReadingJpaRepository
     @Override
     public List<DeviceModbusReading> findAllByTargetDeviceIdOrderByIdAsc(Integer targetDeviceId) {
         return springDataRepository.findAllByTargetDevice_IdOrderByIdAsc(targetDeviceId);
+    }
+
+    @Override
+    public List<DeviceModbusReading> findAllByTargetDeviceIds(Collection<Integer> targetDeviceIds) {
+        return springDataRepository.findAllByTargetDevice_IdInOrderByIdAsc(targetDeviceIds);
     }
 
     @Override

@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
+import java.util.Collection;
 import java.util.Optional;
 
 public interface DeviceModbusReadingSpringDataRepository extends JpaRepository<DeviceModbusReading, Integer> {
@@ -14,6 +15,9 @@ public interface DeviceModbusReadingSpringDataRepository extends JpaRepository<D
 
     @EntityGraph(attributePaths = {"endpointModbus", "endpointModbus.endpoint", "endpointModbus.endpoint.device"})
     List<DeviceModbusReading> findAllByTargetDevice_IdOrderByIdAsc(Integer targetDeviceId);
+
+    @EntityGraph(attributePaths = {"point", "targetDevice"})
+    List<DeviceModbusReading> findAllByTargetDevice_IdInOrderByIdAsc(Collection<Integer> targetDeviceIds);
 
     @EntityGraph(attributePaths = {"endpointModbus", "endpointModbus.endpoint", "endpointModbus.endpoint.device", "point", "targetDevice"})
     Optional<DeviceModbusReading> findByIdAndEndpointModbus_EndpointId(Integer id, Integer endpointId);
