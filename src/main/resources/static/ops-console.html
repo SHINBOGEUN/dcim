@@ -726,6 +726,7 @@
     .side button[data-tab="device-groups"]::before { content:"◫"; }
     .side button[data-tab="tasks"]::before { content:"↻"; }
     .side button[data-tab="collection-status"]::before { content:"◉"; }
+    .side button[data-tab="device-pages"]::before { content:"▧"; }
     .side button[data-tab="widgets"]::before { content:"▦"; }
     .side button[data-tab="locations"]::before { content:"⌖"; }
     .side button[data-tab="models"]::before { content:"◇"; }
@@ -769,6 +770,10 @@
     input[type="checkbox"],input[type="radio"] { min-height:auto; accent-color:var(--accent); }
     input[type="color"] { padding:4px; }
     .device-pick-box { background:#0d1522 !important; border-color:#31415a !important; }
+    .page-device-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; max-height:min(62vh,680px); overflow:auto; padding:2px; }
+    .page-device-list .pick-item { justify-content:flex-start; cursor:pointer; margin:0; min-width:0; }
+    .page-device-list .pick-item span { min-width:0; }
+    @media (max-width:800px) { .page-device-list { grid-template-columns:1fr; } }
     .table-wrap, .mp-table-wrap, [style*="overflow:auto"] { scrollbar-color:#314965 transparent; scrollbar-width:thin; }
     thead th { position:sticky; top:0; z-index:2; box-shadow:0 1px 0 #31415a; }
     tbody tr:last-child td { border-bottom:0; }
@@ -1267,6 +1272,7 @@
     <button type="button" data-tab="device-groups">장비 그룹<small>IT · Cooling · 운영 분류</small></button>
     <button type="button" data-tab="tasks">수집 작업<small>Task · 주기 그룹</small></button>
     <button type="button" data-tab="collection-status">수집 상태<small>지연 · 데이터 없음</small></button>
+    <button type="button" data-tab="device-pages" data-role-gate="admin-user">페이지 장비<small>페이지별 표시 대상</small></button>
     <button type="button" data-tab="widgets">화면 위젯<small>표시 · 조회</small></button>
     <div class="group">기준 정보</div>
     <button type="button" data-tab="locations">위치<small>존 · Path · 랙</small></button>
@@ -1876,6 +1882,32 @@
           <button type="button" class="primary" style="margin-top:12px" id="taskCreate" data-role-gate="admin">만들고 collector에 반영</button>
           <details class="raw"><summary>응답 상세</summary><pre id="taskOut"></pre></details>
         </div>
+      </div>
+    </section>
+
+    <!-- DEVICE PAGE MEMBERSHIP -->
+    <section class="panel" id="tab-device-pages">
+      <h1 class="page-title">페이지 장비</h1>
+      <p class="page-desc">페이지에 표시할 장비를 선택합니다. 위젯 장비 설정이나 수집 작업에는 영향을 주지 않습니다.</p>
+      <div class="card">
+        <div class="row" style="align-items:end">
+          <label class="field" style="flex:1;min-width:220px">페이지
+            <select id="pdPage"></select>
+          </label>
+          <button type="button" class="ghost" id="pdReload">새로고침</button>
+        </div>
+        <p class="muted" style="font-size:12px;margin:10px 0 0">이 페이지의 장비 선택은 위젯과 별개이며, 페이지별 측정값 API에서 사용합니다.</p>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <div class="row" style="justify-content:space-between;margin-bottom:12px">
+          <div><h2 style="margin:0">표시할 장비</h2><div id="pdSelectionCount" class="muted" style="font-size:12px;margin-top:5px">페이지를 선택하세요.</div></div>
+          <button type="button" class="primary" id="pdSave" data-role-gate="admin" disabled>선택 저장</button>
+        </div>
+        <div class="row" style="margin-bottom:12px">
+          <input id="pdSearch" type="search" placeholder="장비 이름·모델·위치 검색" aria-label="페이지 장비 검색" style="flex:1;min-width:200px" />
+          <label class="row" style="font-size:12px;cursor:pointer"><input type="checkbox" id="pdOnlySelected" />선택한 장비만</label>
+        </div>
+        <div id="pdDeviceList" class="page-device-list"><div class="empty">페이지를 선택하면 장비 목록이 나타납니다.</div></div>
       </div>
     </section>
 
@@ -2863,6 +2895,11 @@
       models: [],
       modelRequiresInstance: {},
       devices: [],
+      pageDeviceCatalog: [],
+      pageDeviceCatalogLoaded: false,
+      pageDeviceIds: new Set(),
+      savedPageDeviceIds: new Set(),
+      pageDeviceLoadedCode: null,
       assets: [],
       users: [],
       rackLayouts: [],
@@ -2956,7 +2993,7 @@
     }
 
     const ADMIN_ONLY_TABS = new Set(["wizard", "users"]);
-    const ADMIN_USER_TABS = new Set(["codes"]);
+    const ADMIN_USER_TABS = new Set(["codes", "device-pages"]);
 
     function canAccessTab(name) {
       const role = state.role || "";
@@ -3096,6 +3133,11 @@
         loadCollectionStatus().catch((e) => toast(e.message, true));
         loadCollectionOperationsHealth().catch((e) => toast(e.message, true));
         loadCollectionJobHealth().catch((e) => toast(e.message, true));
+      }
+      if (name === "device-pages" && state.token) {
+        fillPageDevicePageSelect();
+        if (state.pageDeviceLoadedCode === $("pdPage").value) renderPageDeviceCandidates();
+        else loadPageDeviceEditor().catch((e) => toast(e.message, true));
       }
       if (name === "lora-endpoints" && state.token) loadLoraEndpoints().catch((e) => toast(e.message, true));
       if (name === "lora-mqtt-sources" && state.token) loadLoraSources().catch((e) => toast(e.message, true));
@@ -5246,6 +5288,147 @@
       renderDeviceGroupList();
       if (!state.editingDeviceGroupId) renderDeviceGroupDevicePick([]);
     }
+
+    function fillPageDevicePageSelect() {
+      const pages = state.codes.DEVICE_PAGE || [];
+      const previous = $("pdPage").value;
+      fillSelect($("pdPage"), pages,
+        (page) => `<option value="${esc(page.code)}">${esc(page.name)} (${esc(page.code)})</option>`,
+        "페이지를 선택하세요");
+      const defaultPage = pages.find((page) => page.code === "dashboard") || pages[0];
+      $("pdPage").value = pages.some((page) => page.code === previous)
+        ? previous : (defaultPage?.code || "");
+    }
+
+    function hasUnsavedPageDeviceSelection() {
+      return !!state.pageDeviceLoadedCode
+        && (state.pageDeviceIds.size !== state.savedPageDeviceIds.size
+          || [...state.pageDeviceIds].some((id) => !state.savedPageDeviceIds.has(id)));
+    }
+
+    function updatePageDeviceSelectionSummary() {
+      const ready = state.pageDeviceLoadedCode === $("pdPage").value && !!state.pageDeviceLoadedCode;
+      const dirty = ready && hasUnsavedPageDeviceSelection();
+      $("pdSelectionCount").textContent = ready
+        ? `${state.pageDeviceIds.size}대 선택 · 전체 ${state.pageDeviceCatalog.length}대${dirty ? " · 저장 전 변경 사항 있음" : ""}`
+        : "페이지를 선택하세요.";
+      $("pdSave").disabled = state.role !== "ADMIN" || !ready || !dirty;
+    }
+
+    function renderPageDeviceCandidates() {
+      const list = $("pdDeviceList");
+      if (state.pageDeviceLoadedCode !== $("pdPage").value || !state.pageDeviceLoadedCode) {
+        list.innerHTML = '<div class="empty">페이지를 선택하면 장비 목록이 나타납니다.</div>';
+        updatePageDeviceSelectionSummary();
+        return;
+      }
+      const search = $("pdSearch").value.trim().toLocaleLowerCase();
+      const selectedOnly = $("pdOnlySelected").checked;
+      const devices = state.pageDeviceCatalog.filter((device) => {
+        if (selectedOnly && !state.pageDeviceIds.has(Number(device.id))) return false;
+        const label = `${device.name || ""} ${device.modelName || ""} ${device.locationNodeName || device.locationNodeCode || ""} ${device.id}`;
+        return label.toLocaleLowerCase().includes(search);
+      });
+      const scrollTop = list.scrollTop;
+      list.innerHTML = devices.length ? devices.map((device) => `
+        <label class="pick-item">
+          <input type="checkbox" data-pd-device="${Number(device.id)}"
+            ${state.pageDeviceIds.has(Number(device.id)) ? "checked" : ""}
+            ${state.role === "ADMIN" ? "" : "disabled"} />
+          <span><b>${esc(device.name)}</b><span class="muted" style="font-size:12px"> · #${Number(device.id)} · ${esc(device.modelName)} · ${esc(device.locationNodeName || device.locationNodeCode || "위치 없음")}${device.enabled ? "" : " · 사용 중지"}</span></span>
+        </label>`).join("")
+        : `<div class="empty">${state.pageDeviceCatalog.length ? "검색 조건에 맞는 장비가 없습니다." : "등록된 장비가 없습니다."}</div>`;
+      list.scrollTop = scrollTop;
+      list.querySelectorAll("input[data-pd-device]").forEach((input) => {
+        input.addEventListener("change", () => {
+          const id = Number(input.dataset.pdDevice);
+          if (input.checked) state.pageDeviceIds.add(id);
+          else state.pageDeviceIds.delete(id);
+          if ($("pdOnlySelected").checked) renderPageDeviceCandidates();
+          else updatePageDeviceSelectionSummary();
+        });
+      });
+      updatePageDeviceSelectionSummary();
+    }
+
+    async function fetchPageDeviceCatalog() {
+      const devices = [];
+      for (let pageNumber = 1; ; pageNumber += 1) {
+        const page = await api(`/api/manager/devices?page=${pageNumber}&size=100`);
+        devices.push(...(page.content || []));
+        if (page.last || pageNumber >= Number(page.totalPages) || !(page.content || []).length) break;
+      }
+      return devices;
+    }
+
+    let pageDeviceLoadSequence = 0;
+    async function loadPageDeviceEditor(refreshCatalog = false) {
+      const code = $("pdPage").value;
+      const sequence = ++pageDeviceLoadSequence;
+      state.pageDeviceLoadedCode = null;
+      state.pageDeviceIds = new Set();
+      state.savedPageDeviceIds = new Set();
+      if (!code) {
+        renderPageDeviceCandidates();
+        return;
+      }
+      $("pdSave").disabled = true;
+      $("pdSelectionCount").textContent = "장비 목록을 불러오는 중입니다.";
+      $("pdDeviceList").innerHTML = '<div class="empty">장비 목록을 불러오는 중입니다.</div>';
+      try {
+        const [ids, devices] = await Promise.all([
+          api(`/api/manager/device-pages/${encodeURIComponent(code)}/devices`),
+          refreshCatalog || !state.pageDeviceCatalogLoaded
+            ? fetchPageDeviceCatalog() : Promise.resolve(state.pageDeviceCatalog),
+        ]);
+        if (sequence !== pageDeviceLoadSequence) return;
+        state.pageDeviceCatalog = devices;
+        state.pageDeviceCatalogLoaded = true;
+        state.pageDeviceIds = new Set((ids || []).map(Number));
+        state.savedPageDeviceIds = new Set(state.pageDeviceIds);
+        state.pageDeviceLoadedCode = code;
+        renderPageDeviceCandidates();
+      } catch (e) {
+        if (sequence !== pageDeviceLoadSequence) return;
+        $("pdSelectionCount").textContent = "장비 목록을 불러오지 못했습니다.";
+        $("pdDeviceList").innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+        throw e;
+      }
+    }
+
+    $("pdPage").addEventListener("change", () => {
+      if (hasUnsavedPageDeviceSelection() && !confirm("저장하지 않은 장비 선택을 버리고 페이지를 바꿀까요?")) {
+        $("pdPage").value = state.pageDeviceLoadedCode;
+        return;
+      }
+      loadPageDeviceEditor().catch((e) => toast(e.message, true));
+    });
+    $("pdReload").onclick = () => {
+      if (hasUnsavedPageDeviceSelection() && !confirm("저장하지 않은 장비 선택을 버리고 다시 불러올까요?")) return;
+      loadPageDeviceEditor(true).catch((e) => toast(e.message, true));
+    };
+    $("pdSearch").addEventListener("input", renderPageDeviceCandidates);
+    $("pdOnlySelected").addEventListener("change", renderPageDeviceCandidates);
+    $("pdSave").onclick = async () => {
+      const code = state.pageDeviceLoadedCode;
+      if (state.role !== "ADMIN" || !code || code !== $("pdPage").value || !hasUnsavedPageDeviceSelection()) return;
+      $("pdSave").disabled = true;
+      $("pdPage").disabled = true;
+      try {
+        const ids = [...state.pageDeviceIds].sort((a, b) => a - b);
+        const saved = await api(`/api/manager/device-pages/${encodeURIComponent(code)}/devices`, {
+          method: "PUT", body: JSON.stringify({ deviceIds: ids }),
+        });
+        state.pageDeviceIds = new Set((saved || []).map(Number));
+        state.savedPageDeviceIds = new Set(state.pageDeviceIds);
+        renderPageDeviceCandidates();
+        toast(`${state.pageDeviceIds.size}대의 페이지 장비 선택을 저장했습니다`);
+      } catch (e) { toast(e.message, true); }
+      finally {
+        $("pdPage").disabled = false;
+        updatePageDeviceSelectionSummary();
+      }
+    };
 
     function editDeviceGroup(id) {
       const group = state.deviceGroups.find((item) => Number(item.id) === id);
