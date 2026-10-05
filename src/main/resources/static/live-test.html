@@ -215,22 +215,32 @@
       await loadDevices();
     }
 
+    function pointKey(deviceId, point) {
+      return [deviceId, point.protocol || "snmp", point.sourceDeviceId || deviceId, point.name].join("::");
+    }
+
     function selectedItems() {
       const items = [];
+      const checked = new Set(selectedKeys());
       for (const device of state.devices) {
-        const names = [];
+        const bySource = new Map();
         for (const point of device.points || []) {
-          const box = document.querySelector(`input[data-key="${device.deviceId}::${point.name}"]`);
-          if (box && box.checked) names.push(point.name);
+          if (!checked.has(pointKey(device.deviceId, point))) continue;
+          const protocol = point.protocol || "snmp";
+          const sourceDeviceId = point.sourceDeviceId || device.deviceId;
+          const groupKey = protocol + "::" + sourceDeviceId;
+          if (!bySource.has(groupKey)) bySource.set(groupKey, { deviceId: device.deviceId,
+            protocol, sourceDeviceId, pointNames: [] });
+          bySource.get(groupKey).pointNames.push(point.name);
         }
-        if (names.length) items.push({ deviceId: device.deviceId, pointNames: names });
+        items.push(...bySource.values());
       }
       return items;
     }
 
     function renderDevices() {
       if (!state.devices.length) {
-        $("devices").innerHTML = '<p class="empty">선택 가능한 SNMP 장비가 없습니다.</p>';
+        $("devices").innerHTML = '<p class="empty">선택 가능한 SNMP/Modbus 장비가 없습니다.</p>';
         return;
       }
       $("devices").innerHTML = state.devices.map((device) => `
@@ -239,8 +249,10 @@
           <div class="meta">#${device.deviceId} · ${escapeHtml(device.modelName || "-")} · ${escapeHtml(device.locationNodeName || "-")}</div>
           ${(device.points || []).map((point) => `
             <label class="point">
-              <input type="checkbox" data-key="${device.deviceId}::${point.name}" />
+              <input type="checkbox" data-key="${escapeHtml(pointKey(device.deviceId, point))}" />
               <span>${escapeHtml(point.name)}</span>
+              <span class="chip">${escapeHtml((point.protocol || "snmp").toUpperCase())}</span>
+              ${point.protocol === "modbus" ? `<span class="meta">읽기: ${escapeHtml(point.sourceDeviceName || ("#" + point.sourceDeviceId))}</span>` : ""}
               <span class="chip">${escapeHtml(point.unit || "")}</span>
             </label>
           `).join("")}
@@ -269,13 +281,14 @@
     }
 
     function applyChecks(items) {
-      document.querySelectorAll("input[data-key]").forEach((el) => { el.checked = false; });
+      const selected = new Set();
       for (const item of items) {
         for (const name of item.pointNames || []) {
-          const box = document.querySelector(`input[data-key="${item.deviceId}::${name}"]`);
-          if (box) box.checked = true;
+          const key = [item.deviceId, item.protocol || "snmp", item.sourceDeviceId || item.deviceId, name].join("::");
+          selected.add(key);
         }
       }
+      document.querySelectorAll("input[data-key]").forEach((el) => { el.checked = selected.has(el.dataset.key); });
       updateSelectedCount();
       ensureCharts(selectedKeys());
     }
@@ -354,7 +367,9 @@
         return;
       }
       if (msg.type && msg.type !== "realtime") return;
-      const key = msg.deviceId + "::" + msg.pointName;
+      const key = [msg.deviceId, msg.protocol || "snmp", msg.sourceDeviceId || msg.deviceId,
+        msg.pointName].join("::");
+      if (!selectedKeys().includes(key)) return;
       pushSample(key, msg);
     }
 
@@ -374,14 +389,16 @@
     }
 
     function createChart(key, color) {
-      const [deviceId, pointName] = key.split("::");
+      const [deviceId, protocol, sourceDeviceId, ...nameParts] = key.split("::");
+      const pointName = nameParts.join("::");
       const device = state.devices.find((d) => String(d.deviceId) === String(deviceId));
-      const point = device && (device.points || []).find((p) => p.name === pointName);
+      const point = device && (device.points || []).find((p) => p.name === pointName
+        && (p.protocol || "snmp") === protocol && String(p.sourceDeviceId || deviceId) === sourceDeviceId);
       const card = document.createElement("article");
       card.className = "chart-card";
       card.innerHTML = `
         <div class="chart-head">
-          <strong>${escapeHtml((device && device.deviceName) || ("device " + deviceId))} · ${escapeHtml(pointName)}</strong>
+          <strong>${escapeHtml((device && device.deviceName) || ("device " + deviceId))} · ${escapeHtml(pointName)} · ${escapeHtml(protocol.toUpperCase())}</strong>
           <div><span data-value>--</span><span class="unit">${escapeHtml((point && point.unit) || "")}</span></div>
         </div>
         <canvas></canvas>
@@ -436,7 +453,7 @@
       entry.valueEl.textContent = Number.isFinite(value) ? value : String(msg.value);
       const head = entry.card.querySelector("strong");
       if (msg.displayName) {
-        head.textContent = msg.displayName + " · " + msg.pointName;
+        head.textContent = msg.displayName + " · " + msg.pointName + " · " + (msg.protocol || "snmp").toUpperCase();
       }
       entry.chart.update("none");
     }

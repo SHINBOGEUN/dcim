@@ -4,10 +4,16 @@ import lombok.RequiredArgsConstructor;
 import net.vivans.dcim.module.device.api.dto.DeviceCapabilityPointResponse;
 import net.vivans.dcim.module.device.api.dto.DeviceCapabilityResponse;
 import net.vivans.dcim.module.device.application.DeviceCapabilityQueryService;
+import net.vivans.dcim.module.device.domain.repository.DeviceRepository;
+import net.vivans.dcim.module.collectortask.application.CollectionGroupSpecService;
+import net.vivans.dcim.module.collectortask.application.CollectionGroupModbusSpec;
+import net.vivans.dcim.module.live.api.dto.LiveDeviceResponse;
+import net.vivans.dcim.module.live.api.dto.LivePointResponse;
 import net.vivans.dcim.module.live.api.dto.LiveSelectionItemRequest;
 import net.vivans.dcim.module.live.infrastructure.collector.LiveCollectionPointSpec;
 import net.vivans.dcim.module.live.infrastructure.collector.LiveCollectionSpec;
 import net.vivans.dcim.module.live.infrastructure.collector.LiveCollectionTargetSpec;
+import net.vivans.dcim.module.live.infrastructure.collector.LiveModbusTargetSpec;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,6 +21,8 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.LinkedHashSet;
 
 @Service
 @RequiredArgsConstructor
@@ -22,18 +30,29 @@ import java.util.Map;
 public class LiveTelemetrySpecService {
 
     static final int LIVE_INTERVAL_MS = 1000;
-    private static final String SNMP_PROTOCOL = "snmp";
     private static final String DEFAULT_COMMUNITY = "public";
     private static final int DEFAULT_TIMEOUT_MS = 800;
     private static final int DEFAULT_RETRIES = 0;
     private static final int DEFAULT_MAX_CONCURRENCY = 10;
 
     private final DeviceCapabilityQueryService deviceCapabilityQueryService;
+    private final DeviceRepository deviceRepository;
+    private final CollectionGroupSpecService collectionGroupSpecService;
+    private final LiveTelemetryQueryService liveTelemetryQueryService;
 
     public LiveCollectionSpec build(List<LiveSelectionItemRequest> items) {
         Map<Integer, DeviceCapabilityResponse> capabilities = capabilitiesByDeviceId();
+        Map<Integer, LiveDeviceResponse> selectable = new LinkedHashMap<>();
+        for (LiveDeviceResponse device : liveTelemetryQueryService.getSelectableDevices()) {
+            selectable.put(device.deviceId(), device);
+        }
         List<LiveCollectionTargetSpec> targets = new ArrayList<>();
+        List<LiveModbusTargetSpec> modbusTargets = new ArrayList<>();
         for (LiveSelectionItemRequest item : items) {
+            if ("modbus".equals(item.protocol())) {
+                appendModbusTargets(item, selectable.get(item.deviceId()), modbusTargets);
+                continue;
+            }
             DeviceCapabilityResponse capability = capabilities.get(item.deviceId());
             if (capability == null || capability.endpoint() == null) {
                 throw new IllegalArgumentException("device is not selectable for live SNMP: " + item.deviceId());
@@ -63,15 +82,54 @@ public class LiveTelemetrySpecService {
                     List.copyOf(points)
             ));
         }
+        String protocol = targets.isEmpty() ? "modbus" : modbusTargets.isEmpty() ? "snmp" : "mixed";
         return new LiveCollectionSpec(
                 LIVE_INTERVAL_MS,
-                SNMP_PROTOCOL,
+                protocol,
                 DEFAULT_COMMUNITY,
                 DEFAULT_TIMEOUT_MS,
                 DEFAULT_RETRIES,
                 DEFAULT_MAX_CONCURRENCY,
-                List.copyOf(targets)
+                List.copyOf(targets),
+                List.copyOf(modbusTargets)
         );
+    }
+
+    private void appendModbusTargets(LiveSelectionItemRequest item, LiveDeviceResponse device,
+                                     List<LiveModbusTargetSpec> output) {
+        if (device == null) throw new IllegalArgumentException("device is not selectable for live Modbus: " + item.deviceId());
+        var source = deviceRepository.findById(item.sourceDeviceId())
+                .orElseThrow(() -> new IllegalArgumentException("Modbus source device not found: " + item.sourceDeviceId()));
+        var plan = collectionGroupSpecService.previewModbus(source);
+        Set<String> selected = new LinkedHashSet<>(item.pointNames());
+        Set<String> found = new LinkedHashSet<>();
+        Map<String, String> units = new LinkedHashMap<>();
+        for (LivePointResponse point : device.points()) {
+            if ("modbus".equals(point.protocol()) && item.sourceDeviceId().equals(point.sourceDeviceId())
+                    && selected.contains(point.name())) units.put(point.name(), point.unit());
+        }
+        for (CollectionGroupModbusSpec.ModbusTarget target : plan.targets()) {
+            if (!item.deviceId().equals(target.deviceId())) continue;
+            List<CollectionGroupModbusSpec.ModbusPoint> points = new ArrayList<>();
+            for (CollectionGroupModbusSpec.ModbusPoint point : target.points()) {
+                var bits = point.bitFields() == null ? List.<CollectionGroupModbusSpec.ModbusBitField>of()
+                        : point.bitFields().stream().filter(bit -> selected.contains(bit.name())).toList();
+                if (!selected.contains(point.name()) && bits.isEmpty()) continue;
+                if (selected.contains(point.name())) found.add(point.name());
+                bits.forEach(bit -> found.add(bit.name()));
+                points.add(new CollectionGroupModbusSpec.ModbusPoint(point.name(), point.registerType(),
+                        point.address(), point.dataType(), point.byteOrder(), point.scale(), point.offset(), bits));
+            }
+            if (!points.isEmpty()) {
+                output.add(new LiveModbusTargetSpec(device.deviceName(), item.sourceDeviceId(),
+                        new CollectionGroupModbusSpec.ModbusTarget(target.deviceId(), target.host(),
+                                target.port(), target.unitId(), List.copyOf(points)),
+                        java.util.Collections.unmodifiableMap(new LinkedHashMap<>(units))));
+            }
+        }
+        if (!found.containsAll(selected)) {
+            throw new IllegalArgumentException("Modbus points changed while building live selection: " + item.deviceId());
+        }
     }
 
     private Map<Integer, DeviceCapabilityResponse> capabilitiesByDeviceId() {

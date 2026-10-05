@@ -4,6 +4,8 @@ import java.util.List;
 
 public record LiveSelectionItemResponse(
         Integer deviceId,
-        List<String> pointNames
+        List<String> pointNames,
+        String protocol,
+        Integer sourceDeviceId
 ) {
 }
