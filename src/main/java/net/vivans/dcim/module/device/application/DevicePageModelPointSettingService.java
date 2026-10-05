@@ -19,8 +19,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -79,26 +81,51 @@ public class DevicePageModelPointSettingService {
             }
         }
 
+        List<DevicePageModelPointSetting> existingSettings = settingRepository
+                .findAllByPageCode_IdAndDeviceModel_IdOrderBySortOrderAscIdAsc(page.getId(), modelId);
+        Map<PointIdentity, DevicePageModelPointSetting> existingByPoint = new HashMap<>();
+        for (DevicePageModelPointSetting setting : existingSettings) {
+            existingByPoint.put(
+                    new PointIdentity(setting.getProtocolType().getId(), setting.getPointId()), setting);
+        }
+
         Map<Integer, CommonCode> protocolTypes = new HashMap<>();
+        Set<PointIdentity> catalogIdentities = new HashSet<>();
         List<DevicePageModelPointSetting> replacements = new java.util.ArrayList<>(catalog.points().size());
         int catalogOrder = 0;
         for (PointOption point : catalog.points()) {
             PointIdentity identity = identity(point);
+            if (!catalogIdentities.add(identity)) {
+                throw new IllegalStateException("Duplicate point in model catalog: "
+                        + point.protocolTypeId() + "/" + point.pointId());
+            }
             DevicePageModelPointSettingsRequest.PointSetting requested = requestedByPoint.get(identity);
-            CommonCode protocolType = protocolTypes.computeIfAbsent(point.protocolTypeId(), id ->
-                    commonCodeRepository.findById(id)
-                            .filter(code -> PROTOCOL_TYPE_GROUP_KEY.equals(code.getCodeGroup().getGroupKey()))
-                            .orElseThrow(() -> new EntityNotFoundException(
-                                    "PROTOCOL_TYPE code not found: " + id)));
             boolean visible = requested != null && requested.visible();
             int sortOrder = requested == null || requested.sortOrder() == null
                     ? catalogOrder : requested.sortOrder();
-            replacements.add(DevicePageModelPointSetting.create(
-                    page, model, protocolType, point.pointId(), visible, sortOrder));
+            DevicePageModelPointSetting existing = existingByPoint.get(identity);
+            if (existing != null) {
+                existing.update(visible, sortOrder);
+                replacements.add(existing);
+            } else {
+                CommonCode protocolType = protocolTypes.computeIfAbsent(point.protocolTypeId(), id ->
+                        commonCodeRepository.findById(id)
+                                .filter(code -> PROTOCOL_TYPE_GROUP_KEY.equals(code.getCodeGroup().getGroupKey()))
+                                .orElseThrow(() -> new EntityNotFoundException(
+                                        "PROTOCOL_TYPE code not found: " + id)));
+                replacements.add(DevicePageModelPointSetting.create(
+                        page, model, protocolType, point.pointId(), visible, sortOrder));
+            }
             catalogOrder++;
         }
 
-        settingRepository.deleteAllByPageCode_IdAndDeviceModel_Id(page.getId(), modelId);
+        List<DevicePageModelPointSetting> staleSettings = existingSettings.stream()
+                .filter(setting -> !catalogIdentities.contains(
+                        new PointIdentity(setting.getProtocolType().getId(), setting.getPointId())))
+                .toList();
+        if (!staleSettings.isEmpty()) {
+            settingRepository.deleteAll(staleSettings);
+        }
         settingRepository.saveAll(replacements);
         return getSettings(pageCode, modelId);
     }

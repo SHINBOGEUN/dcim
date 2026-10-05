@@ -80,4 +80,12 @@ public class DevicePageModelPointSetting extends BaseEntity {
         return new DevicePageModelPointSetting(pageCode, deviceModel, protocolType,
                 pointId, visible, sortOrder);
     }
+
+    public void update(boolean visible, int sortOrder) {
+        if (sortOrder < 0) {
+            throw new IllegalArgumentException("sortOrder must not be negative");
+        }
+        this.visible = visible;
+        this.sortOrder = sortOrder;
+    }
 }
