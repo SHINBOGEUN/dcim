@@ -9,6 +9,7 @@ public record DeviceModelMeasurementPointOptionsResponse(
 ) {
     public record PointOption(
             Integer pointId,
+            Integer protocolTypeId,
             String protocol,
             String pointName,
             String unit,

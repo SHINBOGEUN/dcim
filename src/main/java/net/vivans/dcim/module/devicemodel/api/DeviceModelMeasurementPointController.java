@@ -24,7 +24,7 @@ public class DeviceModelMeasurementPointController {
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/{modelId}/measurement-points")
     @Operation(summary = "모델의 페이지 설정용 측정항목 조회",
-            description = "모델에 등록된 enabled SNMP·Modbus·LoRa 측정항목을 반환합니다. 장비 인스턴스와 페이지 배정은 필요하지 않습니다.")
+            description = "모델에 등록된 SNMP·Modbus·LoRa 측정항목을 활성 여부와 함께 반환합니다. 장비 인스턴스와 페이지 배정은 필요하지 않습니다.")
     public ResponseEntity<ApiResponse<DeviceModelMeasurementPointOptionsResponse>> getMeasurementPoints(
             @Parameter(description = "device_model.id") @PathVariable Integer modelId) {
         return ResponseEntity.ok(ApiResponse.ok(queryService.getMeasurementPoints(modelId)));
