@@ -24,7 +24,7 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/manager/device-pages")
-@Tag(name = "device-page-measurements", description = "페이지별 장비 최신 측정값 API")
+@Tag(name = "device-page-measurements", description = "페이지별 장비 측정항목 및 최신값 API")
 public class DevicePageMeasurementController {
     private final DevicePageMeasurementService service;
 
