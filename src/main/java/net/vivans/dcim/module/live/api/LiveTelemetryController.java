@@ -23,7 +23,7 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/manager/live")
-@Tag(name = "live-telemetry", description = "SNMP 실시간 수집 대상 선택 API")
+@Tag(name = "live-telemetry", description = "SNMP/Modbus 실시간 수집 대상 선택 API")
 public class LiveTelemetryController {
 
     private final LiveTelemetryQueryService liveTelemetryQueryService;
@@ -32,7 +32,7 @@ public class LiveTelemetryController {
     @GetMapping("/devices")
     @Operation(
             summary = "실시간 선택 가능 장비·point 목록",
-            description = "SNMP endpoint와 수집 가능한 point가 있는 장비만 반환합니다. Modbus는 포함하지 않습니다."
+            description = "SNMP endpoint 또는 수집 가능한 Modbus 회선이 있는 장비와 point를 반환합니다."
     )
     public ResponseEntity<ApiResponse<List<LiveDeviceResponse>>> getSelectableDevices() {
         return ResponseEntity.ok(ApiResponse.ok(liveTelemetryQueryService.getSelectableDevices()));

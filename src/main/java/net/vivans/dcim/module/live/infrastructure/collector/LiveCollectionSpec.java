@@ -9,6 +9,7 @@ public record LiveCollectionSpec(
         int timeoutMs,
         int retries,
         int maxConcurrency,
-        List<LiveCollectionTargetSpec> targets
+        List<LiveCollectionTargetSpec> targets,
+        List<LiveModbusTargetSpec> modbusTargets
 ) {
 }
