@@ -7,6 +7,11 @@ import java.util.List;
 
 public record LiveSelectionItemRequest(
         @NotNull Integer deviceId,
-        @NotEmpty List<String> pointNames
+        @NotEmpty List<String> pointNames,
+        String protocol,
+        Integer sourceDeviceId
 ) {
+    public LiveSelectionItemRequest(Integer deviceId, List<String> pointNames) {
+        this(deviceId, pointNames, "snmp", deviceId);
+    }
 }

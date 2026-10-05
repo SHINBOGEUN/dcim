@@ -138,7 +138,8 @@ public class LiveTelemetrySelectionService {
     private static List<LiveSelectionItemResponse> toResponses(List<LiveSelectionItemRequest> items) {
         List<LiveSelectionItemResponse> responses = new ArrayList<>();
         for (LiveSelectionItemRequest item : items) {
-            responses.add(new LiveSelectionItemResponse(item.deviceId(), item.pointNames()));
+            responses.add(new LiveSelectionItemResponse(item.deviceId(), item.pointNames(),
+                    item.protocol(), item.sourceDeviceId()));
         }
         return List.copyOf(responses);
     }
