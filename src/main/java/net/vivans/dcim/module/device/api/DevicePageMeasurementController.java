@@ -28,6 +28,12 @@ import java.util.List;
 public class DevicePageMeasurementController {
     private final DevicePageMeasurementService service;
 
+    @GetMapping("/{pageCode}/devices")
+    @Operation(summary = "페이지에 선택된 장비 ID 목록 조회")
+    public ResponseEntity<ApiResponse<List<Integer>>> getDevices(@PathVariable String pageCode) {
+        return ResponseEntity.ok(ApiResponse.ok(service.getDeviceIds(pageCode)));
+    }
+
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{pageCode}/devices")
     @Operation(summary = "페이지에 표시할 장비 선택", description = "deviceIds 전체를 교체합니다. 빈 배열이면 선택을 해제합니다.")

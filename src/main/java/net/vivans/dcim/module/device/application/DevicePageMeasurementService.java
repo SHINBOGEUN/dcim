@@ -69,6 +69,13 @@ public class DevicePageMeasurementService {
         return List.copyOf(selected);
     }
 
+    public List<Integer> getDeviceIds(String pageCode) {
+        CommonCode page = findPage(pageCode);
+        return pageDeviceRepository.findAllByPageCode_IdOrderByIdAsc(page.getId()).stream()
+                .map(mapping -> mapping.getDevice().getId())
+                .toList();
+    }
+
     public DevicePageMeasurementsResponse getMeasurements(String pageCode, int lookbackHours) {
         if (lookbackHours < 1 || lookbackHours > 720) {
             throw new IllegalArgumentException("lookbackHours must be between 1 and 720");
