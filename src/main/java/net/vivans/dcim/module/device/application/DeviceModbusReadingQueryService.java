@@ -62,6 +62,13 @@ public class DeviceModbusReadingQueryService {
             Integer endpointId,
             DeviceModbusReadingCreateRequest request
     ) {
+        return createReading(deviceId, endpointId, request, true);
+    }
+
+    @Transactional
+    public DeviceModbusReadingResponse createReading(
+            Integer deviceId, Integer endpointId, DeviceModbusReadingCreateRequest request, boolean synchronize
+    ) {
         findDevice(deviceId);
 
         DeviceProtocolEndpoint endpoint = findEndpoint(deviceId, endpointId);
@@ -97,7 +104,9 @@ public class DeviceModbusReadingQueryService {
         );
 
         DeviceModbusReading saved = readingRepository.save(reading);
-        collectionScriptSyncService.regenerateByModelId(endpoint.getDevice().getDeviceModel().getId());
+        if (synchronize) {
+            collectionScriptSyncService.regenerateByModelId(endpoint.getDevice().getDeviceModel().getId());
+        }
         return DeviceModbusReadingResponse.from(saved);
     }
 

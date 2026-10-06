@@ -63,6 +63,13 @@ public class DeviceProtocolEndpointQueryService {
             Integer deviceId,
             DeviceProtocolEndpointCreateRequest request
     ) {
+        return createEndpoint(deviceId, request, true);
+    }
+
+    @Transactional
+    public DeviceProtocolEndpointResponse createEndpoint(
+            Integer deviceId, DeviceProtocolEndpointCreateRequest request, boolean synchronize
+    ) {
         Device device = findDevice(deviceId);
         CommonCode protocolType = findProtocolType(request.protocolTypeId());
         validateProtocolSupportedByModel(device, protocolType);
@@ -83,7 +90,9 @@ public class DeviceProtocolEndpointQueryService {
                 enabled
         );
         DeviceProtocolEndpoint saved = deviceProtocolEndpointRepository.save(endpoint);
-        regenerateIfSnmp(protocolType, device);
+        if (synchronize) {
+            regenerateIfSnmp(protocolType, device);
+        }
         return DeviceProtocolEndpointResponse.from(saved);
     }
 

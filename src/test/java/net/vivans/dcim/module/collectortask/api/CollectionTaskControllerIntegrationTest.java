@@ -51,6 +51,52 @@ class CollectionTaskControllerIntegrationTest {
     private CommonCodeRepository commonCodeRepository;
 
     @Test
+    void registrationOptionsAndSingleDeviceAdd_keepExistingGroupDevices() throws Exception {
+        String token = loginAndGetAccessToken(mockMvc, objectMapper, userRepository, "registration-flow", "password123");
+        Integer snmpId = scriptTypeId(token, "snmp", "SNMP", 1);
+        Integer modelId = createDeviceModelWithSnmpPoint(token, "REGISTRATION-MODEL", "ACME", snmpId,
+                false, "1.3.6.1.4.1.999.1.0", "POWER", "W");
+        String location = createRootLocation(token, "Registration location");
+        int existingId = createDevice(token, modelId, location, "Existing device");
+        int taskId = createTaskWithDevices(token, "Registration task", modelId, snmpId,
+                "0 */1 * * * *", existingId);
+        String taskJson = mockMvc.perform(get("/api/manager/collector/tasks/{taskId}", taskId)
+                        .header("Authorization", bearerToken(token)))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        int groupId = objectMapper.readTree(taskJson).path("data").path("groups").get(0).path("id").asInt();
+
+        mockMvc.perform(get("/api/manager/device-registrations/options")
+                        .header("Authorization", bearerToken(token)).param("modelId", modelId.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.protocols[0].modelPointCount").value(1))
+                .andExpect(jsonPath("$.data.protocols[0].collectionGroups[0].groupId").value(groupId));
+
+        String registration = mockMvc.perform(post("/api/manager/device-registrations")
+                        .header("Authorization", bearerToken(token)).contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "device": {"modelId": %d, "locationNodeCode": "%s", "name": "Registered device"},
+                                  "protocolTypeId": %d,
+                                  "endpoint": {"protocolTypeId": %d, "host": "10.88.99.20", "port": 161},
+                                  "collectionGroup": {"taskId": %d, "groupId": %d}
+                                }
+                                """.formatted(modelId, location, snmpId, snmpId, taskId, groupId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.device.id").isNumber())
+                .andExpect(jsonPath("$.data.endpointId").isNumber())
+                .andReturn().getResponse().getContentAsString();
+        int newId = objectMapper.readTree(registration).path("data").path("device").path("id").asInt();
+
+        mockMvc.perform(post("/api/manager/collector/tasks/{taskId}/groups/{groupId}/devices", taskId, groupId)
+                        .header("Authorization", bearerToken(token)).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"deviceId\": " + newId + "}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.devices", hasSize(2)));
+        mockMvc.perform(get("/api/manager/collector/tasks/{taskId}", taskId)
+                        .header("Authorization", bearerToken(token)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.groups[0].devices", hasSize(2)));
+    }
+
+    @Test
     void createTask_withPeriodGroups_generatesSpecPerGroup() throws Exception {
         String accessToken = loginAndGetAccessToken(mockMvc, objectMapper, userRepository, "v4-task-create", "password123");
         Integer snmpId = scriptTypeId(accessToken, "snmp", "SNMP", 1);
