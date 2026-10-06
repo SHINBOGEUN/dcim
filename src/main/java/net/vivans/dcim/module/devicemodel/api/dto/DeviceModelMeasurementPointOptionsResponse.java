@@ -16,6 +16,9 @@ public record DeviceModelMeasurementPointOptionsResponse(
             String valueType,
             Integer dataPointTypeId,
             String dataPointType,
+            Integer categoryCodeId,
+            String categoryCode,
+            String categoryName,
             Boolean requiresInstance,
             boolean collectionEnabled
     ) {

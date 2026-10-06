@@ -7,6 +7,9 @@ public record DeviceModelSnmpPointCreateRequest(
         @Schema(description = "DATA_POINT_TYPE common_code.id", example = "101")
         Integer dataPointTypeId,
 
+        @Schema(description = "CATEGORY 그룹 common_code.id (분석 그래프 분류)", example = "13")
+        Integer categoryCodeId,
+
         @Schema(description = "식별자·표시명", example = "PRI-FLOW")
         @NotBlank(message = "name must not be empty")
         String name,

@@ -71,6 +71,7 @@ mysql -h HOST -P PORT -u dcim -p dcim < sql/schema/42_device_asset_document.sql
 | `PROTOCOL_TYPE` | snmp, modbus, mqtt | endpoint·수집 Task 불가 |
 | `DEVICE_PAGE` | ENVIRONMENT, COOLING, …, dashboard | 페이지 위젯 불가 |
 | `DATA_POINT_TYPE` | POWER, ENERGY, TEMPERATURE, … | 모델 포인트 등록 불가 |
+| `CATEGORY` | POWER, BATTERY, ETC, FLOW_PRESSURE, TEMPERATURE_HUMIDITY, STATUS | 포인트의 분석 그래프 분류 |
 | `UNIT` | W, KWH, V, A, CELSIUS, PERCENT, … | SNMP·Modbus·LoRa 포인트의 단위 참조 (단위 없는 포인트는 NULL) |
 | `ASSET_STATUS` | ACTIVE, MAINTENANCE, FAULT, INACTIVE, RETIRED | 자산 상태 관리 불가 |
 | `location_node` | UNASSIGNED | 장비 등록 FK 실패 |
@@ -118,6 +119,7 @@ mysql -h HOST -P PORT -u dcim -p dcim < sql/schema/42_device_asset_document.sql
 | 53 | `53_device_page_device.sql` | DEVICE_PAGE에 직접 선택한 장비 |
 | 54 | `54_device_page_model_point_setting.sql` | 페이지·모델별 포인트 표시 설정 |
 | 55 | `55_device_model_modbus_point_data_point_type.sql` | Modbus 포인트에 DATA_POINT_TYPE FK 추가 (기존 DB용; 신규 설치는 08에 포함) |
+| 56 | `56_add_model_point_category_code.sql` | SNMP·Modbus·LoRa 모델 포인트에 CATEGORY 코드 FK 추가 (기존 DB용; 신규 설치는 각 baseline에 포함) |
 
 ---
 

@@ -42,6 +42,10 @@ public class DeviceModelModbusPoint extends BaseEntity {
     @JoinColumn(name = "data_point_type_id", nullable = false)
     private CommonCode dataPointType;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_code_id")
+    private CommonCode categoryCode;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "register_type", nullable = false, length = 30)
     private ModbusRegisterType registerType;
@@ -78,6 +82,7 @@ public class DeviceModelModbusPoint extends BaseEntity {
             DeviceModelProtocol modelProtocol,
             String name,
             CommonCode dataPointType,
+            CommonCode categoryCode,
             ModbusRegisterType registerType,
             ModbusDataType dataType,
             ModbusByteOrder byteOrder,
@@ -91,6 +96,7 @@ public class DeviceModelModbusPoint extends BaseEntity {
         validateModelProtocol(modelProtocol);
         validateName(name);
         validateDataPointType(dataPointType);
+        validateCategoryCode(categoryCode);
         validateRegisterType(registerType);
         validateDataType(dataType);
         validateByteOrder(dataType, byteOrder);
@@ -99,6 +105,7 @@ public class DeviceModelModbusPoint extends BaseEntity {
         this.modelProtocol = modelProtocol;
         this.name = name;
         this.dataPointType = dataPointType;
+        this.categoryCode = categoryCode;
         this.registerType = registerType;
         this.dataType = dataType;
         this.byteOrder = byteOrder;
@@ -114,6 +121,7 @@ public class DeviceModelModbusPoint extends BaseEntity {
             DeviceModelProtocol modelProtocol,
             String name,
             CommonCode dataPointType,
+            CommonCode categoryCode,
             ModbusRegisterType registerType,
             ModbusDataType dataType,
             ModbusByteOrder byteOrder,
@@ -125,24 +133,45 @@ public class DeviceModelModbusPoint extends BaseEntity {
             boolean enabled
     ) {
         return new DeviceModelModbusPoint(
-                modelProtocol, name, dataPointType, registerType, dataType, byteOrder,
+                modelProtocol, name, dataPointType, categoryCode, registerType, dataType, byteOrder,
                 address, requiresInstance, scale, offset, unitCode, enabled
         );
     }
 
     public static DeviceModelModbusPoint create(
             DeviceModelProtocol modelProtocol, String name, CommonCode dataPointType,
+            ModbusRegisterType registerType, ModbusDataType dataType, ModbusByteOrder byteOrder,
+            Integer address, boolean requiresInstance, Double scale, Double offset,
+            CommonCode unitCode, boolean enabled
+    ) {
+        return create(modelProtocol, name, dataPointType, null, registerType, dataType, byteOrder,
+                address, requiresInstance, scale, offset, unitCode, enabled);
+    }
+
+    public static DeviceModelModbusPoint create(
+            DeviceModelProtocol modelProtocol, String name, CommonCode dataPointType,
+            CommonCode categoryCode,
             ModbusRegisterType registerType,
             ModbusDataType dataType, ModbusByteOrder byteOrder, Integer address,
             boolean requiresInstance, Double scale, CommonCode unitCode, boolean enabled
     ) {
-        return create(modelProtocol, name, dataPointType, registerType, dataType, byteOrder,
+        return create(modelProtocol, name, dataPointType, categoryCode, registerType, dataType, byteOrder,
+                address, requiresInstance, scale, null, unitCode, enabled);
+    }
+
+    public static DeviceModelModbusPoint create(
+            DeviceModelProtocol modelProtocol, String name, CommonCode dataPointType,
+            ModbusRegisterType registerType, ModbusDataType dataType, ModbusByteOrder byteOrder,
+            Integer address, boolean requiresInstance, Double scale, CommonCode unitCode, boolean enabled
+    ) {
+        return create(modelProtocol, name, dataPointType, null, registerType, dataType, byteOrder,
                 address, requiresInstance, scale, null, unitCode, enabled);
     }
 
     public void update(
             String name,
             CommonCode dataPointType,
+            CommonCode categoryCode,
             ModbusRegisterType registerType,
             ModbusDataType dataType,
             ModbusByteOrder byteOrder,
@@ -155,6 +184,7 @@ public class DeviceModelModbusPoint extends BaseEntity {
     ) {
         validateName(name);
         validateDataPointType(dataPointType);
+        validateCategoryCode(categoryCode);
         validateRegisterType(registerType);
         validateDataType(dataType);
         validateByteOrder(dataType, byteOrder);
@@ -162,6 +192,7 @@ public class DeviceModelModbusPoint extends BaseEntity {
         validateOffset(registerType, offset);
         this.name = name;
         this.dataPointType = dataPointType;
+        this.categoryCode = categoryCode;
         this.registerType = registerType;
         this.dataType = dataType;
         this.byteOrder = byteOrder;
@@ -175,11 +206,29 @@ public class DeviceModelModbusPoint extends BaseEntity {
 
     public void update(
             String name, CommonCode dataPointType, ModbusRegisterType registerType,
+            ModbusDataType dataType, ModbusByteOrder byteOrder, Integer address,
+            boolean requiresInstance, Double scale, Double offset, CommonCode unitCode, boolean enabled
+    ) {
+        update(name, dataPointType, null, registerType, dataType, byteOrder, address,
+                requiresInstance, scale, offset, unitCode, enabled);
+    }
+
+    public void update(
+            String name, CommonCode dataPointType, CommonCode categoryCode, ModbusRegisterType registerType,
             ModbusDataType dataType, ModbusByteOrder byteOrder, Integer address, boolean requiresInstance,
             Double scale, CommonCode unitCode, boolean enabled
     ) {
-        update(name, dataPointType, registerType, dataType, byteOrder, address, requiresInstance,
+        update(name, dataPointType, categoryCode, registerType, dataType, byteOrder, address, requiresInstance,
                 scale, null, unitCode, enabled);
+    }
+
+    public void update(
+            String name, CommonCode dataPointType, ModbusRegisterType registerType,
+            ModbusDataType dataType, ModbusByteOrder byteOrder, Integer address,
+            boolean requiresInstance, Double scale, CommonCode unitCode, boolean enabled
+    ) {
+        update(name, dataPointType, null, registerType, dataType, byteOrder, address,
+                requiresInstance, scale, null, unitCode, enabled);
     }
 
 
@@ -204,6 +253,12 @@ public class DeviceModelModbusPoint extends BaseEntity {
         }
         if (!"DATA_POINT_TYPE".equals(dataPointType.getCodeGroup().getGroupKey())) {
             throw new IllegalArgumentException("dataPointType must belong to DATA_POINT_TYPE group");
+        }
+    }
+
+    private static void validateCategoryCode(CommonCode categoryCode) {
+        if (categoryCode != null && !"CATEGORY".equals(categoryCode.getCodeGroup().getGroupKey())) {
+            throw new IllegalArgumentException("categoryCode must belong to CATEGORY group");
         }
     }
 
@@ -253,6 +308,10 @@ public class DeviceModelModbusPoint extends BaseEntity {
     /** 공통 코드의 표시 단위. 기존 조회·수집 설정 소비자 호환을 위해 제공한다. */
     public String getUnit() {
         return unitCode == null ? null : unitCode.getName();
+    }
+
+    public String getCategory() {
+        return categoryCode == null ? null : categoryCode.getName();
     }
 }
 

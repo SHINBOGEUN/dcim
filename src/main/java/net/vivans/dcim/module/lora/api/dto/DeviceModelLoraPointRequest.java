@@ -8,6 +8,8 @@ public record DeviceModelLoraPointRequest(
         @NotBlank String payloadField,
         @NotBlank String pointName,
         Integer dataPointTypeId,
+        @Schema(description = "CATEGORY 그룹 common_code.id (분석 그래프 분류)", example = "13")
+        Integer categoryCodeId,
         @Schema(description = "UNIT 그룹 common_code.id (단위가 없으면 null)", example = "58")
         Integer unitCodeId,
         Double scale,

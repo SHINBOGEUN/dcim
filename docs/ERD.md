@@ -72,9 +72,11 @@ erDiagram
         int id PK "AUTO_INCREMENT"
         int model_protocol_id FK "device_model_protocol.id"
         varchar name UK "식별자·표시명"
+        int data_point_type_id FK "DATA_POINT_TYPE"
+        int category_code_id FK "CATEGORY, nullable"
         varchar oid "OID 또는 템플릿"
         tinyint requires_instance "boolean, 기본 0"
-        varchar unit "단위 nullable"
+        int unit_code_id FK "UNIT, nullable"
         tinyint enabled "boolean, 기본 1"
         timestamp created_dt "생성 시각"
         timestamp updated_dt "수정 시각"
@@ -84,14 +86,28 @@ erDiagram
         int id PK "AUTO_INCREMENT"
         int model_protocol_id FK "device_model_protocol.id"
         varchar name UK "식별자·표시명"
+        int data_point_type_id FK "DATA_POINT_TYPE"
+        int category_code_id FK "CATEGORY, nullable"
         varchar register_type "COIL/DISCRETE/HOLDING/INPUT"
         varchar data_type "INT16/UINT16/INT32/UINT32/FLOAT32"
         varchar byte_order "ABCD/CDAB/BADC/DCBA, 멀티만"
         int address "주소 nullable (인스턴스면 NULL)"
         tinyint requires_instance "boolean, 기본 0"
         double scale "배율 nullable"
-        varchar unit "단위 nullable"
+        int unit_code_id FK "UNIT, nullable"
         tinyint enabled "boolean, 기본 1"
+        timestamp created_dt "생성 시각"
+        timestamp updated_dt "수정 시각"
+    }
+
+    device_model_lora_point {
+        int id PK "AUTO_INCREMENT"
+        int device_model_id FK "device_model.id"
+        varchar payload_field "payload JSON 경로"
+        varchar point_name "표준 측정 항목명"
+        int data_point_type_id FK "DATA_POINT_TYPE"
+        int category_code_id FK "CATEGORY, nullable"
+        int unit_code_id FK "UNIT, nullable"
         timestamp created_dt "생성 시각"
         timestamp updated_dt "수정 시각"
     }
@@ -115,6 +131,10 @@ erDiagram
     common_code ||--o{ device_model_protocol : "protocol_type_id"
     device_model_protocol ||--o{ device_model_snmp_point : "model_protocol_id"
     device_model_protocol ||--o{ device_model_modbus_point : "model_protocol_id"
+    device_model ||--o{ device_model_lora_point : "device_model_id"
+    common_code ||--o{ device_model_snmp_point : "data_point_type_id/category_code_id/unit_code_id"
+    common_code ||--o{ device_model_modbus_point : "data_point_type_id/category_code_id/unit_code_id"
+    common_code ||--o{ device_model_lora_point : "data_point_type_id/category_code_id/unit_code_id"
     device_model ||--o{ devices : "model_id"
     location_node ||--o{ devices : "location_node_code"
 ```
@@ -394,9 +414,11 @@ V005에서 `code_group` + `common_code` 모두 INSERT (없을 때만).
 | `id` | INT | N | PK | AUTO_INCREMENT | point ID |
 | `model_protocol_id` | INT | N | FK | | `device_model_protocol.id` (SNMP만) |
 | `name` | VARCHAR(255) | N | UK* | | 식별자·표시명 (`V`, `전압`, `PRI-FLOW`) |
+| `data_point_type_id` | INT | N | FK | | `common_code.id` (그룹 `DATA_POINT_TYPE`, 기존 데이터 유형) |
+| `category_code_id` | INT | Y | FK | NULL | `common_code.id` (그룹 `CATEGORY`, 분석 차트 분류) |
 | `oid` | VARCHAR(512) | N | | | OID 또는 `{instanceId}` 템플릿 |
 | `requires_instance` | TINYINT(1) | N | | `0` | OID `{instanceId}` 치환 필요 여부 (boolean) |
-| `unit` | VARCHAR(50) | Y | | | 단위 (`V`, `A`, `L/min`) |
+| `unit_code_id` | INT | Y | FK | NULL | `common_code.id` (그룹 `UNIT`) |
 | `enabled` | TINYINT(1) | N | | `1` | 사용 여부 (boolean) |
 | `created_dt` | TIMESTAMP(6) | Y | | | |
 | `updated_dt` | TIMESTAMP(6) | Y | | | |
@@ -410,11 +432,16 @@ V005에서 `code_group` + `common_code` 모두 INSERT (없을 때만).
 
 **DDL:** [`07_device_model_snmp_point.sql`](../sql/schema/07_device_model_snmp_point.sql)
 
+`data_point_type_id`는 기존 데이터 유형이며, `category_code_id`는 분석 그래프 분류입니다. 두 컬럼은 서로 대체하지 않습니다. 카테고리는 `CATEGORY` 그룹의 공통 코드를 선택하며, 기존 포인트의 분류는 별도로 지정할 수 있도록 nullable입니다.
+
 **FK 제약**
 
 | FK | 참조 | ON DELETE | ON UPDATE |
 |----|------|-----------|-----------|
 | `fk_device_model_snmp_point_model_protocol_id` | `device_model_protocol(id)` | CASCADE | CASCADE |
+| `fk_device_model_snmp_point_data_point_type_id` | `common_code(id)` (`DATA_POINT_TYPE`) | RESTRICT | CASCADE |
+| `fk_device_model_snmp_point_category_code_id` | `common_code(id)` (`CATEGORY`) | RESTRICT | CASCADE |
+| `fk_device_model_snmp_point_unit_code_id` | `common_code(id)` (`UNIT`) | RESTRICT | CASCADE |
 
 **관계도 (devicemodel — SNMP point)**
 

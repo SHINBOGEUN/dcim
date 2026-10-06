@@ -11,17 +11,17 @@ import java.util.List;
 
 public interface DeviceModelLoraPointSpringDataRepository extends JpaRepository<DeviceModelLoraPoint, Integer> {
 
-    @EntityGraph(attributePaths = {"deviceModel", "dataPointType", "unitCode"})
+    @EntityGraph(attributePaths = {"deviceModel", "dataPointType", "unitCode", "categoryCode"})
     List<DeviceModelLoraPoint> findAllByDeviceModelIdOrderByIdAsc(Integer deviceModelId);
 
     @Query("""
             SELECT p FROM DeviceModelLoraPoint p
             WHERE p.deviceModel.id IN :deviceModelIds AND p.enabled = true
             """)
-    @EntityGraph(attributePaths = {"deviceModel", "dataPointType", "unitCode"})
+    @EntityGraph(attributePaths = {"deviceModel", "dataPointType", "unitCode", "categoryCode"})
     List<DeviceModelLoraPoint> findAllEnabledByDeviceModelIdIn(@Param("deviceModelIds") Collection<Integer> deviceModelIds);
 
-    @EntityGraph(attributePaths = {"deviceModel", "dataPointType", "unitCode"})
+    @EntityGraph(attributePaths = {"deviceModel", "dataPointType", "unitCode", "categoryCode"})
     List<DeviceModelLoraPoint> findAllByEnabledTrue();
 
     boolean existsByDeviceModelIdAndPayloadField(Integer deviceModelId, String payloadField);

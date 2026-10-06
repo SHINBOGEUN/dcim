@@ -152,6 +152,7 @@ public class DevicePageModelPointSettingService {
     private static PointSetting toResponse(PointOption point, boolean visible, int sortOrder) {
         return new PointSetting(point.protocolTypeId(), point.protocol(), point.pointId(), point.pointName(),
                 point.unit(), point.valueType(), point.dataPointTypeId(), point.dataPointType(),
+                point.categoryCodeId(), point.categoryCode(), point.categoryName(),
                 point.requiresInstance(), point.collectionEnabled(),
                 visible, sortOrder);
     }

@@ -50,6 +50,9 @@ public class DeviceModelMeasurementPointQueryService {
                                 point.getDataPointType() == null ? null : point.getDataPointType().getCode(),
                                 point.getDataPointType() == null ? null : point.getDataPointType().getId(),
                                 point.getDataPointType() == null ? null : point.getDataPointType().getCode(),
+                                point.getCategoryCode() == null ? null : point.getCategoryCode().getId(),
+                                point.getCategoryCode() == null ? null : point.getCategoryCode().getCode(),
+                                point.getCategoryCode() == null ? null : point.getCategoryCode().getName(),
                                 point.isRequiresInstance(),
                                 point.isEnabled()
                         )));
@@ -72,6 +75,9 @@ public class DeviceModelMeasurementPointQueryService {
                         point.getDataPointType().getCode(),
                         point.getDataPointType().getId(),
                         point.getDataPointType().getCode(),
+                        point.getCategoryCode() == null ? null : point.getCategoryCode().getId(),
+                        point.getCategoryCode() == null ? null : point.getCategoryCode().getCode(),
+                        point.getCategoryCode() == null ? null : point.getCategoryCode().getName(),
                         null,
                         point.isEnabled()
                 )));
@@ -100,6 +106,9 @@ public class DeviceModelMeasurementPointQueryService {
                 point.getDataType().name(),
                 point.getDataPointType().getId(),
                 point.getDataPointType().getCode(),
+                point.getCategoryCode() == null ? null : point.getCategoryCode().getId(),
+                point.getCategoryCode() == null ? null : point.getCategoryCode().getCode(),
+                point.getCategoryCode() == null ? null : point.getCategoryCode().getName(),
                 point.isRequiresInstance(),
                 point.isEnabled()
         );

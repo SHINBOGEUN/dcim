@@ -12,10 +12,10 @@ import java.util.Optional;
 
 public interface DeviceModelSnmpPointSpringDataRepository extends JpaRepository<DeviceModelSnmpPoint, Integer> {
 
-    @EntityGraph(attributePaths = {"modelProtocol", "modelProtocol.deviceModel", "modelProtocol.protocolType", "unitCode"})
+    @EntityGraph(attributePaths = {"modelProtocol", "modelProtocol.deviceModel", "modelProtocol.protocolType", "unitCode", "categoryCode"})
     Optional<DeviceModelSnmpPoint> findByIdAndModelProtocolId(Integer id, Integer modelProtocolId);
 
-    @EntityGraph(attributePaths = {"modelProtocol", "modelProtocol.deviceModel", "modelProtocol.protocolType", "unitCode"})
+    @EntityGraph(attributePaths = {"modelProtocol", "modelProtocol.deviceModel", "modelProtocol.protocolType", "unitCode", "categoryCode"})
     List<DeviceModelSnmpPoint> findAllByModelProtocolIdOrderByIdAsc(Integer modelProtocolId);
 
     @Query("""
@@ -23,7 +23,7 @@ public interface DeviceModelSnmpPointSpringDataRepository extends JpaRepository<
             WHERE p.modelProtocol.deviceModel.id IN :deviceModelIds
               AND p.enabled = true
             """)
-    @EntityGraph(attributePaths = {"modelProtocol", "modelProtocol.deviceModel", "unitCode"})
+    @EntityGraph(attributePaths = {"modelProtocol", "modelProtocol.deviceModel", "unitCode", "categoryCode"})
     List<DeviceModelSnmpPoint> findAllEnabledByDeviceModelIds(
             @Param("deviceModelIds") Collection<Integer> deviceModelIds
     );

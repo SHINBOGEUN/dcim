@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import net.vivans.dcim.module.devicemodel.domain.model.DeviceModel;
 import net.vivans.dcim.module.devicemodel.domain.repository.DeviceModelRepository;
 import net.vivans.dcim.module.common.application.UnitCodeResolver;
+import net.vivans.dcim.module.common.application.CategoryCodeResolver;
 import net.vivans.dcim.module.lora.api.dto.DeviceModelLoraPointRequest;
 import net.vivans.dcim.module.lora.api.dto.DeviceModelLoraPointResponse;
 import net.vivans.dcim.module.lora.domain.model.DeviceModelLoraPoint;
@@ -27,6 +28,7 @@ public class DeviceModelLoraPointService {
     private final LoraValueMapValidator loraValueMapValidator;
     private final LoraModelTypeValidator loraModelTypeValidator;
     private final UnitCodeResolver unitCodeResolver;
+    private final CategoryCodeResolver categoryCodeResolver;
     private final ApplicationEventPublisher eventPublisher;
 
     public List<DeviceModelLoraPointResponse> getAllByModelId(Integer deviceModelId) {
@@ -47,7 +49,7 @@ public class DeviceModelLoraPointService {
         DeviceModelLoraPoint saved = deviceModelLoraPointRepository.save(DeviceModelLoraPoint.create(
                 deviceModel, request.payloadField(), request.pointName(),
                 dataPointTypeResolver.resolve(request.dataPointTypeId()), unitCodeResolver.resolve(request.unitCodeId()), request.scale(),
-                request.valueMap(), enabled));
+                request.valueMap(), enabled, categoryCodeResolver.resolve(request.categoryCodeId())));
         eventPublisher.publishEvent(new LoraConfigChangedEvent("model-mapping-created:" + saved.getId()));
         return DeviceModelLoraPointResponse.from(saved);
     }
@@ -60,7 +62,8 @@ public class DeviceModelLoraPointService {
         validateUnique(deviceModelId, request.payloadField(), request.pointName(), id);
         boolean enabled = request.enabled() == null || request.enabled();
         point.update(request.payloadField(), request.pointName(), dataPointTypeResolver.resolve(request.dataPointTypeId()),
-                unitCodeResolver.resolve(request.unitCodeId()), request.scale(), request.valueMap(), enabled);
+                unitCodeResolver.resolve(request.unitCodeId()), request.scale(), request.valueMap(), enabled,
+                categoryCodeResolver.resolve(request.categoryCodeId()));
         DeviceModelLoraPoint saved = deviceModelLoraPointRepository.save(point);
         eventPublisher.publishEvent(new LoraConfigChangedEvent("model-mapping-updated:" + id));
         return DeviceModelLoraPointResponse.from(saved);

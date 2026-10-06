@@ -34,7 +34,7 @@ Modbus point는 SNMP point와 **골격이 동일**하며 프로토콜 주소 체
 
 | SNMP point | Modbus point | 역할 |
 |------------|--------------|------|
-| `id`, `model_protocol_id`, `name`, `data_point_type_id`, `unit_code_id`, `enabled` | 동일 | 공통 측정 유형과 단위는 각각 `DATA_POINT_TYPE`, `UNIT` 그룹 참조 |
+| `id`, `model_protocol_id`, `name`, `data_point_type_id`, `category_code_id`, `unit_code_id`, `enabled` | 동일 | 측정 유형·차트 분류·단위는 각각 `DATA_POINT_TYPE`, `CATEGORY`, `UNIT` 그룹 참조 |
 | `oid` | `register_type` + `address` | 무엇을 어디서 읽나 |
 | — | `data_type` + `byte_order` | raw 바이트를 어떻게 해석하나 (Modbus 특유) |
 | — | `scale` | 원시값 배율 |
@@ -126,6 +126,7 @@ SNMP와 동일하게 `name`은 식별자이자 표시명입니다.
 | `model_protocol_id` | INT | N | FK | | `device_model_protocol.id` |
 | `name` | VARCHAR(255) | N | UK* | | 식별자·표시명 (`TOTAL_WT`, `ONTO-TEMP`) |
 | `data_point_type_id` | INT | N | FK | | `common_code.id` (그룹 `DATA_POINT_TYPE`) |
+| `category_code_id` | INT | Y | FK | NULL | `common_code.id` (그룹 `CATEGORY`, 분석 그래프 분류) |
 | `register_type` | VARCHAR(30) | N | | | `COIL`/`DISCRETE`/`HOLDING`/`INPUT` |
 | `data_type` | VARCHAR(20) | N | | | `INT16`/`UINT16`/`INT32`/`UINT32`/`FLOAT32` |
 | `byte_order` | VARCHAR(10) | Y | | | `ABCD`/`CDAB`/`BADC`/`DCBA` (멀티만) |
@@ -145,6 +146,7 @@ SNMP와 동일하게 `name`은 식별자이자 표시명입니다.
 |----|------|-----------|-----------|
 | `fk_device_model_modbus_point_model_protocol_id` | `device_model_protocol(id)` | CASCADE | CASCADE |
 | `fk_device_model_modbus_point_data_point_type_id` | `common_code(id)` (`code_group=DATA_POINT_TYPE`) | RESTRICT | CASCADE |
+| `fk_device_model_modbus_point_category_code_id` | `common_code(id)` (`code_group=CATEGORY`) | RESTRICT | CASCADE |
 | `fk_device_model_modbus_point_unit_code_id` | `common_code(id)` (`code_group=UNIT`) | RESTRICT | CASCADE |
 
 **CHECK 제약**
@@ -175,6 +177,7 @@ SNMP point API([DEVICE_MODEL_SNMP_POINT_API.md](DEVICE_MODEL_SNMP_POINT_API.md) 
 {
   "name": "TOTAL_WT",
   "dataPointTypeId": 1,
+  "categoryCodeId": 13,
   "registerType": "HOLDING",
   "dataType": "FLOAT32",
   "byteOrder": "CDAB",
@@ -193,12 +196,15 @@ SNMP point API([DEVICE_MODEL_SNMP_POINT_API.md](DEVICE_MODEL_SNMP_POINT_API.md) 
 {
   "dataPointTypeId": 1,
   "dataPointType": "POWER",
+  "categoryCodeId": 13,
+  "categoryCode": "POWER",
+  "categoryName": "전력",
   "unitCodeId": 53,
   "unit": "W"
 }
 ```
 
-`dataPointTypeId`와 `unitCodeId`는 환경별 ID가 다를 수 있으므로 실제 요청 전 각각 `DATA_POINT_TYPE`, `UNIT` 그룹의 공통 코드 조회 API에서 확인해야 합니다.
+`dataPointTypeId`, `categoryCodeId`, `unitCodeId`는 환경별 ID가 다를 수 있으므로 실제 요청 전에 각각 `DATA_POINT_TYPE`, `CATEGORY`, `UNIT` 그룹의 공통 코드 조회 API에서 확인해야 합니다. 카테고리 미지정은 `categoryCodeId: null`로 둘 수 있습니다.
 
 ---
 
