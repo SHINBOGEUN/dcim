@@ -167,12 +167,52 @@
     const $ = (id) => document.getElementById(id);
 
     function defaultManagerUrl() {
-      if (location.protocol.startsWith("http") && location.port === "8080") return "";
-      return "http://localhost:8080";
+      return location.protocol === "http:" || location.protocol === "https:" ? "" : "http://localhost:8080";
     }
 
-    $("managerUrl").value = localStorage.getItem("liveManagerUrl") ?? defaultManagerUrl();
-    $("mqttUrl").value = localStorage.getItem("liveMqttUrl") || "ws://localhost:9001/mqtt";
+    function storedManagerUrl(key) {
+      const saved = localStorage.getItem(key);
+      if (!saved) return defaultManagerUrl();
+      try {
+        const parsed = new URL(saved, location.href);
+        const loopback = ["localhost", "127.0.0.1", "::1"].includes(parsed.hostname);
+        if (loopback && (location.protocol === "http:" || location.protocol === "https:") && parsed.origin !== location.origin) {
+          localStorage.removeItem(key);
+          return defaultManagerUrl();
+        }
+      } catch (_) {
+        localStorage.removeItem(key);
+        return defaultManagerUrl();
+      }
+      return saved;
+    }
+
+    function defaultMqttUrl() {
+      const scheme = location.protocol === "https:" ? "wss" : "ws";
+      const port = location.port === "21080" ? "21083" : "9001";
+      return `${scheme}://${location.hostname || "localhost"}:${port}/mqtt`;
+    }
+
+    function storedMqttUrl() {
+      const saved = localStorage.getItem("liveMqttUrl");
+      if (!saved) return defaultMqttUrl();
+      try {
+        const parsed = new URL(saved);
+        const loopback = ["localhost", "127.0.0.1", "::1"].includes(parsed.hostname);
+        const staleServerPort = location.port === "21080" && parsed.hostname === location.hostname && parsed.port === "9001";
+        if ((loopback && !["localhost", "127.0.0.1", "::1"].includes(location.hostname)) || staleServerPort) {
+          localStorage.removeItem("liveMqttUrl");
+          return defaultMqttUrl();
+        }
+      } catch (_) {
+        localStorage.removeItem("liveMqttUrl");
+        return defaultMqttUrl();
+      }
+      return saved;
+    }
+
+    $("managerUrl").value = storedManagerUrl("liveManagerUrl");
+    $("mqttUrl").value = storedMqttUrl();
     $("topic").value = localStorage.getItem("liveTopic") || "dcim/sensor/realtime";
 
     function managerBase() {
