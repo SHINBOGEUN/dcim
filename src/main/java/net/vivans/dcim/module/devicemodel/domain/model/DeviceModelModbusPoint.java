@@ -46,6 +46,10 @@ public class DeviceModelModbusPoint extends BaseEntity {
     @JoinColumn(name = "category_code_id")
     private CommonCode categoryCode;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "unit_code_id")
+    private CommonCode unitCode;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "register_type", nullable = false, length = 30)
     private ModbusRegisterType registerType;
@@ -69,10 +73,6 @@ public class DeviceModelModbusPoint extends BaseEntity {
 
     @Column(name = "value_offset")
     private Double offset;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "unit_code_id")
-    private CommonCode unitCode;
 
     @Column(nullable = false)
     private boolean enabled;

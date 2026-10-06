@@ -14,6 +14,8 @@ public record DeviceModelModbusPointResponse(
         Integer categoryCodeId,
         String categoryCode,
         String categoryName,
+        Integer unitCodeId,
+        String unit,
         ModbusRegisterType registerType,
         ModbusDataType dataType,
         ModbusByteOrder byteOrder,
@@ -21,8 +23,6 @@ public record DeviceModelModbusPointResponse(
         boolean requiresInstance,
         Double scale,
         Double offset,
-        Integer unitCodeId,
-        String unit,
         boolean enabled
 ) {
 
@@ -37,6 +37,8 @@ public record DeviceModelModbusPointResponse(
                 point.getCategoryCode() == null ? null : point.getCategoryCode().getId(),
                 point.getCategoryCode() == null ? null : point.getCategoryCode().getCode(),
                 point.getCategoryCode() == null ? null : point.getCategoryCode().getName(),
+                point.getUnitCode() == null ? null : point.getUnitCode().getId(),
+                point.getUnit(),
                 point.getRegisterType(),
                 point.getDataType(),
                 point.getByteOrder(),
@@ -44,8 +46,6 @@ public record DeviceModelModbusPointResponse(
                 point.isRequiresInstance(),
                 point.getScale(),
                 point.getOffset(),
-                point.getUnitCode() == null ? null : point.getUnitCode().getId(),
-                point.getUnit(),
                 point.isEnabled()
         );
     }

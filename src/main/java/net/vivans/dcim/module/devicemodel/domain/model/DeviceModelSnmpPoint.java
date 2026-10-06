@@ -56,15 +56,15 @@ public class DeviceModelSnmpPoint extends BaseEntity {
     @JoinColumn(name = "category_code_id")
     private CommonCode categoryCode;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "unit_code_id")
+    private CommonCode unitCode;
+
     @Column(nullable = false, length = 512)
     private String oid;
 
     @Column(name = "requires_instance", nullable = false)
     private boolean requiresInstance;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "unit_code_id")
-    private CommonCode unitCode;
 
     /** 원시값 배율. null이면 collector가 1.0으로 취급 */
     private Double scale;
