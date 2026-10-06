@@ -13,8 +13,8 @@ sql/
 └── schema/          ← DDL (01~22 baseline, 이후 번호로 증분 추가)
     ├── 01_users.sql
     ├── …
-    ├── 22_page_widget_layout.sql
-    └── 23_device_endpoint_modbus.sql
+    ├── 53_device_page_device.sql
+    └── 54_external_data.sql
 ```
 
 운영 DB(`dcim_new`) **현재 구조**를 FK 생성 순서대로 나눈 baseline입니다 (스냅샷: `192.168.10.14:20181`, 2026-09-02).
@@ -23,7 +23,7 @@ sql/
 
 ## 신규 배포 (빈 DB)
 
-1. **스키마** — `schema/01` ~ `schema/42` 번호 순 실행
+1. **스키마** — `schema/01` ~ `schema/54` 번호 순 실행 (존재하는 파일만)
 2. **기준 카탈로그** — 빈 DB에서만 `seed/model_catalog.sql` 실행
 3. **공통코드·위치** — Ops Console(`/ops-console.html`)에서 현장별 위치·`UNASSIGNED` 노드 등록
 4. **로그인 계정** — Ops Console 또는 API로 `users` 생성
@@ -112,6 +112,7 @@ mysql -h HOST -P PORT -u dcim -p dcim < sql/schema/42_device_asset_document.sql
 | 50~51 | LoRa MQTT 수집 소스·상태 | lora_mqtt_source / lora_mqtt_source_status |
 | 52 | `52_device_modbus_bit_field.sql` | Modbus 원본 reading의 비트 구간별 파생 point |
 | 53 | `53_device_page_device.sql` | DEVICE_PAGE에 직접 선택한 장비 |
+| 54 | `54_external_data.sql` | 외부 데이터 JSON 수신 이력 |
 
 ---
 
