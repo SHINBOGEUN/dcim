@@ -142,7 +142,8 @@ public class DevicePageOptionsQueryService {
                             .thenComparing(PointOption::pointName))
                     .toList();
             devices.add(new DeviceOption(
-                    device.getId(), device.getName(), device.getDeviceModel().getId(),
+                    device.getId(), device.getName(), device.getDeviceModel().getDeviceType().getCode(),
+                    device.getDeviceModel().getId(),
                     device.getDeviceModel().getName(), device.getLocationNode().getCode(),
                     device.getLocationNode().getName(), device.isEnabled(), points));
         }

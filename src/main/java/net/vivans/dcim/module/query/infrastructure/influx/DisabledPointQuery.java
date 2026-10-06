@@ -6,6 +6,7 @@ import net.vivans.dcim.module.query.domain.PointQuery;
 import net.vivans.dcim.module.query.domain.CalculatedMetricLastPoint;
 import net.vivans.dcim.module.query.domain.CalculatedMetricSeriesPoint;
 import net.vivans.dcim.module.query.domain.SeriesPoint;
+import net.vivans.dcim.module.query.domain.StatsSeriesPoint;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -30,6 +31,29 @@ public class DisabledPointQuery implements PointQuery {
             String window
     ) {
         log.warn("InfluxDB query disabled; returning empty series values");
+        return List.of();
+    }
+
+    @Override
+    public List<SeriesPoint> findRawSeries(
+            List<Integer> deviceIds,
+            List<String> pointNames,
+            Instant start,
+            Instant end
+    ) {
+        log.warn("InfluxDB query disabled; returning empty raw analysis values");
+        return List.of();
+    }
+
+    @Override
+    public List<StatsSeriesPoint> findStatsSeries(
+            List<Integer> deviceIds,
+            List<String> pointNames,
+            Instant start,
+            Instant end,
+            String window
+    ) {
+        log.warn("InfluxDB query disabled; returning empty aggregated analysis values");
         return List.of();
     }
 

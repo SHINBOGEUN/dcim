@@ -10,6 +10,7 @@ public record DevicePageOptionsResponse(
     public record DeviceOption(
             Integer deviceId,
             String deviceName,
+            String type,
             Integer modelId,
             String modelName,
             String locationCode,
