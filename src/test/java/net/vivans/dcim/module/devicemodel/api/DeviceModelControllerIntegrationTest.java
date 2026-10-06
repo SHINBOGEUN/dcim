@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import static net.vivans.dcim.support.AuthTestSupport.bearerToken;
 import static net.vivans.dcim.support.AuthTestSupport.loginAndGetAccessToken;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -36,6 +37,48 @@ class DeviceModelControllerIntegrationTest {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Test
+    void cloneModel_copiesProtocolsWithoutReusingTheirIds() throws Exception {
+        String token = loginAndGetAccessToken(mockMvc, objectMapper, userRepository, "model-clone-user", "password123");
+        Integer deviceTypeId = createModelType(token);
+        Integer groupId = createCodeGroup(token, "PROTOCOL_TYPE", "Protocol Type");
+        Integer snmpId = createCommonCode(token, groupId, "snmp", "SNMP", 1);
+        String original = mockMvc.perform(post("/api/manager/device-models")
+                        .header("Authorization", bearerToken(token)).contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"Clone source","manufacturer":"ACME","deviceTypeId":%d,
+                                 "protocols":[{"protocolTypeId":%d}]}
+                                """.formatted(deviceTypeId, snmpId)))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        int sourceId = objectMapper.readTree(original).path("data").path("id").asInt();
+        int sourceProtocolId = objectMapper.readTree(original).path("data").path("protocols").get(0).path("id").asInt();
+
+        mockMvc.perform(post("/api/manager/device-models/{modelId}/protocols/{protocolId}/snmp-points",
+                        sourceId, sourceProtocolId)
+                        .header("Authorization", bearerToken(token)).contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"CLONE_POWER","oid":"1.3.6.1.4.1.999.2.0","enabled":true}
+                                """))
+                .andExpect(status().isOk());
+
+        String copied = mockMvc.perform(post("/api/manager/device-models/{id}/clone", sourceId)
+                        .header("Authorization", bearerToken(token)).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Clone target\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.name").value("Clone target"))
+                .andExpect(jsonPath("$.data.manufacturer").value("ACME"))
+                .andExpect(jsonPath("$.data.protocols[0].protocolTypeId").value(snmpId))
+                .andExpect(jsonPath("$.data.protocols[0].id").value(not(sourceProtocolId)))
+                .andReturn().getResponse().getContentAsString();
+        int copiedModelId = objectMapper.readTree(copied).path("data").path("id").asInt();
+        int copiedProtocolId = objectMapper.readTree(copied).path("data").path("protocols").get(0).path("id").asInt();
+        mockMvc.perform(get("/api/manager/device-models/{modelId}/protocols/{protocolId}/snmp-points",
+                        copiedModelId, copiedProtocolId).header("Authorization", bearerToken(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(1)))
+                .andExpect(jsonPath("$.data[0].name").value("CLONE_POWER"));
+    }
 
     @Test
     void createAndGetDeviceModel_returnsProtocols() throws Exception {

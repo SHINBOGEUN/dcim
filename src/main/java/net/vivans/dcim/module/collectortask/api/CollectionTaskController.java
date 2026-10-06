@@ -141,4 +141,15 @@ public class CollectionTaskController {
     ) {
         return ResponseEntity.ok(ApiResponse.ok(collectionTaskService.removeGroupDevice(taskId, groupId, deviceId)));
     }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/{taskId}/groups/{groupId}/devices")
+    @Operation(summary = "그룹에 장비 한 건 추가 (다른 장비 연결은 유지)")
+    public ResponseEntity<ApiResponse<CollectionTaskGroupResponse>> addGroupDevice(
+            @PathVariable Integer taskId,
+            @PathVariable Integer groupId,
+            @Valid @RequestBody net.vivans.dcim.module.collectortask.api.dto.CollectionTaskGroupDeviceAddRequest request
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(collectionTaskService.addGroupDevice(taskId, groupId, request.deviceId())));
+    }
 }

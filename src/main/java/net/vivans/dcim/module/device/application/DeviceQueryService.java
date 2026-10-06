@@ -157,6 +157,12 @@ public class DeviceQueryService {
 
     @Transactional
     public DeviceResponse createDevice(DeviceCreateRequest request) {
+        return createDevice(request, true);
+    }
+
+    /** 복합 등록에서는 모든 통신 설정을 마친 뒤 수집 작업에 연결한다. */
+    @Transactional
+    public DeviceResponse createDevice(DeviceCreateRequest request, boolean autoAssignCollection) {
         DeviceModel deviceModel = findDeviceModel(request.modelId());
         LocationNode locationNode = findLocationNode(request.locationNodeCode());
         CommonCode pathCode = findPathCode(request.pathCodeId());
@@ -173,7 +179,9 @@ public class DeviceQueryService {
         );
         Device saved = deviceRepository.save(device);
         deviceAssetService.updateAsset(saved, request.assetCode(), request.serialNumber(), request.assetStatusId(), request.assetColor());
-        collectionScriptSyncService.assignDeviceAndRegenerate(saved);
+        if (autoAssignCollection) {
+            collectionScriptSyncService.assignDeviceAndRegenerate(saved);
+        }
         return DeviceResponse.from(saved);
     }
 
