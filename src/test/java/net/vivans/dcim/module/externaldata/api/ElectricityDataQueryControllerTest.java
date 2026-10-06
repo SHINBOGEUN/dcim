@@ -36,8 +36,8 @@ class ElectricityDataQueryControllerTest {
         mockMvc.perform(post("/api/manager/electricity-bill/monthly"))
                 .andExpect(status().isMethodNotAllowed());
         mockMvc.perform(post("/api/manager/electricity-bill/hourly"))
-                .andExpect(status().isMethodNotAllowed());
+                .andExpect(status().isNotFound());
         mockMvc.perform(post("/api/manager/power-usage/daily"))
-                .andExpect(status().isMethodNotAllowed());
+                .andExpect(status().isNotFound());
     }
 }
