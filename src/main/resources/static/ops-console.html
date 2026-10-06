@@ -1225,6 +1225,92 @@
     .widget-review .pick-item { margin-top:6px; }
     .widget-editor-footer { display:flex; justify-content:space-between; align-items:center; gap:10px; position:sticky; bottom:-18px; z-index:4; margin:18px -22px -18px; padding:12px 22px; border-top:1px solid var(--line); background:var(--surface); }
     @media (max-width:700px) { #tab-widgets #wEditorCard { width:100vw; max-height:100vh; height:100vh; border-radius:0; } .widget-editor-footer { flex-wrap:wrap; } }
+
+    /* Shared registration and management workspace */
+    body.is-authed .content { padding:16px 22px 12px; }
+    .top { box-shadow:none; }
+    .top-page-context h1 { font-size:18px; }
+    .top-page-description { max-width:min(640px,45vw); font-size:11px; }
+    .side { background:#0b1523; }
+    .side .group { margin-top:15px; padding-top:10px; border-top:1px solid #203149; }
+    .side button[data-tab] { min-height:45px; border-radius:9px; }
+    .side button.active { background:#123c60; box-shadow:inset 3px 0 0 #38c5fb,inset 0 0 0 1px #2b668b; }
+    .side button[data-tab="widget-board"]::before { content:"▦"; }
+    .side button[data-tab="live-telemetry"]::before { content:"⌁"; }
+    .side button[data-tab="mqtt-monitor"]::before { content:"◉"; }
+    .card, .stat { background:var(--surface); border:1px solid var(--line); box-shadow:0 5px 20px rgba(0,0,0,.12); }
+    .card::before { display:none; }
+    .card > h2 { font-size:15px; }
+    .card-heading { border-bottom-color:var(--line); }
+    label.field, .wizard-select-field > label { color:var(--muted); font-size:12px; font-weight:700; }
+    :is(input,select,textarea) { min-height:41px; }
+    :is(input,select,textarea):disabled { opacity:.58; cursor:not-allowed; }
+    .inline-link { display:inline; border:0; background:none; color:var(--accent); padding:0; text-decoration:underline; text-underline-offset:2px; }
+    .inline-link:hover { background:none; }
+
+    /* The first screen follows the reviewed device-registration mockup. */
+    #tab-wizard.panel.active { grid-template-columns:minmax(0,1.2fr) minmax(320px,1fr); grid-template-rows:auto minmax(0,1fr) auto auto auto; gap:14px; overflow:hidden; }
+    #tab-wizard > .wizard-basic-card { grid-column:1; grid-row:2; }
+    #tab-wizard > .wizard-connection-card { grid-column:2; grid-row:2; }
+    #tab-wizard > .wizard-collection-card { grid-column:1 / -1; grid-row:3; min-height:0; overflow:visible; }
+    #tab-wizard > .wizard-footer { grid-column:1 / -1; grid-row:4; }
+    #tab-wizard > .result-ok { grid-column:1 / -1; grid-row:5; margin:0; }
+    #tab-wizard > .card { margin:0; padding:20px 22px; }
+    #tab-wizard > .card .fields { grid-template-columns:minmax(0,1fr); gap:14px; }
+    #tab-wizard > .wizard-collection-card .fields { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    #tab-wizard .field.full { grid-column:1 / -1; }
+    #tab-wizard .card > h2 { margin-bottom:17px; padding-bottom:13px; }
+    #tab-wizard .card > h2 .step { width:28px; height:28px; }
+    #tab-wizard .field > :is(input,select,textarea) { width:100%; min-height:44px; }
+    .wizard-select-field { display:flex; flex-direction:column; gap:7px; min-width:0; }
+    .wizard-inline-field { display:flex; gap:8px; min-width:0; }
+    .wizard-inline-field select { flex:1 1 auto; width:100%; min-width:0; min-height:44px; }
+    .wizard-inline-field button { flex:0 0 auto; min-height:44px; white-space:nowrap; }
+    .wiz-progress { min-height:50px; margin:0; }
+    .wiz-progress span { display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:750; }
+    .wizard-footer { display:flex; align-items:center; justify-content:space-between; gap:18px; padding:13px 17px; border:1px solid var(--line); border-radius:12px; background:var(--surface); }
+    .wizard-summary { min-width:0; display:flex; flex-direction:column; gap:3px; }
+    .wizard-summary span { color:var(--muted); font-size:10px; font-weight:800; letter-spacing:.08em; }
+    .wizard-summary strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px; }
+    .wizard-summary small { font-size:11px; }
+    .wizard-footer .row { flex:none; }
+    .wizard-footer button { min-height:42px; }
+    .wizard-quick-dialog { width:min(600px,calc(100vw - 28px)); max-height:min(88vh,760px); padding:0; overflow:auto; color:var(--text); border:1px solid var(--line); border-radius:14px; background:var(--surface); box-shadow:0 32px 90px rgba(0,0,0,.55); }
+    .wizard-quick-dialog::backdrop { background:rgba(2,8,18,.76); }
+    .wizard-quick-dialog form { padding:22px; }
+    .wizard-dialog-head { display:flex; justify-content:space-between; align-items:flex-start; gap:15px; margin-bottom:20px; padding-bottom:15px; border-bottom:1px solid var(--line); }
+    .wizard-dialog-head h2 { margin:3px 0 6px; font-size:20px; }
+    .wizard-dialog-head p { margin:0; color:var(--muted); font-size:12px; line-height:1.5; }
+    .wizard-dialog-head button { width:35px; height:35px; padding:0; font-size:20px; }
+    .wizard-quick-dialog .field :is(input,select) { width:100%; }
+    .wizard-protocol-choices { grid-column:1/-1; margin:0; padding:10px 12px; border:1px solid var(--line); border-radius:9px; }
+    .wizard-protocol-choices legend { color:var(--muted); font-size:12px; font-weight:700; }
+    .wizard-protocol-choices > div { display:flex; flex-wrap:wrap; gap:8px; }
+    .wizard-protocol-choices label { display:inline-flex; align-items:center; gap:6px; min-height:36px; padding:6px 10px; border:1px solid var(--line); border-radius:8px; cursor:pointer; }
+    .wizard-protocol-choices input { min-height:0; margin:0; accent-color:var(--accent); }
+    .wizard-dialog-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:20px; }
+    .wizard-dialog-actions button { min-height:42px; }
+    [hidden] { display:none !important; }
+
+    /* Existing standalone tools are full-height pages in the same navigation. */
+    .embedded-page.panel.active { display:flex; flex-direction:column; min-height:0; padding:0; overflow:hidden !important; }
+    .embedded-page iframe { display:block; flex:1 1 auto; width:100%; min-height:0; border:1px solid var(--line); border-radius:12px; background:var(--surface); }
+    body.external-view .log-bar { display:none; }
+    @media (max-width:1200px) {
+      #tab-wizard.panel.active { display:block; overflow:auto; }
+      #tab-wizard > .card { min-height:0; overflow:visible; margin-bottom:14px; }
+      #tab-wizard > .wiz-progress { margin-bottom:14px; }
+      #tab-wizard > .wizard-footer { margin-bottom:14px; }
+    }
+    @media (max-width:700px) {
+      body.is-authed .content { padding:10px; }
+      .wizard-footer { align-items:stretch; flex-direction:column; }
+      .wizard-footer .row { justify-content:flex-end; }
+      #tab-wizard > .wizard-collection-card .fields { grid-template-columns:1fr; }
+      .wizard-inline-field { flex-wrap:wrap; }
+      .wizard-inline-field button { width:100%; }
+      .embedded-page iframe { border-radius:8px; }
+    }
   </style>
 </head>
 <body>
@@ -1254,9 +1340,6 @@
     <div class="top-links">
       <button type="button" class="ghost theme-toggle" id="themeToggle" title="화면 테마 변경">☀ 라이트</button>
       <a class="chip" href="/">도구 목록</a>
-      <a class="chip" href="/widget-dashboard.html">위젯 보드</a>
-      <a class="chip" href="/live-test.html">실시간</a>
-      <a class="chip" href="/mqtt-monitor.html" data-role-gate="admin">MQTT 모니터</a>
     </div>
   </header>
 
@@ -1274,6 +1357,10 @@
     <button type="button" data-tab="collection-status">수집 상태<small>지연 · 데이터 없음</small></button>
     <button type="button" data-tab="device-pages" data-role-gate="admin-user">페이지 장비<small>페이지별 표시 대상</small></button>
     <button type="button" data-tab="widgets">화면 위젯<small>표시 · 조회</small></button>
+    <div class="group">모니터링 화면</div>
+    <button type="button" data-tab="widget-board">위젯 보드<small>운영 대시보드 · 배치</small></button>
+    <button type="button" data-tab="live-telemetry">실시간 텔레메트리<small>MQTT 최신값 · 차트</small></button>
+    <button type="button" data-tab="mqtt-monitor" data-role-gate="admin">MQTT 모니터<small>토픽 · 메시지 확인</small></button>
     <div class="group">기준 정보</div>
     <button type="button" data-tab="locations">위치<small>존 · Path · 랙</small></button>
     <button type="button" data-tab="models">장비 모델<small>OID · 측정 항목</small></button>
@@ -1335,7 +1422,7 @@
     <section class="panel active" id="tab-home">
       <div class="home-hero">
         <div><span class="eyebrow">OPERATIONS CENTER</span><h1 class="page-title">데이터센터 운영을 한눈에</h1><p class="page-desc">장비 등록부터 수집 상태, 자산과 Rack, 위젯 구성까지 하나의 흐름으로 관리하세요.</p></div>
-        <div class="hero-actions"><button type="button" class="primary" id="goWizard" data-role-gate="admin">＋ 새 장비 등록</button><a class="hero-link" href="/widget-dashboard.html">위젯 대시보드 열기 ↗</a></div>
+        <div class="hero-actions"><button type="button" class="primary" id="goWizard" data-role-gate="admin">＋ 새 장비 등록</button><button type="button" class="hero-link" data-quick-tab="widget-board">위젯 보드 열기 →</button></div>
       </div>
       <div class="stats home-stats">
         <div class="stat stat-location"><div class="stat-icon">⌖</div><div><div class="k">등록 위치</div><div class="v"><span id="statLoc">–</span><small> locations</small></div><p>Zone · Row · Rack</p></div></div>
@@ -1347,10 +1434,10 @@
         <div class="card home-onboarding">
           <div class="card-heading"><div><span class="eyebrow">GETTING STARTED</span><h2>운영 준비 순서</h2></div><span class="chip">4 STEPS</span></div>
           <ul class="checklist">
-            <li><div class="n">1</div><div><strong>위치 확인</strong><span>없으면 위치 메뉴에서 존/랙 추가</span></div></li>
-            <li><div class="n">2</div><div><strong>모델 확인</strong><span>측정할 OID가 모델에 있어야 합니다</span></div></li>
+            <li><div class="n">1</div><div><strong>위치 확인</strong><span>장비 추가 화면에서도 새 위치를 만들 수 있습니다</span></div></li>
+            <li><div class="n">2</div><div><strong>모델 확인</strong><span>새 모델을 만들고 측정항목을 설정하세요</span></div></li>
             <li><div class="n">3</div><div><strong>장비 추가 마법사</strong><span>장비 → IP → 수집 작업까지</span></div></li>
-            <li><div class="n">4</div><div><strong>위젯으로 확인</strong><span>최신값(last) 조회 · 배치 보드는 별도 화면</span></div></li>
+            <li><div class="n">4</div><div><strong>위젯으로 확인</strong><span>왼쪽 메뉴의 위젯 보드에서 최신값과 배치를 확인</span></div></li>
           </ul>
           <div class="row" style="margin-top:14px">
             <button type="button" class="ghost" id="goDevices">장비 목록 보기</button>
@@ -1379,18 +1466,20 @@
         <span>3 수집</span>
         <span>4 완료</span>
       </div>
-      <div class="card">
+      <div class="card wizard-basic-card">
         <h2><span class="step">1</span> 어떤 장비인가요?</h2>
         <div class="fields">
           <label class="field">표시 이름
             <input id="wzName" placeholder="예: RACK01 좌측 PDU" />
           </label>
-          <label class="field">장비 모델
-            <select id="wzModel"></select>
-          </label>
-          <label class="field full">설치 위치
-            <select id="wzLoc"></select>
-          </label>
+          <div class="wizard-select-field">
+            <label for="wzModel">장비 모델</label>
+            <div class="wizard-inline-field"><select id="wzModel"></select><button type="button" class="ghost" id="wzAddModel" data-role-gate="admin">＋ 모델 추가</button></div>
+          </div>
+          <div class="wizard-select-field">
+            <label for="wzLoc">설치 위치</label>
+            <div class="wizard-inline-field"><select id="wzLoc"></select><button type="button" class="ghost" id="wzAddLocation" data-role-gate="admin">＋ 위치 추가</button></div>
+          </div>
           <label class="field">Path
             <select id="wzPath"></select>
           </label>
@@ -1399,7 +1488,7 @@
           </label>
         </div>
       </div>
-      <div class="card">
+      <div class="card wizard-connection-card">
         <h2 id="wzConnectionTitle"><span class="step">2</span> 어떻게 연결하나요?</h2>
         <div class="fields">
           <label class="field" id="wzHostField">IP / 호스트
@@ -1429,8 +1518,9 @@
             <p class="muted" style="margin:8px 0 0;font-size:12px">게이트웨이 MQTT IP·port는 Sensor Data 공통 설정입니다. 장비마다 devEUI 또는 deviceName만 연결합니다.</p>
           </div>
         </div>
+        <p class="muted" id="wzProtocolHint" style="margin:14px 0 0;font-size:12px;line-height:1.5">모델을 고르면 통신 방식과 측정항목 준비 상태를 알려드립니다.</p>
       </div>
-      <div class="card" id="wzCollectionCard">
+      <div class="card wizard-collection-card" id="wzCollectionCard">
         <h2 id="wzCollectionTitle"><span class="step">3</span> 수집에 넣을까요?</h2>
         <p class="muted" id="wzCollectionNote" style="margin:-4px 0 12px;font-size:13px">같은 모델·프로토콜의 수집 작업이 있으면 골라 주세요. 없으면 건너뛰고 나중에 수집 작업 메뉴에서 연결할 수 있습니다.</p>
         <div class="fields">
@@ -1442,12 +1532,38 @@
           </label>
         </div>
       </div>
-      <div class="row">
-        <button type="button" class="primary" id="wzSubmit">등록 실행</button>
-        <span class="muted" id="wzHint">로그인·데이터 로드 후 사용</span>
+      <div class="wizard-footer">
+        <div class="wizard-summary"><span>등록 내용</span><strong id="wzSummary">모델과 위치를 선택하세요</strong><small class="muted" id="wzHint">로그인·데이터 로드 후 사용</small></div>
+        <div class="row"><button type="button" class="ghost" id="wzCancel">입력 초기화</button><button type="button" class="primary" id="wzSubmit">검토하고 등록</button></div>
       </div>
       <div class="result-ok" id="wzResult"></div>
     </section>
+
+    <dialog class="wizard-quick-dialog" id="wzModelDialog" aria-labelledby="wzModelDialogTitle">
+      <form id="wzModelQuickForm">
+        <div class="wizard-dialog-head"><div><span class="eyebrow">NEW MODEL</span><h2 id="wzModelDialogTitle">장비 모델 추가</h2><p>등록 후 이 장비의 모델로 바로 선택됩니다. 측정항목은 모델 관리에서 설정할 수 있습니다.</p></div><button type="button" class="ghost" data-wizard-dialog-close aria-label="닫기">×</button></div>
+        <div class="fields">
+          <label class="field">모델 이름<input id="wzNewModelName" required placeholder="예: PDU-3phase" /></label>
+          <label class="field">제조사<input id="wzNewModelMaker" required placeholder="예: Raritan" /></label>
+          <label class="field">장비 유형<select id="wzNewModelType" required></select></label>
+          <fieldset class="wizard-protocol-choices"><legend>지원 프로토콜 (하나 이상)</legend><div id="wzNewModelProtocols"></div></fieldset>
+          <label class="field full">설명 (선택)<input id="wzNewModelDesc" placeholder="모델 용도나 특징" /></label>
+        </div>
+        <div class="wizard-dialog-actions"><button type="button" class="ghost" data-wizard-dialog-close>취소</button><button type="submit" class="primary">모델 만들고 선택</button></div>
+      </form>
+    </dialog>
+    <dialog class="wizard-quick-dialog" id="wzLocationDialog" aria-labelledby="wzLocationDialogTitle">
+      <form id="wzLocationQuickForm">
+        <div class="wizard-dialog-head"><div><span class="eyebrow">NEW LOCATION</span><h2 id="wzLocationDialogTitle">설치 위치 추가</h2><p>상위 위치 아래에 새 위치를 만들고 장비의 설치 위치로 선택합니다.</p></div><button type="button" class="ghost" data-wizard-dialog-close aria-label="닫기">×</button></div>
+        <div class="fields">
+          <label class="field">위치 이름<input id="wzNewLocName" required placeholder="예: Rack 01" /></label>
+          <label class="field">위치 유형<select id="wzNewLocType" required></select></label>
+          <label class="field full">상위 위치 (선택)<select id="wzNewLocParent"></select></label>
+          <label class="field" id="wzNewLocRackField" hidden>랙 용량 (U)<input id="wzNewLocRackU" type="number" min="1" max="100" placeholder="예: 42" /></label>
+        </div>
+        <div class="wizard-dialog-actions"><button type="button" class="ghost" data-wizard-dialog-close>취소</button><button type="submit" class="primary">위치 만들고 선택</button></div>
+      </form>
+    </dialog>
 
     <!-- ASSETS -->
     <section class="panel" id="tab-assets">
@@ -1914,7 +2030,7 @@
     <!-- WIDGETS -->
     <section class="panel" id="tab-widgets">
       <h1 class="page-title">화면 위젯</h1>
-      <p class="page-desc">페이지에 무엇을 보여줄지 정의합니다. 배치는 <a href="/widget-dashboard.html">위젯 보드</a>에서 조절하세요.</p>
+      <p class="page-desc">페이지에 무엇을 보여줄지 정의합니다. 배치는 <button type="button" class="inline-link" data-quick-tab="widget-board">위젯 보드</button>에서 조절하세요.</p>
       <div class="grid2">
         <div class="card widget-list-card">
           <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px">
@@ -2763,6 +2879,23 @@
       </div>
     </section>
 
+    <!-- MONITORING PAGES: keep their existing functionality within the console navigation. -->
+    <section class="panel embedded-page" id="tab-widget-board">
+      <h1 class="page-title">위젯 보드</h1>
+      <p class="page-desc">등록된 위젯의 실제 값과 배치를 확인하고 조정합니다.</p>
+      <iframe id="widgetBoardFrame" title="위젯 보드" data-page-src="/widget-dashboard.html?embedded=1" loading="lazy"></iframe>
+    </section>
+    <section class="panel embedded-page" id="tab-live-telemetry">
+      <h1 class="page-title">실시간 텔레메트리</h1>
+      <p class="page-desc">SNMP와 Modbus 장비의 실시간 측정값을 확인합니다.</p>
+      <iframe id="liveTelemetryFrame" title="실시간 텔레메트리" data-page-src="/live-test.html?embedded=1" loading="lazy"></iframe>
+    </section>
+    <section class="panel embedded-page" id="tab-mqtt-monitor">
+      <h1 class="page-title">MQTT 모니터</h1>
+      <p class="page-desc">MQTT 연결과 구독 메시지를 확인합니다.</p>
+      <iframe id="mqttMonitorFrame" title="MQTT 모니터" data-page-src="/mqtt-monitor.html?embedded=1" loading="lazy"></iframe>
+    </section>
+
     <!-- NOTES -->
     <section class="panel" id="tab-notes">
       <h1 class="page-title">API 안내</h1>
@@ -2781,7 +2914,7 @@
             <tr><td>수집 Task</td><td><span class="chip ok">task/group CRUD · toggle</span></td><td>–</td></tr>
             <tr><td>위젯</td><td><span class="chip ok">생성·수정·삭제 · last/count/chart/aggregate</span></td><td>layout은 위젯 보드</td></tr>
             <tr><td>Query</td><td><span class="chip ok">last · count · chart · aggregate</span></td><td>usage / power</td></tr>
-            <tr><td>Live</td><td><span class="chip warn">외부</span></td><td><a href="/live-test.html">live-test.html</a></td></tr>
+            <tr><td>Live</td><td><span class="chip ok">연결됨</span></td><td><button type="button" class="inline-link" data-quick-tab="live-telemetry">실시간 텔레메트리 열기</button></td></tr>
           </tbody>
         </table>
         <p class="muted" style="margin:12px 0 0;font-size:13px">
@@ -2914,6 +3047,7 @@
       selectedModel: null,
       flatLocations: [],
       wizardDeviceId: null,
+      wizardOptions: null,
       selectedLocCode: null,
       locExpanded: new Set(),
       locByCode: {},
@@ -2992,7 +3126,7 @@
       if (el.textContent.length > 8000) el.textContent = el.textContent.slice(0, 8000);
     }
 
-    const ADMIN_ONLY_TABS = new Set(["wizard", "users"]);
+    const ADMIN_ONLY_TABS = new Set(["wizard", "users", "mqtt-monitor"]);
     const ADMIN_USER_TABS = new Set(["codes", "device-pages"]);
 
     function canAccessTab(name) {
@@ -3021,6 +3155,10 @@
     function clearAuth() {
       state.token = "";
       state.role = "";
+      document.querySelectorAll(".embedded-page iframe").forEach((frame) => {
+        frame.removeAttribute("src");
+        frame.dataset.loaded = "";
+      });
       setAuth();
     }
 
@@ -3121,9 +3259,18 @@
         toast("이 메뉴에 접근할 권한이 없습니다", true);
         name = "home";
       }
+      const embedded = new Set(["widget-board", "live-telemetry", "mqtt-monitor"]);
       if (name !== "devices") closeDeviceDetail(false);
       document.querySelectorAll("#tabs button").forEach((b) => b.classList.toggle("active", b.dataset.tab === name));
       document.querySelectorAll(".panel").forEach((p) => p.classList.toggle("active", p.id === "tab-" + name));
+      document.body.classList.toggle("external-view", embedded.has(name));
+      if (embedded.has(name) && state.token) {
+        const frame = document.querySelector(`#tab-${name} iframe[data-page-src]`);
+        if (frame && !frame.dataset.loaded) {
+          frame.src = frame.dataset.pageSrc;
+          frame.dataset.loaded = "true";
+        }
+      }
       updatePageContext(name);
       document.body.classList.remove("side-open");
       if (name === "assets" && state.token) loadAssets().catch((e) => toast(e.message, true));
@@ -3632,7 +3779,7 @@
     function fillLocationSelects() {
       const map = (n) => `<option value="${esc(n.code)}">${esc(locOptionLabel(n))}</option>`;
       fillSelect($("devLoc"), state.flatLocations, map);
-      fillSelect($("wzLoc"), state.flatLocations, map);
+      fillSelect($("wzLoc"), state.flatLocations, map, "설치 위치 선택");
       fillSelect($("editDevLoc"), state.flatLocations, map);
     }
 
@@ -3664,7 +3811,7 @@
       fillSelect($("devModel"), state.models, opts);
       fillSelect($("devFilterModel"), state.models, opts, "모든 모델");
       fillSelect($("taskModel"), state.models, opts);
-      fillSelect($("wzModel"), state.models, opts);
+      fillSelect($("wzModel"), state.models, opts, "장비 모델 선택");
       fillSelect($("editDevModel"), state.models, opts);
     }
 
@@ -7263,18 +7410,38 @@
     }
 
     function fillWizardTasks(modelId, selectedProtocolCode) {
-      // 마법사에서는 모델과 현재 선택한 프로토콜이 모두 같은 수집 작업만 선택한다.
-      const tasks = modelId ? state.tasks.filter((t) =>
-        t.modelId === modelId && (!selectedProtocolCode || String(t.scriptTypeCode || "").toLowerCase() === selectedProtocolCode)) : state.tasks;
-      fillSelect($("wzTask"), tasks, (t) =>
-        `<option value="${t.id}">${esc(t.name)} · ${esc(t.scriptTypeName || t.scriptTypeCode)}</option>`,
-        modelId ? "이 모델·프로토콜의 수집 작업 없음 · 나중에 연결" : "모델을 먼저 선택하세요");
+      const options = state.wizardOptions?.modelId === modelId ? state.wizardOptions : null;
+      const protocol = options?.protocols?.find((item) => item.protocolCode === selectedProtocolCode);
+      const groups = protocol?.collectionGroups || [];
+      const tasks = [...new Map(groups.map((group) => [group.taskId, { id:group.taskId, name:group.taskName }])).values()];
+      fillSelect($("wzTask"), tasks, (task) =>
+        `<option value="${task.id}">${esc(task.name)}</option>`,
+        modelId ? "나중에 연결" : "모델을 먼저 선택하세요");
       $("wzTask").onchange = () => {
-        const t = state.tasks.find((x) => x.id === Number($("wzTask").value));
-        fillSelect($("wzGroup"), t?.groups || [], (g) =>
-          `<option value="${g.id}">${esc(g.name)}</option>`, t ? null : "–");
+        const taskId = Number($("wzTask").value);
+        const matching = groups.filter((group) => group.taskId === taskId);
+        fillSelect($("wzGroup"), matching, (group) =>
+          `<option value="${group.groupId}">${esc(group.groupName)} (${esc(cronLabel(group.cronExpression))})</option>`, taskId ? null : "–");
+        updateWizardSummary();
       };
       $("wzTask").dispatchEvent(new Event("change"));
+    }
+
+    async function loadWizardOptions(modelId) {
+      state.wizardOptions = null;
+      if (!modelId) return fillWizardProtocolSelect(null);
+      const options = await api(`/api/manager/device-registrations/options?modelId=${modelId}`);
+      if (Number($("wzModel").value) !== modelId) return;
+      state.wizardOptions = options;
+      fillWizardProtocolSelect(modelId);
+    }
+
+    function updateWizardSummary() {
+      const model = state.models.find((item) => Number(item.id) === Number($("wzModel").value));
+      const protocol = (model?.protocols || []).find((item) => Number(item.id) === Number($("wzProtocol").value));
+      const location = state.flatLocations.find((item) => item.code === $("wzLoc").value);
+      $("wzSummary").textContent = [model?.name, protocol?.protocolName || protocol?.protocolCode, location?.name]
+        .filter(Boolean).join(" · ") || "모델과 위치를 선택하세요";
     }
 
     async function syncWizardProtocolUi() {
@@ -7292,8 +7459,20 @@
       $("wzCollectionCard").style.display = mqtt ? "none" : "";
       if (modbus && !$("wzPort").dataset.userEdited) $("wzPort").value = "502";
       if (code === "snmp" && !$("wzPort").dataset.userEdited) $("wzPort").value = "161";
-      await updateInstanceUiForModel(model?.id, code);
+      const option = state.wizardOptions?.modelId === model?.id
+        ? state.wizardOptions.protocols.find((item) => item.protocolTypeId === protocol?.protocolTypeId)
+        : null;
+      if (option) $("wzInstanceField").style.display = code === "snmp" && option.snmpInstanceRequired ? "" : "none";
+      else await updateInstanceUiForModel(model?.id, code);
+      $("wzProtocolHint").textContent = !protocol
+        ? "모델을 고르면 통신 방식과 측정항목 준비 상태를 알려드립니다."
+        : !option
+          ? "등록 옵션을 불러오는 중입니다."
+          : option.modelPointCount === 0
+            ? "이 모델에 측정항목이 없습니다. 장비 등록은 가능하지만 수집 전에 모델 관리에서 측정항목을 설정해야 합니다."
+            : `모델 측정항목 ${option.modelPointCount}개 · ${loraMqtt ? "LoRa 식별자로 연결" : code === "modbus" ? "Modbus 회선별 주소는 장비 목록에서 설정" : "통신 설정 후 수집 가능"}`;
       if (!mqtt) fillWizardTasks(model?.id, code);
+      updateWizardSummary();
     }
 
     function fillWizardProtocolSelect(modelId) {
@@ -7305,7 +7484,7 @@
       if (previous && (model?.protocols || []).some((protocol) => String(protocol.id) === previous)) {
         $("wzProtocol").value = previous;
       }
-      syncWizardProtocolUi();
+      syncWizardProtocolUi().catch((error) => toast(error.message, true));
     }
 
     function syncAttachFilters(modelId, selectedProtocolCode) {
@@ -7637,14 +7816,15 @@
         await loadTasks();
         await loadCommonCodesUi();
         if ($("taskModel").value) await refreshTaskDevicePick();
-        if ($("wzModel").value) fillWizardProtocolSelect(Number($("wzModel").value));
+        if ($("wzModel").value) await loadWizardOptions(Number($("wzModel").value));
+        else fillWizardProtocolSelect(null);
         $("bootStatus").innerHTML =
           `<div class="readiness-head"><i></i><div><strong>운영 준비 완료</strong><small>기준 정보와 수집 구성을 정상적으로 불러왔습니다.</small></div></div>` +
           `<div class="readiness-grid"><div><span>Locations</span><b>${state.flatLocations.length}개</b></div>` +
           `<div><span>Models</span><b>${state.models.length}개</b></div>` +
           `<div><span>Devices</span><b>${state.devices.length}대</b></div>` +
           `<div><span>Code Groups</span><b>${state.codeGroups.length}개</b></div></div>`;
-        $("wzHint").textContent = "입력 후 「등록 실행」";
+        $("wzHint").textContent = "내용을 확인한 뒤 등록하세요";
         toast("데이터를 불러왔습니다");
         log("부트 완료");
       } catch (e) {
@@ -8276,59 +8456,50 @@
       if (!protocol) return toast("모델에서 지원하는 프로토콜을 선택하세요", true);
       if (!loraMqtt && !host) return toast("IP / 호스트를 입력하세요", true);
       if (loraMqtt && !$("wzLoraExternalId").value.trim()) return toast("LoRa 외부 식별자를 입력하세요", true);
+      const port = Number($("wzPort").value);
+      if (!loraMqtt && (!Number.isInteger(port) || port < 1 || port > 65535)) return toast("포트는 1~65535 사이여야 합니다", true);
+      const taskId = Number($("wzTask").value);
+      const groupId = Number($("wzGroup").value);
+      if (!mqtt && taskId && !groupId) return toast("수집 주기 그룹을 선택하세요", true);
+      if (!confirm(`「${name}」 장비를 등록할까요?\n${$("wzSummary").textContent}`)) return;
 
       const btn = $("wzSubmit");
       btn.disabled = true;
       $("wzResult").classList.remove("show");
       try {
-        setWizProgress(0);
-        const device = await api("/api/manager/devices", {
-          method: "POST",
-          body: JSON.stringify({
-            modelId: Number($("wzModel").value),
+        const protocolId = protocolTypeId(protocol);
+        const needsInstance = code === "snmp" && $("wzInstanceField").style.display !== "none";
+        const request = {
+          device: {
+            modelId: model.id,
             locationNodeCode: $("wzLoc").value,
             name,
             description: $("wzDesc").value.trim() || null,
             enabled: true,
             pathCodeId: $("wzPath").value ? Number($("wzPath").value) : null,
-          }),
+          },
+          protocolTypeId: protocolId,
+          endpoint: loraMqtt ? undefined : { protocolTypeId:protocolId, host, port, enabled:true },
+          snmpInstance: needsInstance ? { instanceId:parseInstanceId($("wzInstance").value, true) } : undefined,
+          modbus: code === "modbus" ? { unitId:readModbusUnitId("wzModbusUnit") } : undefined,
+          loraIdentity: loraMqtt ? {
+            idType:$("wzLoraIdType").value,
+            externalId:$("wzLoraExternalId").value.trim(),
+            enabled:true,
+          } : undefined,
+          collectionGroup: !mqtt && taskId && groupId ? { taskId, groupId } : undefined,
+        };
+        const registered = await api("/api/manager/device-registrations", {
+          method: "POST",
+          body: JSON.stringify(request),
         });
+        const device = registered.device;
         state.wizardDeviceId = device.id;
-        setWizProgress(1);
-        let connectionLabel;
-        if (loraMqtt) {
-          await api("/api/manager/lora/endpoints", {
-            method: "POST",
-            body: JSON.stringify({
-              deviceId: device.id,
-              idType: $("wzLoraIdType").value,
-              externalId: $("wzLoraExternalId").value.trim(),
-              enabled: true,
-            }),
-          });
-          connectionLabel = `MQTT · ${$("wzLoraIdType").value} ${$("wzLoraExternalId").value.trim()}`;
-        } else {
-          const needsInst = await modelRequiresInstance(device.modelId);
-          const endpoint = await ensureEndpointAndInstance(
-            device.id,
-            protocolTypeId(protocol),
-            host,
-            Number($("wzPort").value),
-            code === "snmp" && needsInst,
-            $("wzInstance").value
-          );
-          if (code === "modbus") await saveModbusEndpoint(device.id, endpoint.id, readModbusUnitId("wzModbusUnit"));
-          connectionLabel = `${host}:${$("wzPort").value}`;
-        }
-        setWizProgress(2);
-        let attachMsg = "수집 연결은 건너뜀";
-        const taskId = Number($("wzTask").value);
-        const groupId = Number($("wzGroup").value);
-        if (!mqtt && taskId && groupId) {
-          await attachDeviceToGroup(device.id, taskId, groupId);
-          attachMsg = "수집 그룹에 추가함";
-        }
-        setWizProgress(3);
+        setWizProgress(4);
+        const connectionLabel = loraMqtt
+          ? `MQTT · ${$("wzLoraIdType").value} ${$("wzLoraExternalId").value.trim()}`
+          : `${host}:${port}`;
+        const attachMsg = registered.groupId ? "수집 그룹에 추가함" : "수집 연결은 건너뜀";
         await loadDevices();
         await loadTasks();
         $("wzResult").innerHTML =
@@ -8348,6 +8519,7 @@
         $("wzName").value = "";
         $("wzHost").value = "";
         $("wzLoraExternalId").value = "";
+        updateWizardSummary();
       } catch (e) {
         toast(e.message, true);
         log("wizard fail: " + e.message);
@@ -8359,11 +8531,120 @@
     // sync wizard model → prefer matching task
     $("wzModel").addEventListener("change", async () => {
       const modelId = Number($("wzModel").value);
-      fillWizardProtocolSelect(modelId);
+      try { await loadWizardOptions(modelId); }
+      catch (error) { toast(error.message, true); fillWizardProtocolSelect(modelId); }
     });
 
-    $("wzProtocol").addEventListener("change", () => syncWizardProtocolUi());
+    $("wzProtocol").addEventListener("change", () => syncWizardProtocolUi().catch((error) => toast(error.message, true)));
     $("wzPort").addEventListener("input", () => { $("wzPort").dataset.userEdited = "true"; });
+    ["wzName", "wzLoc", "wzPath", "wzHost", "wzLoraExternalId"].forEach((id) => {
+      $(id).addEventListener("input", updateWizardSummary);
+      $(id).addEventListener("change", updateWizardSummary);
+    });
+
+    $("wzCancel").onclick = () => {
+      ["wzName", "wzDesc", "wzHost", "wzLoraExternalId", "wzModbusUnit"].forEach((id) => { $(id).value = ""; });
+      $("wzModel").value = "";
+      $("wzLoc").value = "";
+      $("wzPath").value = "";
+      $("wzPort").value = "161";
+      delete $("wzPort").dataset.userEdited;
+      $("wzResult").classList.remove("show");
+      state.wizardOptions = null;
+      setWizProgress(0);
+      fillWizardProtocolSelect(null);
+      updateWizardSummary();
+    };
+
+    $("wzAddModel").onclick = () => {
+      if (!(state.codes.MODEL_TYPE || []).length || !(state.codes.PROTOCOL_TYPE || []).length) {
+        return toast("모델 유형과 프로토콜 목록을 먼저 불러와 주세요", true);
+      }
+      fillSelect($("wzNewModelType"), state.codes.MODEL_TYPE, (code) =>
+        `<option value="${code.id}">${esc(code.name)}</option>`, "장비 유형 선택");
+      $("wzNewModelProtocols").innerHTML = state.codes.PROTOCOL_TYPE.map((code) =>
+        `<label><input type="checkbox" name="wzNewModelProtocol" value="${code.id}" />${esc(code.name)}</label>`).join("");
+      $("wzNewModelName").value = "";
+      $("wzNewModelMaker").value = "";
+      $("wzNewModelDesc").value = "";
+      $("wzModelDialog").showModal();
+      $("wzNewModelName").focus();
+    };
+
+    $("wzAddLocation").onclick = () => {
+      if (!(state.codes.LOCATION_TYPE || []).length) return toast("위치 유형 목록을 먼저 불러와 주세요", true);
+      fillSelect($("wzNewLocType"), state.codes.LOCATION_TYPE, (code) =>
+        `<option value="${code.id}">${esc(code.name)}</option>`, "위치 유형 선택");
+      fillSelect($("wzNewLocParent"), state.flatLocations, (location) =>
+        `<option value="${esc(location.code)}">${esc(locOptionLabel(location))}</option>`, "최상위 위치");
+      $("wzNewLocParent").value = $("wzLoc").value || "";
+      $("wzNewLocName").value = "";
+      $("wzNewLocRackU").value = "";
+      $("wzNewLocType").dispatchEvent(new Event("change"));
+      $("wzLocationDialog").showModal();
+      $("wzNewLocName").focus();
+    };
+
+    $("wzNewLocType").onchange = () => {
+      const selected = (state.codes.LOCATION_TYPE || []).find((code) => Number(code.id) === Number($("wzNewLocType").value));
+      $("wzNewLocRackField").hidden = String(selected?.code || "").toUpperCase() !== "RACK";
+    };
+
+    document.querySelectorAll("[data-wizard-dialog-close]").forEach((button) => {
+      button.onclick = () => button.closest("dialog").close();
+    });
+
+    $("wzModelQuickForm").onsubmit = async (event) => {
+      event.preventDefault();
+      const protocolIds = [...document.querySelectorAll('#wzNewModelProtocols input:checked')].map((input) => Number(input.value));
+      if (!protocolIds.length) return toast("지원 프로토콜을 하나 이상 선택하세요", true);
+      const submit = event.submitter || $("wzModelQuickForm").querySelector('[type="submit"]');
+      submit.disabled = true;
+      try {
+        const created = await api("/api/manager/device-models", {
+          method: "POST",
+          body: JSON.stringify({
+            name: $("wzNewModelName").value.trim(),
+            manufacturer: $("wzNewModelMaker").value.trim(),
+            deviceTypeId: Number($("wzNewModelType").value),
+            description: $("wzNewModelDesc").value.trim() || null,
+            protocols: protocolIds.map((protocolTypeId) => ({ protocolTypeId })),
+          }),
+        });
+        $("wzModelDialog").close();
+        await loadModels();
+        $("wzModel").value = String(created.id);
+        await loadWizardOptions(created.id);
+        updateWizardSummary();
+        toast("모델을 추가했습니다. 측정항목은 모델 관리에서 설정하세요");
+      } catch (error) { toast(error.message, true); }
+      finally { submit.disabled = false; }
+    };
+
+    $("wzLocationQuickForm").onsubmit = async (event) => {
+      event.preventDefault();
+      const submit = event.submitter || $("wzLocationQuickForm").querySelector('[type="submit"]');
+      submit.disabled = true;
+      try {
+        const rack = !$("wzNewLocRackField").hidden;
+        const capacity = $("wzNewLocRackU").value.trim();
+        const created = await api("/api/manager/location-node", {
+          method: "POST",
+          body: JSON.stringify({
+            parentCode: $("wzNewLocParent").value || null,
+            locationTypeId: Number($("wzNewLocType").value),
+            name: $("wzNewLocName").value.trim(),
+            rackUCapacity: rack && capacity ? Number(capacity) : null,
+          }),
+        });
+        $("wzLocationDialog").close();
+        await loadLocations();
+        $("wzLoc").value = created.code;
+        updateWizardSummary();
+        toast("설치 위치를 추가했습니다");
+      } catch (error) { toast(error.message, true); }
+      finally { submit.disabled = false; }
+    };
 
     $("editDevModel").addEventListener("change", async () => {
       syncEditManufacturer();

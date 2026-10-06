@@ -353,9 +353,13 @@
     .board-wrap { min-height:0; scrollbar-gutter:stable; }
     body.edit-mode aside { overflow:auto; }
     :is(button,a,input,select):focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+    body.embedded .dashboard-brand, body.embedded .dashboard-context,
+    body.embedded .dashboard-actions > a[href="/ops-console.html"] { display:none; }
+    body.embedded .dashboard-topbar { justify-content:flex-end; min-height:48px; }
   </style>
 </head>
 <body>
+  <script>if (new URLSearchParams(location.search).has("embedded")) document.body.classList.add("embedded");</script>
   <header class="dashboard-header">
     <div class="dashboard-topbar">
       <div class="dashboard-brand"><span class="dashboard-mark">D</span><div><strong>DEFOG</strong><span>DATA CENTER INTELLIGENCE</span></div></div>

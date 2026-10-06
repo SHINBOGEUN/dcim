@@ -128,6 +128,8 @@
     aside,.charts { min-height:0; scrollbar-gutter:stable; }
     :is(button,a,input,select):focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
     @media (max-width:760px) { main { overflow:auto; } aside { overflow:auto; } .charts { overflow:visible; } }
+    body.embedded .live-brand, body.embedded .live-context, body.embedded .live-nav a { display:none; }
+    body.embedded .live-topbar { min-height:48px; padding:8px 16px; justify-content:flex-end; }
   </style>
 </head>
 <body>
@@ -158,7 +160,7 @@
     const MAX_POINTS = 90;
     const PALETTE = ["#3d9cf0", "#3ecf8e", "#f0b429", "#c084fc", "#f07178", "#67e8f9", "#fb923c", "#a3e635"];
     const state = {
-      token: sessionStorage.getItem("liveToken") || "",
+      token: "",
       mqtt: null,
       charts: new Map(),
       devices: [],
@@ -230,10 +232,30 @@
       $("authStatus").textContent = state.token ? "로그인됨" : "미로그인";
     }
 
+    async function refreshAccessToken() {
+      try {
+        const response = await fetch(managerBase() + "/api/manager/auth/refresh", {
+          method: "POST", credentials: "same-origin",
+        });
+        const json = await response.json().catch(() => ({}));
+        state.token = response.ok ? (json.data?.accessToken || "") : "";
+      } catch (_) {
+        state.token = "";
+      }
+      setAuthStatus();
+      return !!state.token;
+    }
+
     async function api(path, options = {}) {
-      const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
-      if (state.token) headers.Authorization = "Bearer " + state.token;
-      const res = await fetch(managerBase() + path, { ...options, headers });
+      const request = () => {
+        const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
+        if (state.token) headers.Authorization = "Bearer " + state.token;
+        return fetch(managerBase() + path, { ...options, headers, credentials: "same-origin" });
+      };
+      let res = await request();
+      if (res.status === 401 && !path.startsWith("/api/manager/auth/") && await refreshAccessToken()) {
+        res = await request();
+      }
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
         throw new Error(json.error || json.message || `HTTP ${res.status}`);
@@ -249,7 +271,6 @@
         body: JSON.stringify({ username, password }),
       });
       state.token = data.accessToken;
-      sessionStorage.setItem("liveToken", state.token);
       setAuthStatus();
       log("로그인 성공: " + data.username);
       await loadDevices();
@@ -509,10 +530,12 @@
       if (event.target.matches("input[data-key]")) updateSelectedCount();
     });
 
+    if (new URLSearchParams(location.search).has("embedded")) document.body.classList.add("embedded");
+    sessionStorage.removeItem("liveToken");
     setAuthStatus();
-    if (state.token) {
-      loadDevices().catch((err) => log("목록 실패: " + err.message));
-    }
+    refreshAccessToken().then((authenticated) => {
+      if (authenticated) loadDevices().catch((err) => log("목록 실패: " + err.message));
+    });
     connectMqtt();
   </script>
 </body>
