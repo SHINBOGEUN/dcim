@@ -27,6 +27,8 @@ public record DevicePageOptionsResponse(
             String pointName,
             String unit,
             String valueType,
+            Integer dataPointTypeId,
+            String dataPointType,
             Boolean requiresInstance,
             boolean collectionEnabled,
             String origin,

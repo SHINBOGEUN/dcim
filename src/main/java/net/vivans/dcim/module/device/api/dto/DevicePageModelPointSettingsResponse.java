@@ -15,6 +15,8 @@ public record DevicePageModelPointSettingsResponse(
             String pointName,
             String unit,
             String valueType,
+            Integer dataPointTypeId,
+            String dataPointType,
             Boolean requiresInstance,
             boolean collectionEnabled,
             boolean visible,

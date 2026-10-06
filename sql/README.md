@@ -29,6 +29,8 @@ sql/
 4. **로그인 계정** — Ops Console 또는 API로 `users` 생성
 5. **현장 데이터** — 실제 장비·Endpoint·수집 작업·계산 지표·위젯·자산을 등록
 
+단, `ALTER` 형식의 증분 파일은 기존 DB 업그레이드용입니다. 신규 빈 DB에는 해당 변경이 반영된 최신 테이블 DDL을 사용하며, 이미 컬럼이 포함된 상태에서 같은 `ALTER` 파일을 다시 실행하지 않습니다.
+
 ```bash
 for f in sql/schema/[0-9][0-9]_*.sql; do
   mysql -h HOST -P PORT -u dcim -p dcim < "$f"
@@ -51,7 +53,7 @@ Get-ChildItem sql/schema/*_*.sql | Sort-Object Name | ForEach-Object {
 2. 운영 DB에 아직 적용하지 않은 새 DDL 파일만 실행
 3. 애플리케이션 재기동 후 수집 상태·Collector Job 동기화를 확인
 
-Modbus 단위 전환 파일(`55_alter_device_model_modbus_point_unit_code.sql`)을 적용한 기존 DB에서는 마지막 조회 결과에 미매핑 문자열이 있는지 확인합니다. 기존 `unit` 컬럼은 자동 삭제하지 않으므로, 결과를 모두 처리한 뒤에만 해당 파일의 선택적 정리 SQL로 제거합니다.
+기존 DB에는 새 증분 SQL만 적용합니다. 파일에 포함된 확인 조회에서 미처리 행이 없는지 확인한 뒤 다음 애플리케이션 배포를 진행합니다.
 
 ```bash
 mysql -h HOST -P PORT -u dcim -p dcim < sql/schema/42_device_asset_document.sql
@@ -115,7 +117,7 @@ mysql -h HOST -P PORT -u dcim -p dcim < sql/schema/42_device_asset_document.sql
 | 52 | `52_device_modbus_bit_field.sql` | Modbus 원본 reading의 비트 구간별 파생 point |
 | 53 | `53_device_page_device.sql` | DEVICE_PAGE에 직접 선택한 장비 |
 | 54 | `54_device_page_model_point_setting.sql` | 페이지·모델별 포인트 표시 설정 |
-| 55 | `55_alter_device_model_modbus_point_unit_code.sql` | Modbus 포인트 단위를 UNIT 공통 코드 FK로 전환 (기존 DB용) |
+| 55 | `55_device_model_modbus_point_data_point_type.sql` | Modbus 포인트에 DATA_POINT_TYPE FK 추가 (기존 DB용; 신규 설치는 08에 포함) |
 
 ---
 

@@ -17,7 +17,8 @@ public interface DeviceModbusReadingSpringDataRepository extends JpaRepository<D
     List<DeviceModbusReading> findAllByTargetDevice_IdOrderByIdAsc(Integer targetDeviceId);
 
     @EntityGraph(attributePaths = {
-            "point", "point.modelProtocol", "point.modelProtocol.deviceModel", "point.modelProtocol.protocolType",
+            "point", "point.dataPointType", "point.unitCode",
+            "point.modelProtocol", "point.modelProtocol.deviceModel", "point.modelProtocol.protocolType",
             "endpointModbus", "endpointModbus.endpoint", "endpointModbus.endpoint.device",
             "endpointModbus.endpoint.protocolType", "targetDevice"
     })

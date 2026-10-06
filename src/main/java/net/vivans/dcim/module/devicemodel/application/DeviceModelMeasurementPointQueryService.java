@@ -48,6 +48,8 @@ public class DeviceModelMeasurementPointQueryService {
                                 point.getName(),
                                 point.getUnit(),
                                 point.getDataPointType() == null ? null : point.getDataPointType().getCode(),
+                                point.getDataPointType() == null ? null : point.getDataPointType().getId(),
+                                point.getDataPointType() == null ? null : point.getDataPointType().getCode(),
                                 point.isRequiresInstance(),
                                 point.isEnabled()
                         )));
@@ -67,6 +69,8 @@ public class DeviceModelMeasurementPointQueryService {
                         "mqtt",
                         point.getPointName(),
                         point.getUnit(),
+                        point.getDataPointType().getCode(),
+                        point.getDataPointType().getId(),
                         point.getDataPointType().getCode(),
                         null,
                         point.isEnabled()
@@ -94,6 +98,8 @@ public class DeviceModelMeasurementPointQueryService {
                 point.getName(),
                 point.getUnit(),
                 point.getDataType().name(),
+                point.getDataPointType().getId(),
+                point.getDataPointType().getCode(),
                 point.isRequiresInstance(),
                 point.isEnabled()
         );

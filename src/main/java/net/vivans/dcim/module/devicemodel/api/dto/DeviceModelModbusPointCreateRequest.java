@@ -12,6 +12,9 @@ public record DeviceModelModbusPointCreateRequest(
         @NotBlank(message = "name must not be empty")
         String name,
 
+        @Schema(description = "DATA_POINT_TYPE 그룹 common_code.id", example = "1")
+        Integer dataPointTypeId,
+
         @Schema(description = "레지스터 종류 (COIL/DISCRETE/HOLDING/INPUT)", example = "HOLDING")
         @NotNull(message = "registerType must not be null")
         ModbusRegisterType registerType,

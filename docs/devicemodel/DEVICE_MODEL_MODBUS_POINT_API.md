@@ -34,7 +34,7 @@ Modbus point는 SNMP point와 **골격이 동일**하며 프로토콜 주소 체
 
 | SNMP point | Modbus point | 역할 |
 |------------|--------------|------|
-| `id`, `model_protocol_id`, `name`, `unit_code_id`, `enabled` | 동일 | 골격. 단위는 `common_code`의 `UNIT` 그룹 참조 |
+| `id`, `model_protocol_id`, `name`, `data_point_type_id`, `unit_code_id`, `enabled` | 동일 | 공통 측정 유형과 단위는 각각 `DATA_POINT_TYPE`, `UNIT` 그룹 참조 |
 | `oid` | `register_type` + `address` | 무엇을 어디서 읽나 |
 | — | `data_type` + `byte_order` | raw 바이트를 어떻게 해석하나 (Modbus 특유) |
 | — | `scale` | 원시값 배율 |
@@ -106,6 +106,7 @@ SNMP와 동일하게 `name`은 식별자이자 표시명입니다.
 | `protocolId` | 해당 모델 소속 `device_model_protocol.id` |
 | 프로토콜 타입 | **Modbus만** 허용 (`protocolCode = modbus`) |
 | `name` | 필수. `(model_protocol_id, name)` UK |
+| `dataPointTypeId` | `DATA_POINT_TYPE` 그룹의 공통 코드 ID. 생략/null이면 `UNCLASSIFIED` 기본 적용 |
 | `registerType` / `dataType` | 필수 |
 | `byteOrder` | 멀티 레지스터면 필수, 단일이면 `NULL` |
 | `address` / `requiresInstance` | 상호 배타 (`requiresInstance=false` → address 필수 / `true` → address NULL) |
@@ -124,6 +125,7 @@ SNMP와 동일하게 `name`은 식별자이자 표시명입니다.
 | `id` | INT | N | PK | AUTO_INCREMENT | point ID |
 | `model_protocol_id` | INT | N | FK | | `device_model_protocol.id` |
 | `name` | VARCHAR(255) | N | UK* | | 식별자·표시명 (`TOTAL_WT`, `ONTO-TEMP`) |
+| `data_point_type_id` | INT | N | FK | | `common_code.id` (그룹 `DATA_POINT_TYPE`) |
 | `register_type` | VARCHAR(30) | N | | | `COIL`/`DISCRETE`/`HOLDING`/`INPUT` |
 | `data_type` | VARCHAR(20) | N | | | `INT16`/`UINT16`/`INT32`/`UINT32`/`FLOAT32` |
 | `byte_order` | VARCHAR(10) | Y | | | `ABCD`/`CDAB`/`BADC`/`DCBA` (멀티만) |
@@ -142,6 +144,7 @@ SNMP와 동일하게 `name`은 식별자이자 표시명입니다.
 | FK | 참조 | ON DELETE | ON UPDATE |
 |----|------|-----------|-----------|
 | `fk_device_model_modbus_point_model_protocol_id` | `device_model_protocol(id)` | CASCADE | CASCADE |
+| `fk_device_model_modbus_point_data_point_type_id` | `common_code(id)` (`code_group=DATA_POINT_TYPE`) | RESTRICT | CASCADE |
 | `fk_device_model_modbus_point_unit_code_id` | `common_code(id)` (`code_group=UNIT`) | RESTRICT | CASCADE |
 
 **CHECK 제약**
@@ -171,6 +174,7 @@ SNMP point API([DEVICE_MODEL_SNMP_POINT_API.md](DEVICE_MODEL_SNMP_POINT_API.md) 
 ```json
 {
   "name": "TOTAL_WT",
+  "dataPointTypeId": 1,
   "registerType": "HOLDING",
   "dataType": "FLOAT32",
   "byteOrder": "CDAB",
@@ -187,12 +191,14 @@ SNMP point API([DEVICE_MODEL_SNMP_POINT_API.md](DEVICE_MODEL_SNMP_POINT_API.md) 
 
 ```json
 {
+  "dataPointTypeId": 1,
+  "dataPointType": "POWER",
   "unitCodeId": 53,
   "unit": "W"
 }
 ```
 
-`unitCodeId`는 환경별 ID가 다를 수 있으므로 실제 요청 전 `UNIT` 그룹의 공통 코드 조회 API에서 확인해야 합니다.
+`dataPointTypeId`와 `unitCodeId`는 환경별 ID가 다를 수 있으므로 실제 요청 전 각각 `DATA_POINT_TYPE`, `UNIT` 그룹의 공통 코드 조회 API에서 확인해야 합니다.
 
 ---
 
@@ -202,28 +208,28 @@ SNMP point API([DEVICE_MODEL_SNMP_POINT_API.md](DEVICE_MODEL_SNMP_POINT_API.md) 
 
 `host` 1개 + `unit_id` 1개 + point 여러 개(각 고정 주소). 단일 레지스터라 `byte_order`는 NULL.
 
-| name | register_type | data_type | byte_order | address | requires_instance | scale | unit_code_id → UNIT.code / 표시 단위 |
-|------|---------------|-----------|------------|---------|-------------------|-------|------|
-| ONTO-TEMP | INPUT | INT16 | NULL | 256 | 0 | 0.1 | CELSIUS / °C |
-| OFF-TEMP | INPUT | INT16 | NULL | 257 | 0 | 0.1 | CELSIUS / °C |
-| FAN_SPEED1 | INPUT | UINT16 | NULL | 4 | 0 | 0.1 | PERCENT / % |
+| name | data_point_type | register_type | data_type | byte_order | address | requires_instance | scale | unit_code_id → UNIT |
+|------|-----------------|---------------|-----------|------------|---------|-------------------|-------|----------------------|
+| ONTO-TEMP | TEMPERATURE | INPUT | INT16 | NULL | 256 | 0 | 0.1 | CELSIUS / °C |
+| OFF-TEMP | TEMPERATURE | INPUT | INT16 | NULL | 257 | 0 | 0.1 | CELSIUS / °C |
+| FAN_SPEED1 | UNCLASSIFIED | INPUT | UINT16 | NULL | 4 | 0 | 0.1 | PERCENT / % |
 
 > `signed:true` → `INT16`, `signed:false` → `UINT16`, `raw/10` → `scale=0.1`, `readInputRegisters` → `INPUT`.
 
 ### 4.2 쿨러 (IMCOOLER) — HOLDING 레지스터
 
-| name | register_type | data_type | byte_order | address | requires_instance | scale | unit_code_id → UNIT.code / 표시 단위 |
-|------|---------------|-----------|------------|---------|-------------------|-------|------|
-| IN-TEMP | HOLDING | INT16 | NULL | 8963 | 0 | 0.1 | CELSIUS / °C |
-| OUT-TEMP | HOLDING | INT16 | NULL | 8964 | 0 | 0.1 | CELSIUS / °C |
+| name | data_point_type | register_type | data_type | byte_order | address | requires_instance | scale | unit_code_id → UNIT |
+|------|-----------------|---------------|-----------|------------|---------|-------------------|-------|----------------------|
+| IN-TEMP | TEMPERATURE | HOLDING | INT16 | NULL | 8963 | 0 | 0.1 | CELSIUS / °C |
+| OUT-TEMP | TEMPERATURE | HOLDING | INT16 | NULL | 8964 | 0 | 0.1 | CELSIUS / °C |
 
 ### 4.3 분전반 회로 — 인스턴스 주소, FLOAT32
 
 같은 측정(`TOTAL_WT`)을 회로(=별도 device)마다 다른 주소로 읽음 → 주소는 인스턴스가 제공.
 
-| name | register_type | data_type | byte_order | address | requires_instance | scale | unit_code_id → UNIT.code / 표시 단위 |
-|------|---------------|-----------|------------|---------|-------------------|-------|------|
-| TOTAL_WT | HOLDING | FLOAT32 | CDAB | NULL | 1 | 1000 | W / W |
+| name | data_point_type | register_type | data_type | byte_order | address | requires_instance | scale | unit_code_id → UNIT |
+|------|-----------------|---------------|-----------|------------|---------|-------------------|-------|----------------------|
+| TOTAL_WT | POWER | HOLDING | FLOAT32 | CDAB | NULL | 1 | 1000 | W / W |
 
 > 실제 주소(11667 등)와 `unit_id`는 `device_endpoint_modbus`(향후)에 회로별로 저장. Influx는 회로마다 별도 `device_id` 태그.
 
@@ -274,7 +280,8 @@ readInputRegisters(host, port, unitId, address, quantity)   → Integer[]  (raw 
 |------|------|
 | 모델 포인트 엔티티·Repository·Service·Controller·DTO | 구현 완료 |
 | Modbus 단위의 `UNIT` 공통 코드 참조 | `unit_code_id` 적용 |
-| 기존 DB 단위 데이터 이관 | `55_alter_device_model_modbus_point_unit_code.sql` 적용 필요 |
+| Modbus 측정 유형의 `DATA_POINT_TYPE` 공통 코드 참조 | `data_point_type_id` 적용 |
+| 기존 DB 측정 유형 기본값 이관 | `55_device_model_modbus_point_data_point_type.sql` 적용 필요 |
 | device_endpoint_modbus | 구현 완료 |
 | 수집 스크립트 동기화 | 수집 task 동기화 흐름에서 관리 |
 

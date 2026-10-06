@@ -12,10 +12,10 @@ import java.util.Optional;
 
 public interface DeviceModelModbusPointSpringDataRepository extends JpaRepository<DeviceModelModbusPoint, Integer> {
 
-    @EntityGraph(attributePaths = {"modelProtocol", "modelProtocol.deviceModel", "modelProtocol.protocolType"})
+    @EntityGraph(attributePaths = {"modelProtocol", "modelProtocol.deviceModel", "modelProtocol.protocolType", "dataPointType", "unitCode"})
     Optional<DeviceModelModbusPoint> findByIdAndModelProtocolId(Integer id, Integer modelProtocolId);
 
-    @EntityGraph(attributePaths = {"modelProtocol", "modelProtocol.deviceModel", "modelProtocol.protocolType"})
+    @EntityGraph(attributePaths = {"modelProtocol", "modelProtocol.deviceModel", "modelProtocol.protocolType", "dataPointType", "unitCode"})
     List<DeviceModelModbusPoint> findAllByModelProtocolIdOrderByIdAsc(Integer modelProtocolId);
 
     @Query("""
@@ -23,7 +23,7 @@ public interface DeviceModelModbusPointSpringDataRepository extends JpaRepositor
             WHERE p.modelProtocol.deviceModel.id IN :deviceModelIds
               AND p.enabled = true
             """)
-    @EntityGraph(attributePaths = {"modelProtocol", "modelProtocol.deviceModel"})
+    @EntityGraph(attributePaths = {"modelProtocol", "modelProtocol.deviceModel", "dataPointType", "unitCode"})
     List<DeviceModelModbusPoint> findAllEnabledByDeviceModelIds(
             @Param("deviceModelIds") Collection<Integer> deviceModelIds
     );
