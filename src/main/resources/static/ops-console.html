@@ -7216,6 +7216,10 @@
             </div>
             <span class="chip ${t.active ? "ok" : "bad"}">${t.active ? "동작 중" : "중지"}</span>
           </div>
+          <div class="row" style="justify-content:space-between;margin-top:16px">
+            <b>등록된 그룹</b><span class="muted">${(t.groups || []).length}개</span>
+          </div>
+          ${!(t.groups || []).length ? '<div class="empty" style="margin-top:10px">아직 등록된 그룹이 없습니다.</div>' : ''}
           ${(t.groups || []).map((g) => {
             const key = `${t.id}-${g.id}`;
             const presetOpts = cronPresetOptions(g.cronExpression);
@@ -7223,7 +7227,7 @@
             return `<div class="task-group-card" style="margin-top:10px;padding:10px;background:var(--surface2);border-radius:8px;border:1px solid var(--line)">
               <div class="row" style="justify-content:space-between;align-items:flex-start;margin-bottom:8px">
                 <div>
-                  <b>그룹 #${g.id}</b>
+                  <b>${esc(g.name)} <span class="muted">#${g.id}</span></b>
                   <span class="chip ${g.active ? "ok" : "bad"}">${g.active ? "ON" : "OFF"}</span>
                 </div>
                 <div class="row" style="gap:6px">
@@ -7251,8 +7255,11 @@
               <button type="button" class="primary" data-save-group="${g.id}" data-task-id="${t.id}" style="margin-top:8px;padding:6px 10px;font-size:12px" data-role-gate="admin">그룹 저장 (주기·장비)</button>
             </div>`;
           }).join("")}
-          <div class="task-group-create" style="margin-top:12px;padding:10px;background:var(--surface2);border-radius:8px;border:1px dashed var(--line)" data-role-gate="admin">
-            <div class="muted" style="font-size:12px;font-weight:650;margin-bottom:8px">그룹 추가</div>
+          <div style="margin-top:14px" data-role-gate="admin">
+            <button type="button" class="ghost" data-toggle-new-group="${t.id}" aria-expanded="false" aria-controls="task-group-create-${t.id}">＋ 새 그룹 추가</button>
+          </div>
+          <div class="task-group-create" id="task-group-create-${t.id}" hidden style="margin-top:10px;padding:14px;background:var(--surface2);border-radius:8px;border:1px dashed var(--line)" data-role-gate="admin">
+            <div class="muted" style="font-size:12px;font-weight:650;margin-bottom:8px">새 그룹 등록</div>
             <div class="fields">
               <label class="field">이름
                 <input data-add-gname="${t.id}" value="추가 그룹" />
@@ -7270,7 +7277,7 @@
                 </div>
               </label>
             </div>
-            <button type="button" class="primary" data-add-group="${t.id}" style="margin-top:8px;padding:6px 10px;font-size:12px">그룹 추가</button>
+            <button type="button" class="primary" data-add-group="${t.id}" style="margin-top:8px;padding:6px 10px;font-size:12px">새 그룹 등록</button>
           </div>
           <div class="row" style="margin-top:10px">
             <button type="button" class="ghost" data-toggle-task="${t.id}" data-role-gate="admin-user">${t.active ? "Task 중지" : "Task 시작"}</button>
@@ -7320,6 +7327,16 @@
             toast("그룹을 삭제했습니다");
             await loadTasks();
           } catch (e) { toast(e.message, true); }
+        };
+      });
+      $("taskList").querySelectorAll("[data-toggle-new-group]").forEach((btn) => {
+        btn.onclick = () => {
+          const form = document.getElementById(`task-group-create-${btn.dataset.toggleNewGroup}`);
+          const opening = form.hidden;
+          form.hidden = !opening;
+          btn.setAttribute("aria-expanded", String(opening));
+          btn.textContent = opening ? "− 새 그룹 입력 닫기" : "＋ 새 그룹 추가";
+          if (opening) form.querySelector("[data-add-gname]")?.focus();
         };
       });
       $("taskList").querySelectorAll("[data-save-group]").forEach((btn) => {
