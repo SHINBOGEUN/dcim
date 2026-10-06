@@ -4,8 +4,6 @@ import net.vivans.dcim.module.devicemodel.domain.model.DeviceModelModbusPoint;
 import net.vivans.dcim.module.devicemodel.domain.model.ModbusByteOrder;
 import net.vivans.dcim.module.devicemodel.domain.model.ModbusDataType;
 import net.vivans.dcim.module.devicemodel.domain.model.ModbusRegisterType;
-import org.antlr.v4.runtime.misc.IntegerList;
-
 public record DeviceModelModbusPointResponse(
         Integer id,
         Integer modelId,
@@ -18,6 +16,7 @@ public record DeviceModelModbusPointResponse(
         boolean requiresInstance,
         Double scale,
         Double offset,
+        Integer unitCodeId,
         String unit,
         boolean enabled
 ) {
@@ -35,6 +34,7 @@ public record DeviceModelModbusPointResponse(
                 point.isRequiresInstance(),
                 point.getScale(),
                 point.getOffset(),
+                point.getUnitCode() == null ? null : point.getUnitCode().getId(),
                 point.getUnit(),
                 point.isEnabled()
         );

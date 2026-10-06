@@ -23,7 +23,7 @@ sql/
 
 ## 신규 배포 (빈 DB)
 
-1. **스키마** — `schema/01` ~ `schema/42` 번호 순 실행
+1. **스키마** — `schema/01`부터 최신 번호까지 순서대로 실행
 2. **기준 카탈로그** — 빈 DB에서만 `seed/model_catalog.sql` 실행
 3. **공통코드·위치** — Ops Console(`/ops-console.html`)에서 현장별 위치·`UNASSIGNED` 노드 등록
 4. **로그인 계정** — Ops Console 또는 API로 `users` 생성
@@ -51,6 +51,8 @@ Get-ChildItem sql/schema/*_*.sql | Sort-Object Name | ForEach-Object {
 2. 운영 DB에 아직 적용하지 않은 새 DDL 파일만 실행
 3. 애플리케이션 재기동 후 수집 상태·Collector Job 동기화를 확인
 
+Modbus 단위 전환 파일(`55_alter_device_model_modbus_point_unit_code.sql`)을 적용한 기존 DB에서는 마지막 조회 결과에 미매핑 문자열이 있는지 확인합니다. 기존 `unit` 컬럼은 자동 삭제하지 않으므로, 결과를 모두 처리한 뒤에만 해당 파일의 선택적 정리 SQL로 제거합니다.
+
 ```bash
 mysql -h HOST -P PORT -u dcim -p dcim < sql/schema/42_device_asset_document.sql
 ```
@@ -67,7 +69,7 @@ mysql -h HOST -P PORT -u dcim -p dcim < sql/schema/42_device_asset_document.sql
 | `PROTOCOL_TYPE` | snmp, modbus, mqtt | endpoint·수집 Task 불가 |
 | `DEVICE_PAGE` | ENVIRONMENT, COOLING, …, dashboard | 페이지 위젯 불가 |
 | `DATA_POINT_TYPE` | POWER, ENERGY, TEMPERATURE, … | 모델 포인트 등록 불가 |
-| `UNIT` | W, KWH, V, A, CELSIUS, PERCENT, … | SNMP·LoRa 단위 선택 불가 (단위 없는 포인트는 NULL) |
+| `UNIT` | W, KWH, V, A, CELSIUS, PERCENT, … | SNMP·Modbus·LoRa 포인트의 단위 참조 (단위 없는 포인트는 NULL) |
 | `ASSET_STATUS` | ACTIVE, MAINTENANCE, FAULT, INACTIVE, RETIRED | 자산 상태 관리 불가 |
 | `location_node` | UNASSIGNED | 장비 등록 FK 실패 |
 
@@ -112,6 +114,8 @@ mysql -h HOST -P PORT -u dcim -p dcim < sql/schema/42_device_asset_document.sql
 | 50~51 | LoRa MQTT 수집 소스·상태 | lora_mqtt_source / lora_mqtt_source_status |
 | 52 | `52_device_modbus_bit_field.sql` | Modbus 원본 reading의 비트 구간별 파생 point |
 | 53 | `53_device_page_device.sql` | DEVICE_PAGE에 직접 선택한 장비 |
+| 54 | `54_device_page_model_point_setting.sql` | 페이지·모델별 포인트 표시 설정 |
+| 55 | `55_alter_device_model_modbus_point_unit_code.sql` | Modbus 포인트 단위를 UNIT 공통 코드 FK로 전환 (기존 DB용) |
 
 ---
 

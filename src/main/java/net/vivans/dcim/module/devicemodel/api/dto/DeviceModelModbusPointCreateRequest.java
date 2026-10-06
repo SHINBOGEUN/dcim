@@ -36,8 +36,8 @@ public record DeviceModelModbusPointCreateRequest(
         @Schema(description = "배율 적용 후 더할 값 (null이면 0). 최종값 = raw × scale + offset", example = "-50")
         Double offset,
 
-        @Schema(description = "단위", example = "W")
-        String unit,
+        @Schema(description = "UNIT 그룹 common_code.id. 단위가 없으면 null", example = "53")
+        Integer unitCodeId,
 
         @Schema(description = "사용여부 (기본 true)", example = "true")
         Boolean enabled

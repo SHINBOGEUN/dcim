@@ -2,6 +2,7 @@ package net.vivans.dcim.module.devicemodel.application;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import net.vivans.dcim.module.common.application.UnitCodeResolver;
 import net.vivans.dcim.module.collectortask.application.CollectionScriptSyncService;
 import net.vivans.dcim.module.devicemodel.api.dto.DeviceModelModbusPointCreateRequest;
 import net.vivans.dcim.module.devicemodel.api.dto.DeviceModelModbusPointResponse;
@@ -24,6 +25,7 @@ public class DeviceModelModbusPointQueryService {
     private final DeviceModelRepository deviceModelRepository;
     private final DeviceModelModbusPointRepository deviceModelModbusPointRepository;
     private final CollectionScriptSyncService collectionScriptSyncService;
+    private final UnitCodeResolver unitCodeResolver;
 
     public List<DeviceModelModbusPointResponse> getDeviceModelModbusPoints(Integer modelId, Integer protocolId) {
         findModbusProtocol(modelId, protocolId);
@@ -72,7 +74,7 @@ public class DeviceModelModbusPointQueryService {
                 requiresInstance,
                 request.scale(),
                 request.offset(),
-                request.unit(),
+                unitCodeResolver.resolve(request.unitCodeId()),
                 enabled
         );
 
@@ -108,7 +110,7 @@ public class DeviceModelModbusPointQueryService {
                 requiresInstance,
                 request.scale(),
                 request.offset(),
-                request.unit(),
+                unitCodeResolver.resolve(request.unitCodeId()),
                 enabled
         );
 

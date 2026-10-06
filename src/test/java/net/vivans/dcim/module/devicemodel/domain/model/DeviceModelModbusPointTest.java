@@ -20,7 +20,7 @@ class DeviceModelModbusPointTest {
                 257,
                 false,
                 0.1,
-                "°C",
+                unitCode("CELSIUS", "°C"),
                 true
         );
 
@@ -32,6 +32,7 @@ class DeviceModelModbusPointTest {
         assertThat(point.isRequiresInstance()).isFalse();
         assertThat(point.getScale()).isEqualTo(0.1);
         assertThat(point.getUnit()).isEqualTo("°C");
+        assertThat(point.getUnitCode().getCode()).isEqualTo("CELSIUS");
         assertThat(point.isEnabled()).isTrue();
     }
 
@@ -46,13 +47,14 @@ class DeviceModelModbusPointTest {
                 null,
                 true,
                 1000.0,
-                "W",
+                unitCode("W", "W"),
                 true
         );
 
         assertThat(point.isRequiresInstance()).isTrue();
         assertThat(point.getAddress()).isNull();
         assertThat(point.getByteOrder()).isEqualTo(ModbusByteOrder.CDAB);
+        assertThat(point.getUnit()).isEqualTo("W");
     }
 
     @Test
@@ -60,7 +62,7 @@ class DeviceModelModbusPointTest {
         assertThatThrownBy(() -> DeviceModelModbusPoint.create(
                 modbusProtocol(), " ",
                 ModbusRegisterType.INPUT, ModbusDataType.INT16, null,
-                257, false, 0.1, "°C", true))
+                257, false, 0.1, unitCode("CELSIUS", "°C"), true))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("name is required");
     }
@@ -70,7 +72,7 @@ class DeviceModelModbusPointTest {
         assertThatThrownBy(() -> DeviceModelModbusPoint.create(
                 modbusProtocol(), "OFF-TEMP",
                 null, ModbusDataType.INT16, null,
-                257, false, 0.1, "°C", true))
+                257, false, 0.1, unitCode("CELSIUS", "°C"), true))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("registerType is required");
     }
@@ -80,7 +82,7 @@ class DeviceModelModbusPointTest {
         assertThatThrownBy(() -> DeviceModelModbusPoint.create(
                 modbusProtocol(), "OFF-TEMP",
                 ModbusRegisterType.INPUT, null, null,
-                257, false, 0.1, "°C", true))
+                257, false, 0.1, unitCode("CELSIUS", "°C"), true))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("dataType is required");
     }
@@ -90,7 +92,7 @@ class DeviceModelModbusPointTest {
         assertThatThrownBy(() -> DeviceModelModbusPoint.create(
                 modbusProtocol(), "TOTAL_WT",
                 ModbusRegisterType.HOLDING, ModbusDataType.FLOAT32, null,
-                null, true, 1000.0, "W", true))
+                null, true, 1000.0, unitCode("W", "W"), true))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("byteOrder is required for multi-register data type");
     }
@@ -100,7 +102,7 @@ class DeviceModelModbusPointTest {
         assertThatThrownBy(() -> DeviceModelModbusPoint.create(
                 modbusProtocol(), "OFF-TEMP",
                 ModbusRegisterType.INPUT, ModbusDataType.INT16, ModbusByteOrder.CDAB,
-                257, false, 0.1, "°C", true))
+                257, false, 0.1, unitCode("CELSIUS", "°C"), true))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("byteOrder must be null for single-register data type");
     }
@@ -110,7 +112,7 @@ class DeviceModelModbusPointTest {
         assertThatThrownBy(() -> DeviceModelModbusPoint.create(
                 modbusProtocol(), "TOTAL_WT",
                 ModbusRegisterType.HOLDING, ModbusDataType.FLOAT32, ModbusByteOrder.CDAB,
-                11667, true, 1000.0, "W", true))
+                11667, true, 1000.0, unitCode("W", "W"), true))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("address must be null when requiresInstance is true");
     }
@@ -120,7 +122,7 @@ class DeviceModelModbusPointTest {
         assertThatThrownBy(() -> DeviceModelModbusPoint.create(
                 modbusProtocol(), "OFF-TEMP",
                 ModbusRegisterType.INPUT, ModbusDataType.INT16, null,
-                null, false, 0.1, "°C", true))
+                null, false, 0.1, unitCode("CELSIUS", "°C"), true))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("address is required when requiresInstance is false");
     }
@@ -130,7 +132,7 @@ class DeviceModelModbusPointTest {
         assertThatThrownBy(() -> DeviceModelModbusPoint.create(
                 modbusProtocol(), "OFF-TEMP",
                 ModbusRegisterType.INPUT, ModbusDataType.INT16, null,
-                70000, false, 0.1, "°C", true))
+                70000, false, 0.1, unitCode("CELSIUS", "°C"), true))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("address must be between 0 and 65535");
     }
@@ -154,12 +156,12 @@ class DeviceModelModbusPointTest {
         DeviceModelModbusPoint point = DeviceModelModbusPoint.create(
                 modbusProtocol(), "OFF-TEMP",
                 ModbusRegisterType.INPUT, ModbusDataType.INT16, null,
-                257, false, 0.1, "°C", true);
+                257, false, 0.1, unitCode("CELSIUS", "°C"), true);
 
         point.update(
                 "TOTAL_WT",
                 ModbusRegisterType.HOLDING, ModbusDataType.FLOAT32, ModbusByteOrder.CDAB,
-                null, true, 1000.0, "W", false);
+                null, true, 1000.0, unitCode("W", "W"), false);
 
         assertThat(point.getName()).isEqualTo("TOTAL_WT");
         assertThat(point.getDataType()).isEqualTo(ModbusDataType.FLOAT32);
@@ -167,6 +169,7 @@ class DeviceModelModbusPointTest {
         assertThat(point.getAddress()).isNull();
         assertThat(point.isRequiresInstance()).isTrue();
         assertThat(point.isEnabled()).isFalse();
+        assertThat(point.getUnitCode().getCode()).isEqualTo("W");
     }
 
     private DeviceModelProtocol modbusProtocol() {
@@ -181,6 +184,11 @@ class DeviceModelModbusPointTest {
 
     private CommonCode protocolType(String code, String name) {
         CodeGroup group = CodeGroup.createCodeGroup("PROTOCOL_TYPE", "Protocol Type");
+        return CommonCode.createCommonCode(group, code, name, 1);
+    }
+
+    private CommonCode unitCode(String code, String name) {
+        CodeGroup group = CodeGroup.createCodeGroup("UNIT", "측정 단위");
         return CommonCode.createCommonCode(group, code, name, 1);
     }
 }
