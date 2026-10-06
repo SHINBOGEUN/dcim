@@ -178,6 +178,30 @@ public class CollectionTaskService {
         return CollectionTaskGroupResponse.from(group, collectionGroupSpecService);
     }
 
+    /** 다른 장비 연결을 교체하지 않고, 지정한 장비 한 건만 그룹에 추가한다. */
+    @Transactional
+    public CollectionTaskGroupResponse addGroupDevice(Integer taskId, Integer groupId, Integer deviceId) {
+        CollectionTask task = findTask(taskId);
+        CollectionTaskGroup group = findGroup(task, groupId);
+        Device device = deviceRepository.findById(deviceId)
+                .orElseThrow(() -> new EntityNotFoundException("Device not found: " + deviceId));
+        if (!task.getDeviceModel().getId().equals(device.getDeviceModel().getId())) {
+            throw new IllegalArgumentException(DEVICE_MODEL_MISMATCH_MESSAGE);
+        }
+        if (group.containsDevice(deviceId)) {
+            return CollectionTaskGroupResponse.from(group, collectionGroupSpecService);
+        }
+        if (task.containsDevice(deviceId, groupId)) {
+            throw new ConflictException(DEVICE_ALREADY_IN_GROUP_MESSAGE);
+        }
+        group.addDevice(device);
+        collectionTaskRepository.saveAndFlush(task);
+        group.updateGeneratedSpec(collectionGroupSpecService.generateJson(group));
+        collectionTaskRepository.saveAndFlush(task);
+        collectorSyncService.syncGroupSpec(group);
+        return CollectionTaskGroupResponse.from(group, collectionGroupSpecService);
+    }
+
     @Transactional
     public CollectionTaskGroupResponse toggleGroup(Integer taskId, Integer groupId) {
         CollectionTask task = findTask(taskId);
