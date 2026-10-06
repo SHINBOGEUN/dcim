@@ -62,6 +62,7 @@ Defog ShowRoom용 DCIM(Data Center Infrastructure Management) 백엔드 서버�
 
 - [기능 명세](docs/FEATURES.md) — 기존 manager-server API·기능 정리
 - [배포·운영 가이드](docs/ops/DEPLOYMENT.md) — 신규 현장 설치, 환경변수, 백업·복구, 점검 기준
+- [외부 데이터 API](docs/external-data/EXTERNAL_DATA_API.md) — 공통 저장 요청과 자료별 조회 경로
 
 ## API prefix
 
