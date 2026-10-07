@@ -408,9 +408,13 @@
     body.analysis-page-active main { display:none; }
     @media(max-width:1050px) { #analysisMain .analysis-toolbar { grid-template-columns:1fr 1fr; } #analysisMain .analysis-layout { grid-template-columns:300px minmax(0,1fr); } }
     @media(max-width:760px) { #analysisMain { padding:14px 10px; } #analysisMain .analysis-heading { align-items:flex-start;flex-direction:column; } #analysisMain .analysis-toolbar,#analysisMain .analysis-layout { grid-template-columns:1fr; } #analysisMain .analysis-selection { position:static;max-height:none; } #analysisMain .analysis-chart-grid { grid-template-columns:1fr; } #analysisMain .analysis-dates input { flex:1;width:1px; } }
+    body.embedded .dashboard-brand, body.embedded .dashboard-context,
+    body.embedded .dashboard-actions > a[href="/ops-console.html"] { display:none; }
+    body.embedded .dashboard-topbar { justify-content:flex-end; min-height:48px; }
   </style>
 </head>
 <body>
+  <script>if (new URLSearchParams(location.search).has("embedded")) document.body.classList.add("embedded");</script>
   <header class="dashboard-header">
     <div class="dashboard-topbar">
       <div class="dashboard-brand"><span class="dashboard-mark">D</span><div><strong>DEFOG</strong><span>DATA CENTER INTELLIGENCE</span></div></div>
@@ -528,11 +532,27 @@
     const $ = (id) => document.getElementById(id);
 
     function defaultManagerUrl() {
-      if (location.protocol.startsWith("http") && location.port === "8080") return "";
-      return "http://localhost:8080";
+      return location.protocol === "http:" || location.protocol === "https:" ? "" : "http://localhost:8080";
     }
 
-    $("managerUrl").value = localStorage.getItem("widgetDashManagerUrl") ?? defaultManagerUrl();
+    function storedManagerUrl(key) {
+      const saved = localStorage.getItem(key);
+      if (!saved) return defaultManagerUrl();
+      try {
+        const parsed = new URL(saved, location.href);
+        const loopback = ["localhost", "127.0.0.1", "::1"].includes(parsed.hostname);
+        if (loopback && (location.protocol === "http:" || location.protocol === "https:") && parsed.origin !== location.origin) {
+          localStorage.removeItem(key);
+          return defaultManagerUrl();
+        }
+      } catch (_) {
+        localStorage.removeItem(key);
+        return defaultManagerUrl();
+      }
+      return saved;
+    }
+
+    $("managerUrl").value = storedManagerUrl("widgetDashManagerUrl");
     function managerBase() {
       return $("managerUrl").value.replace(/\/$/, "");
     }

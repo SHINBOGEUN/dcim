@@ -79,6 +79,21 @@ public class CollectionScriptSyncService {
         }
     }
 
+    /** 복합 등록에서는 선택된 프로토콜의 작업에만 기본 그룹 연결을 만든다. */
+    @Transactional
+    public void assignDeviceAndRegenerate(Device device, String protocolCode) {
+        if (device == null || device.getId() == null || device.getDeviceModel() == null) {
+            return;
+        }
+        for (CollectionTask task : collectionTaskRepository.findAllByModelId(device.getDeviceModel().getId())) {
+            if (!task.getScriptType().getCode().equalsIgnoreCase(protocolCode)) {
+                continue;
+            }
+            assignToDefaultGroup(task, device);
+            regenerateTask(task);
+        }
+    }
+
     @Transactional
     public void assignUnassignedModelDevicesAndRegenerate(CollectionTask task) {
         if (task == null || task.getDeviceModel() == null) {

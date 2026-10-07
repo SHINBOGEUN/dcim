@@ -128,6 +128,8 @@
     aside,.charts { min-height:0; scrollbar-gutter:stable; }
     :is(button,a,input,select):focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
     @media (max-width:760px) { main { overflow:auto; } aside { overflow:auto; } .charts { overflow:visible; } }
+    body.embedded .live-brand, body.embedded .live-context, body.embedded .live-nav a { display:none; }
+    body.embedded .live-topbar { min-height:48px; padding:8px 16px; justify-content:flex-end; }
   </style>
 </head>
 <body>
@@ -158,7 +160,7 @@
     const MAX_POINTS = 90;
     const PALETTE = ["#3d9cf0", "#3ecf8e", "#f0b429", "#c084fc", "#f07178", "#67e8f9", "#fb923c", "#a3e635"];
     const state = {
-      token: sessionStorage.getItem("liveToken") || "",
+      token: "",
       mqtt: null,
       charts: new Map(),
       devices: [],
@@ -167,12 +169,52 @@
     const $ = (id) => document.getElementById(id);
 
     function defaultManagerUrl() {
-      if (location.protocol.startsWith("http") && location.port === "8080") return "";
-      return "http://localhost:8080";
+      return location.protocol === "http:" || location.protocol === "https:" ? "" : "http://localhost:8080";
     }
 
-    $("managerUrl").value = localStorage.getItem("liveManagerUrl") ?? defaultManagerUrl();
-    $("mqttUrl").value = localStorage.getItem("liveMqttUrl") || "ws://localhost:9001/mqtt";
+    function storedManagerUrl(key) {
+      const saved = localStorage.getItem(key);
+      if (!saved) return defaultManagerUrl();
+      try {
+        const parsed = new URL(saved, location.href);
+        const loopback = ["localhost", "127.0.0.1", "::1"].includes(parsed.hostname);
+        if (loopback && (location.protocol === "http:" || location.protocol === "https:") && parsed.origin !== location.origin) {
+          localStorage.removeItem(key);
+          return defaultManagerUrl();
+        }
+      } catch (_) {
+        localStorage.removeItem(key);
+        return defaultManagerUrl();
+      }
+      return saved;
+    }
+
+    function defaultMqttUrl() {
+      const scheme = location.protocol === "https:" ? "wss" : "ws";
+      const port = location.port === "21080" ? "21083" : "9001";
+      return `${scheme}://${location.hostname || "localhost"}:${port}/mqtt`;
+    }
+
+    function storedMqttUrl() {
+      const saved = localStorage.getItem("liveMqttUrl");
+      if (!saved) return defaultMqttUrl();
+      try {
+        const parsed = new URL(saved);
+        const loopback = ["localhost", "127.0.0.1", "::1"].includes(parsed.hostname);
+        const staleServerPort = location.port === "21080" && parsed.hostname === location.hostname && parsed.port === "9001";
+        if ((loopback && !["localhost", "127.0.0.1", "::1"].includes(location.hostname)) || staleServerPort) {
+          localStorage.removeItem("liveMqttUrl");
+          return defaultMqttUrl();
+        }
+      } catch (_) {
+        localStorage.removeItem("liveMqttUrl");
+        return defaultMqttUrl();
+      }
+      return saved;
+    }
+
+    $("managerUrl").value = storedManagerUrl("liveManagerUrl");
+    $("mqttUrl").value = storedMqttUrl();
     $("topic").value = localStorage.getItem("liveTopic") || "dcim/sensor/realtime";
 
     function managerBase() {
@@ -190,10 +232,30 @@
       $("authStatus").textContent = state.token ? "로그인됨" : "미로그인";
     }
 
+    async function refreshAccessToken() {
+      try {
+        const response = await fetch(managerBase() + "/api/manager/auth/refresh", {
+          method: "POST", credentials: "same-origin",
+        });
+        const json = await response.json().catch(() => ({}));
+        state.token = response.ok ? (json.data?.accessToken || "") : "";
+      } catch (_) {
+        state.token = "";
+      }
+      setAuthStatus();
+      return !!state.token;
+    }
+
     async function api(path, options = {}) {
-      const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
-      if (state.token) headers.Authorization = "Bearer " + state.token;
-      const res = await fetch(managerBase() + path, { ...options, headers });
+      const request = () => {
+        const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
+        if (state.token) headers.Authorization = "Bearer " + state.token;
+        return fetch(managerBase() + path, { ...options, headers, credentials: "same-origin" });
+      };
+      let res = await request();
+      if (res.status === 401 && !path.startsWith("/api/manager/auth/") && await refreshAccessToken()) {
+        res = await request();
+      }
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
         throw new Error(json.error || json.message || `HTTP ${res.status}`);
@@ -209,7 +271,6 @@
         body: JSON.stringify({ username, password }),
       });
       state.token = data.accessToken;
-      sessionStorage.setItem("liveToken", state.token);
       setAuthStatus();
       log("로그인 성공: " + data.username);
       await loadDevices();
@@ -469,10 +530,12 @@
       if (event.target.matches("input[data-key]")) updateSelectedCount();
     });
 
+    if (new URLSearchParams(location.search).has("embedded")) document.body.classList.add("embedded");
+    sessionStorage.removeItem("liveToken");
     setAuthStatus();
-    if (state.token) {
-      loadDevices().catch((err) => log("목록 실패: " + err.message));
-    }
+    refreshAccessToken().then((authenticated) => {
+      if (authenticated) loadDevices().catch((err) => log("목록 실패: " + err.message));
+    });
     connectMqtt();
   </script>
 </body>

@@ -8,11 +8,18 @@ import net.vivans.dcim.module.common.domain.model.CommonCode;
 import net.vivans.dcim.module.common.domain.repository.CommonCodeRepository;
 import net.vivans.dcim.module.device.domain.repository.DeviceRepository;
 import net.vivans.dcim.module.devicemodel.api.dto.DeviceModelCreateRequest;
+import net.vivans.dcim.module.devicemodel.api.dto.DeviceModelCloneRequest;
 import net.vivans.dcim.module.devicemodel.api.dto.DeviceModelProtocolRequest;
 import net.vivans.dcim.module.devicemodel.api.dto.DeviceModelResponse;
 import net.vivans.dcim.module.devicemodel.domain.model.DeviceModel;
 import net.vivans.dcim.module.devicemodel.domain.model.DeviceModelProtocol;
+import net.vivans.dcim.module.devicemodel.domain.model.DeviceModelSnmpPoint;
+import net.vivans.dcim.module.devicemodel.domain.model.DeviceModelModbusPoint;
 import net.vivans.dcim.module.devicemodel.domain.repository.DeviceModelRepository;
+import net.vivans.dcim.module.devicemodel.domain.repository.DeviceModelSnmpPointRepository;
+import net.vivans.dcim.module.devicemodel.domain.repository.DeviceModelModbusPointRepository;
+import net.vivans.dcim.module.lora.domain.model.DeviceModelLoraPoint;
+import net.vivans.dcim.module.lora.domain.repository.DeviceModelLoraPointRepository;
 import net.vivans.dcim.shared.exception.ConflictException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,6 +45,48 @@ public class DeviceModelQueryService {
     private final DeviceRepository deviceRepository;
     private final CollectionTaskRepository collectionTaskRepository;
     private final CollectionScriptSyncService collectionScriptSyncService;
+    private final DeviceModelSnmpPointRepository snmpPointRepository;
+    private final DeviceModelModbusPointRepository modbusPointRepository;
+    private final DeviceModelLoraPointRepository loraPointRepository;
+
+    @Transactional
+    public DeviceModelResponse cloneDeviceModel(Integer sourceId, DeviceModelCloneRequest request) {
+        DeviceModel source = findDeviceModel(sourceId);
+        String manufacturer = request.manufacturer() == null ? source.getManufacturer() : request.manufacturer();
+        String description = request.description() == null ? source.getDescription() : request.description();
+        validateUniqueNameAndManufacturer(request.name(), manufacturer, null);
+
+        DeviceModel clone = DeviceModel.create(request.name(), manufacturer, source.getDeviceType(), description);
+        List<DeviceModelProtocol> protocols = source.getProtocols().stream()
+                .map(protocol -> DeviceModelProtocol.of(clone, protocol.getProtocolType()))
+                .toList();
+        clone.replaceProtocols(protocols);
+        deviceModelRepository.save(clone);
+        deviceModelRepository.flush();
+
+        for (DeviceModelProtocol original : source.getProtocols()) {
+            DeviceModelProtocol target = clone.getProtocols().stream()
+                    .filter(protocol -> protocol.getProtocolType().getId().equals(original.getProtocolType().getId()))
+                    .findFirst().orElseThrow();
+            for (DeviceModelSnmpPoint point : snmpPointRepository.findAllByModelProtocolIdOrderByIdAsc(original.getId())) {
+                snmpPointRepository.save(DeviceModelSnmpPoint.create(target, point.getName(), point.getOid(),
+                        point.isRequiresInstance(), point.getUnitCode(), point.getScale(), point.isEnabled(),
+                        point.getDataPointType(), point.getCategoryCode()));
+            }
+            for (DeviceModelModbusPoint point : modbusPointRepository.findAllByModelProtocolIdOrderByIdAsc(original.getId())) {
+                modbusPointRepository.save(DeviceModelModbusPoint.create(target, point.getName(), point.getDataPointType(),
+                        point.getCategoryCode(), point.getRegisterType(), point.getDataType(), point.getByteOrder(),
+                        point.getAddress(), point.isRequiresInstance(), point.getScale(), point.getOffset(),
+                        point.getUnitCode(), point.isEnabled()));
+            }
+        }
+        for (DeviceModelLoraPoint point : loraPointRepository.findAllByDeviceModelIdOrderByIdAsc(sourceId)) {
+            loraPointRepository.save(DeviceModelLoraPoint.create(clone, point.getPayloadField(), point.getPointName(),
+                    point.getDataPointType(), point.getUnitCode(), point.getScale(), point.getValueMap(),
+                    point.isEnabled(), point.getCategoryCode()));
+        }
+        return DeviceModelResponse.from(clone);
+    }
 
     @Transactional
     public DeviceModelResponse createDeviceModel(DeviceModelCreateRequest request) {

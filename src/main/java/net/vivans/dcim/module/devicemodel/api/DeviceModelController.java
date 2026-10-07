@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import net.vivans.dcim.module.devicemodel.api.dto.DeviceModelCreateRequest;
+import net.vivans.dcim.module.devicemodel.api.dto.DeviceModelCloneRequest;
 import net.vivans.dcim.module.devicemodel.api.dto.DeviceModelResponse;
 import net.vivans.dcim.module.devicemodel.application.DeviceModelQueryService;
 import net.vivans.dcim.shared.api.ApiResponse;
@@ -55,6 +56,14 @@ public class DeviceModelController {
     public ResponseEntity<ApiResponse<DeviceModelResponse>> createDeviceModel(
             @Valid @RequestBody DeviceModelCreateRequest request) {
         return ResponseEntity.ok(ApiResponse.ok(deviceModelQueryService.createDeviceModel(request)));
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/{id}/clone")
+    @Operation(summary = "모델과 프로토콜·측정항목 정의 복제", description = "장비와 수집 작업은 복제하지 않습니다.")
+    public ResponseEntity<ApiResponse<DeviceModelResponse>> cloneDeviceModel(
+            @PathVariable Integer id, @Valid @RequestBody DeviceModelCloneRequest request) {
+        return ResponseEntity.ok(ApiResponse.ok(deviceModelQueryService.cloneDeviceModel(id, request)));
     }
 
     @PreAuthorize("hasRole('ADMIN')")

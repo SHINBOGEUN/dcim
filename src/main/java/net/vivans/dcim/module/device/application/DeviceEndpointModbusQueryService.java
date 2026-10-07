@@ -41,6 +41,13 @@ public class DeviceEndpointModbusQueryService {
             Integer endpointId,
             DeviceEndpointModbusCreateRequest request
     ) {
+        return createEndpointModbus(deviceId, endpointId, request, true);
+    }
+
+    @Transactional
+    public DeviceEndpointModbusResponse createEndpointModbus(
+            Integer deviceId, Integer endpointId, DeviceEndpointModbusCreateRequest request, boolean synchronize
+    ) {
         findDevice(deviceId);
         DeviceProtocolEndpoint endpoint = findEndpoint(endpointId, deviceId);
         validateModbusEndpoint(endpoint);
@@ -52,7 +59,9 @@ public class DeviceEndpointModbusQueryService {
         DeviceEndpointModbus endpointModbus = DeviceEndpointModbus.create(endpoint, request.unitId());
         DeviceEndpointModbus saved = deviceEndpointModbusRepository.save(endpointModbus);
 
-        collectionScriptSyncService.regenerateByModelId(endpoint.getDevice().getDeviceModel().getId());
+        if (synchronize) {
+            collectionScriptSyncService.regenerateByModelId(endpoint.getDevice().getDeviceModel().getId());
+        }
 
         return DeviceEndpointModbusResponse.from(saved);
     }

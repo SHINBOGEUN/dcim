@@ -48,6 +48,13 @@ public class DeviceSnmpInstanceQueryService {
             Integer endpointId,
             DeviceSnmpInstanceCreateRequest request
     ) {
+        return createSnmpInstance(deviceId, endpointId, request, true);
+    }
+
+    @Transactional
+    public DeviceSnmpInstanceResponse createSnmpInstance(
+            Integer deviceId, Integer endpointId, DeviceSnmpInstanceCreateRequest request, boolean synchronize
+    ) {
         findDevice(deviceId);
         DeviceProtocolEndpoint endpoint = findEndpoint(endpointId, deviceId);
         validateSnmpEndpoint(endpoint);
@@ -59,7 +66,9 @@ public class DeviceSnmpInstanceQueryService {
 
         DeviceSnmpInstance snmpInstance = DeviceSnmpInstance.create(endpoint, request.instanceId());
         DeviceSnmpInstance saved = deviceSnmpInstanceRepository.save(snmpInstance);
-        collectionScriptSyncService.regenerateByModelId(endpoint.getDevice().getDeviceModel().getId());
+        if (synchronize) {
+            collectionScriptSyncService.regenerateByModelId(endpoint.getDevice().getDeviceModel().getId());
+        }
         return DeviceSnmpInstanceResponse.from(saved);
     }
 

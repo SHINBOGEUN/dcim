@@ -13,8 +13,8 @@ sql/
 └── schema/          ← DDL (01~22 baseline, 이후 번호로 증분 추가)
     ├── 01_users.sql
     ├── …
-    ├── 22_page_widget_layout.sql
-    └── 23_device_endpoint_modbus.sql
+    ├── 53_device_page_device.sql
+    └── 57_external_data.sql
 ```
 
 운영 DB(`dcim_new`) **현재 구조**를 FK 생성 순서대로 나눈 baseline입니다 (스냅샷: `192.168.10.14:20181`, 2026-09-02).
@@ -120,6 +120,7 @@ mysql -h HOST -P PORT -u dcim -p dcim < sql/schema/42_device_asset_document.sql
 | 54 | `54_device_page_model_point_setting.sql` | 페이지·모델별 포인트 표시 설정 |
 | 55 | `55_device_model_modbus_point_data_point_type.sql` | Modbus 포인트에 DATA_POINT_TYPE FK 추가 (기존 DB용; 신규 설치는 08에 포함) |
 | 56 | `56_add_model_point_category_code.sql` | SNMP·Modbus·LoRa 모델 포인트에 CATEGORY 코드 FK 추가 (기존 DB용; 신규 설치는 각 baseline에 포함) |
+| 57 | `57_external_data.sql` | 외부 데이터 JSON 수신 이력 |
 
 ---
 
