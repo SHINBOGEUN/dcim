@@ -7,8 +7,9 @@ import net.vivans.dcim.module.collectortask.domain.repository.CollectionTaskRepo
 import net.vivans.dcim.module.common.domain.model.CommonCode;
 import net.vivans.dcim.module.common.domain.repository.CommonCodeRepository;
 import net.vivans.dcim.module.device.domain.repository.DeviceRepository;
-import net.vivans.dcim.module.devicemodel.api.dto.DeviceModelCreateRequest;
 import net.vivans.dcim.module.devicemodel.api.dto.DeviceModelCloneRequest;
+import net.vivans.dcim.module.devicemodel.api.dto.DeviceModelCreateRequest;
+import net.vivans.dcim.module.devicemodel.api.dto.DeviceModelDetailsUpdateRequest;
 import net.vivans.dcim.module.devicemodel.api.dto.DeviceModelProtocolRequest;
 import net.vivans.dcim.module.devicemodel.api.dto.DeviceModelResponse;
 import net.vivans.dcim.module.devicemodel.domain.model.DeviceModel;
@@ -113,6 +114,17 @@ public class DeviceModelQueryService {
         deviceModel.update(request.name(), request.manufacturer(), deviceType, request.description());
         replaceProtocolsFromRequest(deviceModel, request.protocols());
 
+        DeviceModelResponse response = DeviceModelResponse.from(deviceModelRepository.save(deviceModel));
+        collectionScriptSyncService.regenerateByModelId(id);
+        return response;
+    }
+
+    @Transactional
+    public DeviceModelResponse updateDeviceModelDetails(Integer id, DeviceModelDetailsUpdateRequest request) {
+        DeviceModel deviceModel = findDeviceModel(id);
+        validateUniqueNameAndManufacturer(request.name(), request.manufacturer(), id);
+        deviceModel.update(request.name(), request.manufacturer(), findDeviceType(request.deviceTypeId()),
+                request.description());
         DeviceModelResponse response = DeviceModelResponse.from(deviceModelRepository.save(deviceModel));
         collectionScriptSyncService.regenerateByModelId(id);
         return response;

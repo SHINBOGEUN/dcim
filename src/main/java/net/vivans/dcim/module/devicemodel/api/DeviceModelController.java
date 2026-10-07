@@ -7,8 +7,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import net.vivans.dcim.module.devicemodel.api.dto.DeviceModelCreateRequest;
 import net.vivans.dcim.module.devicemodel.api.dto.DeviceModelCloneRequest;
+import net.vivans.dcim.module.devicemodel.api.dto.DeviceModelCreateRequest;
+import net.vivans.dcim.module.devicemodel.api.dto.DeviceModelDetailsUpdateRequest;
 import net.vivans.dcim.module.devicemodel.api.dto.DeviceModelResponse;
 import net.vivans.dcim.module.devicemodel.application.DeviceModelQueryService;
 import net.vivans.dcim.shared.api.ApiResponse;
@@ -17,6 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -73,6 +75,14 @@ public class DeviceModelController {
             @Parameter(description = "장비 모델 ID") @PathVariable Integer id,
             @Valid @RequestBody DeviceModelCreateRequest request) {
         return ResponseEntity.ok(ApiResponse.ok(deviceModelQueryService.updateDeviceModel(id, request)));
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PatchMapping("/{id}/details")
+    @Operation(summary = "모델 기본 정보 수정", description = "기존 프로토콜 및 측정항목 연결은 유지합니다.")
+    public ResponseEntity<ApiResponse<DeviceModelResponse>> updateDeviceModelDetails(
+            @PathVariable Integer id, @Valid @RequestBody DeviceModelDetailsUpdateRequest request) {
+        return ResponseEntity.ok(ApiResponse.ok(deviceModelQueryService.updateDeviceModelDetails(id, request)));
     }
 
     @PreAuthorize("hasRole('ADMIN')")

@@ -469,7 +469,10 @@
       display: flex; gap: 10px; align-items: center;
       padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px;
       background: var(--surface2); margin-bottom: 6px;
+      cursor: pointer; transition: border-color .15s, background .15s;
     }
+    .loc-device-list .dev-row:hover,
+    .loc-device-list .dev-row:focus-visible { border-color: var(--accent); background: var(--accent-soft); outline: none; }
     .loc-device-list .dev-row .dev-ico {
       width: 28px; height: 28px; border-radius: 8px; background: var(--accent-soft);
       display: grid; place-items: center; flex: 0 0 auto;
@@ -1151,6 +1154,8 @@
     #tab-codes > .workspace-table-card { overflow:hidden; }
     #tab-codes > .grid2 { display:block; min-height:0; height:100%; overflow:auto; }
     #tab-codes > .grid2 > * { min-width:0; }
+    #tab-codes.panel.active { display:flex; flex-direction:column; overflow:hidden; }
+    #tab-codes > .workspace-table-card { flex:1 1 auto; min-height:0; width:100%; height:auto; }
 
     #tab-wizard.panel.active { grid-template-rows:auto minmax(0,1fr) auto auto; align-items:stretch; overflow:hidden; }
     #tab-wizard > .card { min-height:0; overflow:auto; scrollbar-gutter:stable; }
@@ -1171,6 +1176,8 @@
       :is(#tab-models,#tab-lora-model-mapping) > .models-layout > *,
       :is(#tab-lora-mqtt-sources,#tab-lora-endpoints,#tab-users,#tab-codes) > .card { height:auto; overflow:visible; }
       #tab-codes > .grid2 { height:auto; overflow:visible; }
+      #tab-codes.panel.active { display:block; overflow:auto; }
+      #tab-codes > .workspace-table-card { height:auto; }
       #tab-wizard > .card { overflow:visible; margin-bottom:14px; }
     }
     @media (max-width:1250px) {
@@ -1238,6 +1245,7 @@
     .side button[data-tab="widget-board"]::before { content:"▦"; }
     .side button[data-tab="live-telemetry"]::before { content:"⌁"; }
     .side button[data-tab="mqtt-monitor"]::before { content:"◉"; }
+    .side button[data-tab="analysis"]::before { content:"⌁"; }
     .card, .stat { background:var(--surface); border:1px solid var(--line); box-shadow:0 5px 20px rgba(0,0,0,.12); }
     .card::before { display:none; }
     .card > h2 { font-size:15px; }
@@ -1283,6 +1291,22 @@
     .wizard-dialog-head p { margin:0; color:var(--muted); font-size:12px; line-height:1.5; }
     .wizard-dialog-head button { width:35px; height:35px; padding:0; font-size:20px; }
     .wizard-quick-dialog .field :is(input,select) { width:100%; }
+    .entity-dialog-content { padding:22px; }
+    .tree .device-leaf { padding-left:26px; cursor:pointer; }
+    .tree .device-leaf .label { cursor:pointer; }
+    .tree .device-leaf .label:active { cursor:pointer; }
+    .loc-device-detail { margin:12px 0; padding:14px; border:1px solid var(--accent); border-radius:10px; background:var(--surface2); }
+    .loc-device-detail h3 { margin:0 0 10px; font-size:16px; }
+    .loc-device-facts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px 14px; margin:0; }
+    .loc-device-facts > div { min-width:0; }
+    .loc-device-facts dt { color:var(--muted); font-size:11px; font-weight:700; }
+    .loc-device-facts dd { margin:3px 0 0; font-size:13px; overflow-wrap:anywhere; }
+    .point-editor-dialog { width:min(1000px,calc(100vw - 28px)); }
+    .point-editor-dialog .entity-dialog-content { max-height:min(88vh,900px); overflow:auto; }
+    .point-editor-dialog #mpCreateBox, .point-editor-dialog #mpEditBox { margin:0!important; padding:0!important; border:0!important; }
+    .point-editor-dialog #mbPointFormBox { margin:0; }
+    .point-editor-dialog .mp-table-wrap { overflow-x:auto; }
+    .point-editor-dialog .mp-table { min-width:760px; }
     .wizard-protocol-choices { grid-column:1/-1; margin:0; padding:10px 12px; border:1px solid var(--line); border-radius:9px; }
     .wizard-protocol-choices legend { color:var(--muted); font-size:12px; font-weight:700; }
     .wizard-protocol-choices > div { display:flex; flex-wrap:wrap; gap:8px; }
@@ -1359,6 +1383,7 @@
     <button type="button" data-tab="widgets">화면 위젯<small>표시 · 조회</small></button>
     <div class="group">모니터링 화면</div>
     <button type="button" data-tab="widget-board">위젯 보드<small>운영 대시보드 · 배치</small></button>
+    <button type="button" data-tab="analysis">분석<small>측정값 이력 · 비교 차트</small></button>
     <button type="button" data-tab="live-telemetry">실시간 텔레메트리<small>MQTT 최신값 · 차트</small></button>
     <button type="button" data-tab="mqtt-monitor" data-role-gate="admin">MQTT 모니터<small>토픽 · 메시지 확인</small></button>
     <div class="group">기준 정보</div>
@@ -2360,11 +2385,12 @@
     <!-- LOCATIONS -->
     <section class="panel" id="tab-locations">
       <h1 class="page-title">위치</h1>
-      <p class="page-desc">위치 트리를 관리합니다. Path(전원 피드)는 장비에 지정합니다. 드래그로 부모를 바꿀 수 있습니다.</p>
+      <p class="page-desc">위치를 선택하면 하위 장비 목록을 보고, 장비를 선택하면 해당 장비의 상세 정보만 확인할 수 있습니다. 위치는 드래그로 옮길 수 있습니다.</p>
       <div class="grid2">
         <div class="card">
           <h2>위치 탐색기</h2>
           <div class="loc-toolbar">
+            <button type="button" class="primary" id="locAddOpen" data-role-gate="admin">+ 위치 추가</button>
             <button type="button" class="ghost" id="locReload">새로고침</button>
             <button type="button" class="ghost" id="locExpandAll">모두 펼치기</button>
             <button type="button" class="ghost" id="locCollapseAll">모두 접기</button>
@@ -2375,39 +2401,31 @@
         </div>
         <div>
           <div class="card">
-            <h2>선택 위치</h2>
+            <h2>위치·장비 상세</h2>
             <div id="locDetail" class="loc-detail-empty">왼쪽에서 위치를 선택하세요.</div>
             <div id="locDetailForm" style="display:none">
-              <div class="fields">
-                <label class="field full">이름
-                  <input id="locEditName" />
-                </label>
-                <label class="field">유형
-                  <select id="locEditType"></select>
-                </label>
-                <label class="field">Rack 최대 U
-                  <input id="locEditRackCapacity" type="number" min="1" placeholder="Rack만 입력" />
-                </label>
-                <label class="field full">코드
-                  <input id="locEditCode" readonly class="mono" />
-                </label>
-              </div>
-              <div class="row" style="margin-top:12px">
-                <button type="button" class="primary" id="locSave" data-role-gate="admin">이름·유형 저장</button>
+              <div id="locLocationContent">
+                <div class="row">
+                <button type="button" class="primary" id="locEditOpen" data-role-gate="admin">위치 수정</button>
                 <button type="button" class="ghost" id="locDelete" data-role-gate="admin">이 노드만 삭제</button>
                 <button type="button" class="danger" id="locDeleteSubtree" data-role-gate="admin">하위 포함 삭제</button>
+                </div>
+                <hr style="border:0;border-top:1px solid var(--line);margin:16px 0" />
+                <h2 style="margin:0 0 8px;font-size:15px">이 위치의 장비</h2>
+                <div class="loc-scope">
+                  <label><input type="checkbox" id="locSubtree" checked /> 하위 위치 장비까지</label>
+                  <button type="button" class="ghost" id="locDevReload">다시 조회</button>
+                </div>
+                <div id="locDevices" class="loc-device-list"></div>
               </div>
-              <hr style="border:0;border-top:1px solid var(--line);margin:16px 0" />
-              <h2 style="margin:0 0 8px;font-size:15px">이 위치의 장비</h2>
-              <div class="loc-scope">
-                <label><input type="checkbox" id="locSubtree" checked /> 하위 위치 장비까지</label>
-                <button type="button" class="ghost" id="locDevReload">다시 조회</button>
-              </div>
-              <div id="locDevices" class="loc-device-list"></div>
+              <div id="locDeviceDetail" class="loc-device-detail" style="display:none" aria-live="polite"></div>
             </div>
           </div>
-          <div class="card">
-            <h2>위치 추가</h2>
+        </div>
+      </div>
+      <dialog class="wizard-quick-dialog" id="locCreateDialog" aria-labelledby="locCreateTitle">
+        <div class="entity-dialog-content">
+          <div class="wizard-dialog-head"><div><h2 id="locCreateTitle">위치 추가</h2><p>상위 위치와 유형을 선택해 새 위치를 등록합니다.</p></div><button type="button" class="ghost" data-entity-dialog-close aria-label="닫기">×</button></div>
             <div class="fields">
               <label class="field full">상위 위치
                 <select id="locParent"></select>
@@ -2429,11 +2447,22 @@
                 <input id="locName" placeholder="예: A열 랙01" />
               </label>
             </div>
-            <button type="button" class="primary" style="margin-top:12px" id="locCreate" data-role-gate="admin">하위로 추가</button>
+            <div class="wizard-dialog-actions"><button type="button" class="ghost" data-entity-dialog-close>취소</button><button type="button" class="primary" id="locCreate" data-role-gate="admin">위치 등록</button></div>
             <details class="raw"><summary>응답 상세</summary><pre id="locOut"></pre></details>
-          </div>
         </div>
-      </div>
+      </dialog>
+      <dialog class="wizard-quick-dialog" id="locEditDialog" aria-labelledby="locEditTitle">
+        <div class="entity-dialog-content">
+          <div class="wizard-dialog-head"><div><h2 id="locEditTitle">위치 수정</h2><p>선택한 위치의 이름·유형·랙 용량을 수정합니다.</p></div><button type="button" class="ghost" data-entity-dialog-close aria-label="닫기">×</button></div>
+          <div class="fields">
+            <label class="field full">이름<input id="locEditName" /></label>
+            <label class="field">유형<select id="locEditType"></select></label>
+            <label class="field">Rack 최대 U<input id="locEditRackCapacity" type="number" min="1" placeholder="Rack만 입력" /></label>
+            <label class="field full">코드<input id="locEditCode" readonly class="mono" /></label>
+          </div>
+          <div class="wizard-dialog-actions"><button type="button" class="ghost" data-entity-dialog-close>취소</button><button type="button" class="primary" id="locSave" data-role-gate="admin">위치 저장</button></div>
+        </div>
+      </dialog>
     </section>
 
     <!-- MODELS -->
@@ -2443,7 +2472,9 @@
       <div class="models-layout">
         <div>
           <div class="card">
-            <h2>모델 목록</h2>
+            <div class="row" style="justify-content:space-between;margin-bottom:10px"><h2 style="margin:0">모델 목록</h2>
+              <button type="button" class="primary" id="modelAddOpen" data-role-gate="admin">+ 모델 생성</button>
+            </div>
             <div class="row" style="margin-bottom:10px">
               <button type="button" class="ghost" id="modelReload">새로고침</button>
             </div>
@@ -2454,30 +2485,12 @@
               </table>
             </div>
           </div>
-          <div class="card">
-            <h2>모델 등록</h2>
-            <div class="fields">
-              <label class="field">이름
-                <input id="modelName" placeholder="예: AP8959" />
-              </label>
-              <label class="field">제조사
-                <input id="modelMfr" placeholder="예: APC" />
-              </label>
-              <label class="field">장비 유형
-                <select id="modelType"></select>
-              </label>
-              <label class="field">프로토콜
-                <select id="modelProtocol"></select>
-              </label>
-              <label class="field full">설명
-                <input id="modelDesc" placeholder="선택" />
-              </label>
-            </div>
-            <button type="button" class="primary" style="margin-top:12px" id="modelCreate" data-role-gate="admin">모델 등록</button>
-          </div>
         </div>
         <div class="card">
-          <h2 id="mpTitle">측정 항목</h2>
+          <div class="row" style="justify-content:space-between;gap:10px;margin-bottom:10px">
+            <h2 id="mpTitle" style="margin:0">측정 항목</h2>
+            <div class="row"><button type="button" class="primary" id="mpAddOpen" data-role-gate="admin" style="display:none">+ 측정항목 추가</button><button type="button" class="ghost" id="mpLoad">목록 새로고침</button></div>
+          </div>
           <div class="fields" style="margin-bottom:10px">
             <label class="field">선택 모델
               <input id="mpModel" readonly placeholder="왼쪽에서 선택" />
@@ -2486,7 +2499,7 @@
               <select id="mpProtocol"></select>
             </label>
           </div>
-          <button type="button" class="ghost" id="mpLoad">항목 불러오기</button>
+          <div id="mpPointSummary" class="muted" role="status" aria-live="polite" style="font-size:12px;margin-bottom:8px">왼쪽에서 모델을 선택하세요.</div>
           <div id="mpSnmpContent">
           <div id="mpCreateBox" style="display:none;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)">
             <div class="muted" style="font-size:12px;font-weight:650;margin-bottom:8px">측정 항목 일괄 추가</div>
@@ -2509,6 +2522,7 @@
             </div>
             <div class="row" style="margin-top:10px">
               <button type="button" class="ghost" id="mpAddRow" data-role-gate="admin">행 추가</button>
+              <button type="button" class="ghost" id="mpCreateCancel">취소</button>
               <button type="button" class="primary" id="mpCreate" data-role-gate="admin">일괄 등록</button>
             </div>
           </div>
@@ -2565,6 +2579,7 @@
           </div>
           </div>
           <div id="mpModbusContent" style="display:none">
+            <div id="mbPointFormBox">
             <div class="muted" style="font-size:12px;margin-top:12px">1단계 · 모델 공통 해석 규칙: 레지스터 종류·데이터 형식·바이트 순서·배율·단위를 정의합니다. 장비/회선마다 주소가 다르면 「장비별 주소」를 선택하고, 실제 Unit ID·주소·결과 장비는 장비 목록의 Modbus 회선 매핑에서 등록하세요.</div>
             <div class="fields" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line)">
               <label class="field">이름<input id="mbPointName" placeholder="예: TOTAL_WT" /></label>
@@ -2579,14 +2594,44 @@
               <label class="field"><span>주소 설정 방식</span><span><input id="mbPointRequiresInstance" type="checkbox" /> 장비별 주소 (Unit ID·주소는 장비 화면에서 설정)</span></label>
             </div>
             <div class="row" style="margin-top:12px"><button type="button" class="primary" id="mbPointSave" data-role-gate="admin">Modbus 항목 등록</button><button type="button" class="ghost" id="mbPointCancel" style="display:none">취소</button></div>
+            </div>
             <div class="mp-table-wrap" style="margin-top:14px"><table class="mp-table"><thead><tr><th>항목</th><th>레지스터</th><th>형식</th><th>주소 방식</th><th>단위</th><th>scale</th><th>offset</th><th>작업</th></tr></thead><tbody id="mbPointBody"></tbody></table></div>
           </div>
           <div id="mpMqttContent" style="display:none;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)">
             <div class="empty">MQTT/LoRa 측정 항목은 OID·레지스터가 아니라 payload 필드 매핑으로 관리합니다.</div>
-            <div class="row" style="margin-top:10px"><button type="button" class="primary" id="mpOpenLoraMapping" data-role-gate="admin">LoRa 모델 매핑 열기</button></div>
+            <div class="row" style="margin-top:10px"><button type="button" class="ghost" id="mpOpenLoraMapping">LoRa 매핑 항목 보기</button></div>
           </div>
         </div>
       </div>
+      <dialog class="wizard-quick-dialog" id="modelDialog" aria-labelledby="modelDialogTitle">
+        <div class="entity-dialog-content">
+          <div class="wizard-dialog-head"><div><h2 id="modelDialogTitle">모델 생성</h2><p>장비 유형과 지원 프로토콜을 지정합니다.</p></div><button type="button" class="ghost" data-entity-dialog-close aria-label="닫기">×</button></div>
+          <div class="fields">
+            <label class="field">이름<input id="modelName" placeholder="예: AP8959" /></label>
+            <label class="field">제조사<input id="modelMfr" placeholder="예: APC" /></label>
+            <label class="field">장비 유형<select id="modelType"></select></label>
+            <fieldset class="wizard-protocol-choices" id="modelProtocolsField"><legend>지원 프로토콜 (하나 이상)</legend><div id="modelProtocols"></div></fieldset>
+            <p class="muted field full" id="modelProtocolHint" style="display:none;margin:0">수정 시 기존 프로토콜과 측정항목 연결을 보호하기 위해 프로토콜은 변경할 수 없습니다.</p>
+            <label class="field full">설명<input id="modelDesc" placeholder="선택" /></label>
+          </div>
+          <div class="wizard-dialog-actions"><button type="button" class="ghost" data-entity-dialog-close>취소</button><button type="button" class="primary" id="modelCreate" data-role-gate="admin">모델 등록</button></div>
+        </div>
+      </dialog>
+      <dialog class="wizard-quick-dialog point-editor-dialog" id="mpCreateDialog" aria-labelledby="mpCreateDialogTitle">
+        <div class="entity-dialog-content"><div class="wizard-dialog-head"><div><h2 id="mpCreateDialogTitle">SNMP 측정항목 추가</h2><p>여러 항목을 한 번에 등록할 수 있습니다.</p></div><button type="button" class="ghost" data-entity-dialog-close aria-label="닫기">×</button></div></div>
+      </dialog>
+      <dialog class="wizard-quick-dialog point-editor-dialog" id="mpEditDialog" aria-labelledby="mpEditDialogTitle">
+        <div class="entity-dialog-content"><div class="wizard-dialog-head"><h2 id="mpEditDialogTitle">SNMP 측정항목 수정</h2><button type="button" class="ghost" data-entity-dialog-close aria-label="닫기">×</button></div></div>
+      </dialog>
+      <dialog class="wizard-quick-dialog point-editor-dialog" id="mbPointDialog" aria-labelledby="mbPointDialogTitle">
+        <div class="entity-dialog-content"><div class="wizard-dialog-head"><h2 id="mbPointDialogTitle">Modbus 측정항목 추가</h2><button type="button" class="ghost" data-entity-dialog-close aria-label="닫기">×</button></div></div>
+      </dialog>
+      <dialog class="wizard-quick-dialog point-editor-dialog" id="modelLoraPointsDialog" aria-labelledby="modelLoraPointsTitle">
+        <div class="entity-dialog-content">
+          <div class="wizard-dialog-head"><div><h2 id="modelLoraPointsTitle">LoRa 매핑 항목</h2><p>선택한 모델의 payload 필드와 측정항목 연결을 보여줍니다.</p></div><button type="button" class="ghost" data-entity-dialog-close aria-label="닫기">×</button></div>
+          <div class="mp-table-wrap" style="max-height:60vh"><table class="mp-table"><thead><tr><th>payload 필드</th><th>측정항목</th><th>데이터 유형</th><th>단위</th><th>scale</th><th>값 변환</th><th>상태</th></tr></thead><tbody id="modelLoraPointsBody"></tbody></table></div>
+        </div>
+      </dialog>
     </section>
 
     <!-- CODES -->
@@ -2599,7 +2644,7 @@
             <h2 style="margin:0">코드 그룹 · 공통 코드</h2>
             <div class="muted" style="font-size:12px;margin-top:4px">그룹 행 아래에 소속 코드가 표시됩니다.</div>
           </div>
-          <button type="button" class="ghost" id="cgReload">새로고침</button>
+          <div class="row"><button type="button" class="primary" id="cgAddOpen" data-role-gate="admin">+ 그룹 생성</button><button type="button" class="primary" id="ccAddOpen" data-role-gate="admin">+ 코드 생성</button><button type="button" class="ghost" id="cgReload">새로고침</button></div>
         </div>
         <div class="workspace-table-scroll">
           <table id="codeTreeTable">
@@ -2608,10 +2653,9 @@
           </table>
         </div>
       </div>
-      <div class="grid2">
-        <div>
-          <div class="card">
-            <h2 id="cgFormTitle">그룹 추가</h2>
+      <dialog class="wizard-quick-dialog" id="cgDialog" aria-labelledby="cgFormTitle">
+        <div class="entity-dialog-content">
+            <div class="wizard-dialog-head"><h2 id="cgFormTitle">그룹 추가</h2><button type="button" class="ghost" data-entity-dialog-close aria-label="닫기">×</button></div>
             <div class="fields">
               <label class="field">groupKey
                 <input id="cgKey" placeholder="예: CUSTOM_TYPE" class="mono" />
@@ -2620,15 +2664,15 @@
                 <input id="cgName" placeholder="표시 이름" />
               </label>
             </div>
-            <div class="row" style="margin-top:12px">
+            <div class="wizard-dialog-actions">
               <button type="button" class="primary" id="cgSave" data-role-gate="admin">그룹 등록</button>
-              <button type="button" class="ghost" id="cgCancelEdit" style="display:none">취소</button>
+              <button type="button" class="ghost" id="cgCancelEdit">취소</button>
             </div>
-          </div>
         </div>
-        <div>
-          <div class="card">
-            <h2 id="ccFormTitle">코드 추가</h2>
+      </dialog>
+      <dialog class="wizard-quick-dialog" id="ccDialog" aria-labelledby="ccFormTitle">
+        <div class="entity-dialog-content">
+            <div class="wizard-dialog-head"><h2 id="ccFormTitle">코드 추가</h2><button type="button" class="ghost" data-entity-dialog-close aria-label="닫기">×</button></div>
             <div class="fields">
               <label class="field">그룹
                 <select id="ccGroup"></select>
@@ -2643,13 +2687,12 @@
                 <input id="ccName" placeholder="표시 이름" />
               </label>
             </div>
-            <div class="row" style="margin-top:12px">
+            <div class="wizard-dialog-actions">
               <button type="button" class="primary" id="ccSave" data-role-gate="admin">등록</button>
-              <button type="button" class="ghost" id="ccCancelEdit" style="display:none">취소</button>
+              <button type="button" class="ghost" id="ccCancelEdit">취소</button>
             </div>
-          </div>
         </div>
-      </div>
+      </dialog>
     </section>
 
     <!-- LORA COLLECTION STATUS -->
@@ -2885,6 +2928,11 @@
       <p class="page-desc">등록된 위젯의 실제 값과 배치를 확인하고 조정합니다.</p>
       <iframe id="widgetBoardFrame" title="위젯 보드" data-page-src="/widget-dashboard.html?embedded=1" loading="lazy"></iframe>
     </section>
+    <section class="panel embedded-page" id="tab-analysis">
+      <h1 class="page-title">분석</h1>
+      <p class="page-desc">장비별 측정 이력을 조회하고 기간별 추이를 비교합니다.</p>
+      <iframe id="analysisFrame" title="분석" data-page-src="/widget-dashboard.html?embedded=1&pageCode=ANALYSIS" loading="lazy"></iframe>
+    </section>
     <section class="panel embedded-page" id="tab-live-telemetry">
       <h1 class="page-title">실시간 텔레메트리</h1>
       <p class="page-desc">SNMP와 Modbus 장비의 실시간 측정값을 확인합니다.</p>
@@ -3045,13 +3093,16 @@
       tasks: [],
       selectedDeviceId: null,
       selectedModel: null,
+      editingModelId: null,
       flatLocations: [],
       wizardDeviceId: null,
       wizardOptions: null,
       selectedLocCode: null,
+      selectedLocationDeviceId: null,
       locExpanded: new Set(),
       locByCode: {},
       deviceCountByLoc: {},
+      devicesByLoc: {},
       widgetDeviceIds: [],
       widgetDeviceGroupIds: [],
       lastWidgetSources: [],
@@ -3259,7 +3310,7 @@
         toast("이 메뉴에 접근할 권한이 없습니다", true);
         name = "home";
       }
-      const embedded = new Set(["widget-board", "live-telemetry", "mqtt-monitor"]);
+      const embedded = new Set(["widget-board", "analysis", "live-telemetry", "mqtt-monitor"]);
       if (name !== "devices") closeDeviceDetail(false);
       document.querySelectorAll("#tabs button").forEach((b) => b.classList.toggle("active", b.dataset.tab === name));
       document.querySelectorAll(".panel").forEach((p) => p.classList.toggle("active", p.id === "tab-" + name));
@@ -3489,10 +3540,46 @@
     function fillModelFormSelects() {
       fillSelect($("modelType"), state.codes.MODEL_TYPE || [], (c) =>
         `<option value="${c.id}">${esc(c.name)} (${esc(c.code)})</option>`);
-      fillSelect($("modelProtocol"), state.codes.PROTOCOL_TYPE || [], (c) =>
-        `<option value="${c.id}">${esc(c.name)} (${esc(c.code)})</option>`);
+      $("modelProtocols").innerHTML = (state.codes.PROTOCOL_TYPE || []).map((c) =>
+        `<label><input type="checkbox" value="${Number(c.id)}" /><span>${esc(c.name)} (${esc(c.code)})</span></label>`).join("");
       const snmp = (state.codes.PROTOCOL_TYPE || []).find((c) => c.code === "snmp");
-      if (snmp && $("modelProtocol")) $("modelProtocol").value = String(snmp.id);
+      if (snmp) $("modelProtocols").querySelector(`input[value="${snmp.id}"]`).checked = true;
+    }
+
+    function closeEntityDialog(id) {
+      const dialog = $(id);
+      if (dialog?.open) dialog.close();
+    }
+
+    document.querySelectorAll("[data-entity-dialog-close]").forEach((button) => {
+      button.onclick = () => {
+        const id = button.closest("dialog").id;
+        if (id === "modelDialog") state.returnToLoraModelMapping = false;
+        closeEntityDialog(id);
+      };
+    });
+    $("modelDialog").addEventListener("cancel", () => { state.returnToLoraModelMapping = false; });
+    $("mpCreateDialog").querySelector(".entity-dialog-content").appendChild($("mpCreateBox"));
+    $("mpEditDialog").querySelector(".entity-dialog-content").appendChild($("mpEditBox"));
+    $("mbPointDialog").querySelector(".entity-dialog-content").appendChild($("mbPointFormBox"));
+
+    function openModelDialog(model = null) {
+      state.editingModelId = model?.id || null;
+      fillModelFormSelects();
+      $("modelDialogTitle").textContent = model ? `모델 수정 — ${model.name}` : "모델 생성";
+      $("modelCreate").textContent = model ? "모델 저장" : "모델 등록";
+      $("modelName").value = model?.name || "";
+      $("modelMfr").value = model?.manufacturer || "";
+      $("modelDesc").value = model?.description || "";
+      if (model) $("modelType").value = String(model.deviceTypeId);
+      const selectedIds = new Set((model?.protocols || []).map((p) => Number(p.protocolTypeId)));
+      if (model) $("modelProtocols").querySelectorAll("input").forEach((input) => {
+        input.checked = selectedIds.has(Number(input.value));
+      });
+      $("modelProtocolsField").disabled = !!model;
+      $("modelProtocolHint").style.display = model ? "" : "none";
+      $("modelDialog").showModal();
+      $("modelName").focus();
     }
 
 
@@ -3562,14 +3649,18 @@
 
     async function refreshDeviceCounts() {
       state.deviceCountByLoc = {};
+      state.devicesByLoc = {};
       try {
-        const page = await api("/api/manager/devices?page=1&size=100");
-        for (const d of page.content || []) {
+        const devices = await fetchPageDeviceCatalog();
+        for (const d of devices) {
           const c = d.locationNodeCode;
           if (!c) continue;
           state.deviceCountByLoc[c] = (state.deviceCountByLoc[c] || 0) + 1;
+          (state.devicesByLoc[c] ||= []).push(d);
         }
-      } catch (_) { /* ignore */ }
+        Object.values(state.devicesByLoc).forEach((list) =>
+          list.sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), "ko")));
+      } catch (e) { toast(`위치별 장비 조회 실패: ${e.message}`, true); }
     }
 
     async function loadLocDevices() {
@@ -3577,23 +3668,20 @@
       const box = $("locDevices");
       if (!code || !box) return;
       const subtree = $("locSubtree")?.checked;
-      box.innerHTML = '<div class="muted">조회 중…</div>';
-      try {
-        const qs = new URLSearchParams({
-          page: "1",
-          size: "100",
-          locationNodeCode: code,
-        });
-        if (subtree) qs.set("includeSubtree", "true");
-        const page = await api(`/api/manager/devices?${qs}`);
-        const list = page.content || [];
-        if (!list.length) {
-          box.innerHTML = `<div class="empty">${subtree ? "이 위치·하위에 장비가 없습니다" : "이 위치에 직접 매달린 장비가 없습니다"}</div>`;
-          return;
+      const codes = [code];
+      if (subtree) {
+        for (let i = 0; i < codes.length; i++) {
+          codes.push(...(state.locByCode[codes[i]]?.children || []).map((child) => child.code));
         }
-        box.innerHTML = `<div class="muted" style="margin-bottom:8px">${list.length}대${subtree ? " (하위 포함)" : " (이 노드만)"}</div>`
-          + list.map((d) => `
-            <div class="dev-row">
+      }
+      const list = codes.flatMap((locationCode) => state.devicesByLoc[locationCode] || []);
+      if (!list.length) {
+        box.innerHTML = `<div class="empty">${subtree ? "이 위치·하위에 장비가 없습니다" : "이 위치에 직접 매달린 장비가 없습니다"}</div>`;
+        return;
+      }
+      box.innerHTML = `<div class="muted" style="margin-bottom:8px">${list.length}대${subtree ? " (하위 포함)" : " (이 노드만)"}</div>`
+        + list.map((d) => `
+            <div class="dev-row" data-device-id="${Number(d.id)}" tabindex="0" role="button" title="${esc(d.name)} 상세 보기">
               <div class="dev-ico">${deviceIconSvg()}</div>
               <div style="flex:1;min-width:0">
                 <b>${esc(d.name)}</b>
@@ -3601,13 +3689,86 @@
               </div>
               ${d.enabled ? '<span class="chip ok">사용</span>' : '<span class="chip bad">중지</span>'}
             </div>`).join("");
-      } catch (e) {
-        box.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+      box.querySelectorAll(".dev-row[data-device-id]").forEach((row) => {
+        const open = () => showLocationDevice(Number(row.dataset.deviceId), code);
+        row.addEventListener("click", open);
+        row.addEventListener("keydown", (event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            open();
+          }
+        });
+      });
+    }
+
+    async function showLocationDevice(deviceId, locationCode) {
+      selectLocation(locationCode);
+      state.selectedLocationDeviceId = Number(deviceId);
+      $("locLocationContent").style.display = "none";
+      document.querySelectorAll("#locTree .device-leaf").forEach((row) =>
+        row.classList.toggle("selected", Number(row.dataset.deviceId) === Number(deviceId)));
+      const box = $("locDeviceDetail");
+      box.style.display = "block";
+      box.innerHTML = `<div class="row" style="justify-content:space-between;margin-bottom:12px">
+          <strong>선택한 장비</strong>
+          <button type="button" class="ghost" id="locDeviceBack">← 위치 장비 목록</button>
+        </div><div class="muted">장비 정보를 불러오는 중…</div>`;
+      $("locDeviceBack").onclick = showLocationContents;
+      try {
+        const device = await api(`/api/manager/devices/${deviceId}`);
+        if (state.selectedLocationDeviceId !== Number(deviceId)) return;
+        let endpoints = [];
+        try { endpoints = await api(`/api/manager/devices/${deviceId}/endpoints`) || []; }
+        catch (_) { /* 통신 설정 조회 실패 시 기본 장비 정보는 계속 표시 */ }
+        if (state.selectedLocationDeviceId !== Number(deviceId)) return;
+        const fact = (label, value) => `<div><dt>${label}</dt><dd>${esc(value ?? "—")}</dd></div>`;
+        const groups = (device.deviceGroups || []).map((group) => group.name).join(", ") || "—";
+        box.innerHTML = `<div class="row" style="justify-content:space-between;margin-bottom:12px">
+            <strong>선택한 장비</strong>
+            <button type="button" class="ghost" id="locDeviceBack">← 위치 장비 목록</button>
+          </div>
+          <h3>${esc(device.name)} <span class="muted mono">#${device.id}</span></h3>
+          <dl class="loc-device-facts">
+            ${fact("모델", device.modelName)}
+            ${fact("제조사", device.manufacturer)}
+            ${fact("장비 유형", device.deviceTypeCode)}
+            ${fact("상태", device.enabled ? "사용" : "중지")}
+            ${fact("위치", device.locationNodeName || device.locationNodeCode)}
+            ${fact("Path", device.pathName || device.pathCode)}
+            ${fact("장비 그룹", groups)}
+            ${fact("자산 코드", device.assetCode)}
+            ${fact("시리얼", device.serialNumber)}
+            ${fact("설명", device.description)}
+          </dl>
+          <div class="muted" style="margin-top:12px;font-size:12px;font-weight:700">통신 설정</div>
+          <div style="font-size:12px;margin-top:4px">${endpoints.length
+            ? endpoints.map((endpoint) => `${esc(endpoint.protocolName || endpoint.protocolCode)} · ${esc(endpoint.host)}:${esc(endpoint.port)}${endpoint.enabled ? "" : " (중지)"}`).join("<br>")
+            : "등록된 일반 통신 설정 없음 (LoRa 장비는 LoRa 엔드포인트에서 관리)"}</div>`;
+        $("locDeviceBack").onclick = showLocationContents;
+      } catch (error) {
+        if (state.selectedLocationDeviceId === Number(deviceId))
+          box.innerHTML = `<div class="row" style="justify-content:space-between;margin-bottom:12px">
+              <strong>선택한 장비</strong>
+              <button type="button" class="ghost" id="locDeviceBack">← 위치 장비 목록</button>
+            </div><div class="empty">장비 상세 조회 실패: ${esc(error.message)}</div>`;
+        if (state.selectedLocationDeviceId === Number(deviceId)) $("locDeviceBack").onclick = showLocationContents;
       }
+    }
+
+    function showLocationContents() {
+      state.selectedLocationDeviceId = null;
+      $("locDeviceDetail").style.display = "none";
+      $("locLocationContent").style.display = "block";
+      document.querySelectorAll("#locTree .device-leaf").forEach((row) => row.classList.remove("selected"));
+      paintLocationTree();
+      if (state.selectedLocCode) loadLocDevices();
     }
 
     function selectLocation(code) {
       state.selectedLocCode = code;
+      state.selectedLocationDeviceId = null;
+      $("locLocationContent").style.display = "block";
+      $("locDeviceDetail").style.display = "none";
       document.querySelectorAll(".tree .row-item").forEach((el) => {
         el.classList.toggle("selected", el.dataset.code === code);
       });
@@ -3684,16 +3845,23 @@
       }
     }
 
-    function renderLocTree(nodes, ul, filterText) {
+    function locationBranchMatches(node, query) {
+      if (!query) return true;
+      if (`${node.name} ${node.code}`.toLowerCase().includes(query)) return true;
+      if ((state.devicesByLoc[node.code] || []).some((device) =>
+        `${device.name} ${device.modelName || ""} ${device.id}`.toLowerCase().includes(query))) return true;
+      return (node.children || []).some((child) => locationBranchMatches(child, query));
+    }
+
+    function renderLocTree(nodes, ul, filterText, ancestorMatches = false) {
       ul.innerHTML = "";
       const q = (filterText || "").trim().toLowerCase();
       for (const n of nodes || []) {
-        const blob = JSON.stringify(n).toLowerCase();
         const selfMatch = !q || n.name.toLowerCase().includes(q) || n.code.toLowerCase().includes(q);
-        const childMatch = q && blob.includes(q);
-        if (q && !selfMatch && !childMatch) continue;
+        if (q && !ancestorMatches && !locationBranchMatches(n, q)) continue;
 
-        const hasKids = !!(n.children && n.children.length);
+        const devices = state.devicesByLoc[n.code] || [];
+        const hasKids = !!(n.children?.length || devices.length);
         const open = !!q || state.locExpanded.has(n.code);
         const li = document.createElement("li");
         if (open) li.classList.add("open");
@@ -3744,7 +3912,28 @@
         if (hasKids) {
           const childUl = document.createElement("ul");
           childUl.className = "children";
-          renderLocTree(n.children, childUl, filterText);
+          renderLocTree(n.children, childUl, filterText, ancestorMatches || selfMatch);
+          for (const device of devices) {
+            if (q && !ancestorMatches && !selfMatch &&
+              !`${device.name} ${device.modelName || ""} ${device.id}`.toLowerCase().includes(q)) continue;
+            const deviceLi = document.createElement("li");
+            const deviceRow = document.createElement("div");
+            deviceRow.className = "row-item device-leaf" + (state.selectedLocationDeviceId === Number(device.id) ? " selected" : "");
+            deviceRow.dataset.deviceId = String(device.id);
+            deviceRow.tabIndex = 0;
+            deviceRow.setAttribute("role", "button");
+            deviceRow.title = `${device.name} · ${device.modelName || "모델 없음"} · #${device.id} — 오른쪽에 상세 표시`;
+            deviceRow.innerHTML = `<span class="ico">${deviceIconSvg()}</span><span class="label">${esc(device.name)}<span class="meta">${esc(device.modelName || "")} · #${device.id}</span></span>`;
+            deviceRow.onclick = () => showLocationDevice(device.id, n.code);
+            deviceRow.onkeydown = (event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                deviceRow.click();
+              }
+            };
+            deviceLi.appendChild(deviceRow);
+            childUl.appendChild(deviceLi);
+          }
           li.appendChild(childUl);
         }
         ul.appendChild(li);
@@ -3925,12 +4114,19 @@
           <td><b>${esc(m.name)}</b><div class="muted mono">#${m.id} · ${esc(m.manufacturer || "")}</div></td>
           <td>${esc(m.deviceTypeName || m.deviceTypeCode)}</td>
           <td>${(m.protocols || []).map((p) => esc(p.protocolName || p.protocolCode)).join(", ") || "–"}</td>
-          <td><button type="button" class="danger" data-del-model="${m.id}" style="padding:4px 8px;font-size:12px">삭제</button></td>
+          <td><div class="action-btns" data-role-gate="admin"><button type="button" class="ghost" data-edit-model="${m.id}">수정</button><button type="button" class="danger" data-del-model="${m.id}">삭제</button></div></td>
         </tr>`).join("") || `<tr><td colspan="4"><div class="empty">모델이 없습니다</div></td></tr>`;
       $("modelBody").querySelectorAll("tr[data-id]").forEach((tr) => {
         tr.onclick = (ev) => {
-          if (ev.target.closest("[data-del-model]")) return;
+          if (ev.target.closest("[data-edit-model],[data-del-model]")) return;
           selectModel(Number(tr.dataset.id));
+        };
+      });
+      $("modelBody").querySelectorAll("[data-edit-model]").forEach((btn) => {
+        btn.onclick = (event) => {
+          event.stopPropagation();
+          const model = state.models.find((item) => item.id === Number(btn.dataset.editModel));
+          if (model) openModelDialog(model);
         };
       });
       $("modelBody").querySelectorAll("[data-del-model]").forEach((btn) => {
@@ -3969,11 +4165,17 @@
       document.querySelectorAll("#modelBody tr").forEach((tr) => {
         tr.classList.toggle("selected", Number(tr.dataset.id) === id);
       });
-      $("mpCreateBox").style.display = "block";
+      closeEntityDialog("mpCreateDialog");
+      closeEntityDialog("mpEditDialog");
+      closeEntityDialog("mbPointDialog");
+      $("mpCreateBox").style.display = "none";
       $("mpBody").innerHTML = "";
+      $("mbPointBody").innerHTML = "";
+      $("mpPointSummary").textContent = "측정항목을 불러오는 중…";
       clearMpEdit();
       resetMpRows(3);
       updateModelPointUi();
+      loadModelPointsUi().catch((error) => { $("mpPointSummary").textContent = `조회 실패: ${error.message}`; });
     }
 
     function updateModelPointUi() {
@@ -3984,8 +4186,12 @@
       $("mpModbusContent").style.display = code === "modbus" ? "" : "none";
       $("mpMqttContent").style.display = code === "mqtt" ? "" : "none";
       $("mpLoad").style.display = code === "mqtt" ? "none" : "";
+      $("mpAddOpen").style.display = (state.selectedModel && (code === "snmp" || code === "modbus")) ? "" : "none";
       if (code === "mqtt") {
         const isLora = isLoraSensorModel(state.selectedModel);
+        $("mpPointSummary").textContent = isLora
+          ? "LoRa 측정항목은 아래의 매핑 항목 보기에서 확인하세요."
+          : "MQTT 모델 측정항목 등록은 아직 지원하지 않습니다.";
         $("mpMqttContent").querySelector(".empty").textContent = isLora
           ? "MQTT/LoRa 측정 항목은 OID·레지스터가 아니라 payload 필드 매핑으로 관리합니다."
           : "MQTT 모델 측정 항목 등록은 아직 지원하지 않습니다.";
@@ -4004,9 +4210,10 @@
         if (!isSnmp) {
           return loadModelPointsUi();
         }
-        $("mpCreateBox").style.display = "block";
         const points = await api(`/api/manager/device-models/${m.id}/protocols/${pid}/snmp-points`);
+        if (state.selectedModel?.id !== m.id || Number($("mpProtocol").value) !== pid) return;
         state.mpPoints = points || [];
+        $("mpPointSummary").textContent = `등록된 SNMP 측정항목 ${state.mpPoints.length}개`;
         clearMpEdit();
         $("mpBody").innerHTML = (points || []).map((p) =>
           `<tr>
@@ -4016,7 +4223,7 @@
             <td>${esc(p.dataPointType || "UNCLASSIFIED")}</td>
             <td class="mono">${p.scale == null ? "–" : esc(String(p.scale))}</td>
             <td class="actions">
-              <div class="row">
+              <div class="row" data-role-gate="admin">
                 <button type="button" class="primary" data-edit-point="${p.id}" style="padding:5px 10px;font-size:12px">수정</button>
                 <button type="button" class="danger" data-del-point="${p.id}" style="padding:5px 10px;font-size:12px">삭제</button>
               </div>
@@ -4040,7 +4247,6 @@
             } catch (e) { toast(e.message, true); }
           };
         });
-        toast(`측정 항목 ${points?.length || 0}개`);
         invalidateModelRequiresInstance(m.id);
         if (Number($("wzModel").value) === m.id) await updateInstanceUiForModel(m.id);
         if (state.selectedDeviceId) {
@@ -4048,15 +4254,42 @@
           if (dev?.modelId === m.id) await updateInstanceUiForModel(m.id);
         }
       } catch (e) {
-        toast(e.message, true);
+        if (state.selectedModel?.id === m.id && Number($("mpProtocol").value) === pid) {
+          $("mpPointSummary").textContent = `조회 실패: ${e.message}`;
+          toast(e.message, true);
+        }
       }
     }
 
-    $("mpLoad").onclick = () => loadModelPointsUi();
+    $("mpLoad").onclick = () => {
+      if (!state.selectedModel) return toast("모델을 먼저 선택하세요", true);
+      $("mpPointSummary").textContent = "측정항목을 새로고치는 중…";
+      loadModelPointsUi().catch((error) => toast(error.message, true));
+    };
+    $("mpAddOpen").onclick = () => {
+      const code = protocolCode(selectedModelProtocol());
+      if (code === "snmp") {
+        resetMpRows(3);
+        $("mpCreateBox").style.display = "block";
+        $("mpCreateDialog").showModal();
+        $("mpRows").querySelector(".mp-name")?.focus();
+      } else if (code === "modbus") {
+        clearModbusPointForm();
+        $("mbPointDialogTitle").textContent = "Modbus 측정항목 추가";
+        $("mbPointCancel").style.display = "";
+        $("mbPointDialog").showModal();
+        $("mbPointName").focus();
+      }
+    };
     $("mpProtocol").onchange = () => {
+      closeEntityDialog("mpCreateDialog");
+      closeEntityDialog("mpEditDialog");
+      closeEntityDialog("mbPointDialog");
       updateModelPointUi();
       $("mpBody").innerHTML = "";
       $("mbPointBody").innerHTML = "";
+      $("mpPointSummary").textContent = "측정항목을 불러오는 중…";
+      loadModelPointsUi().catch((error) => toast(error.message, true));
     };
 
     async function loadModelPointsUi() {
@@ -4064,6 +4297,7 @@
       if (code === "snmp") return loadSnmpPointsUi();
       if (code === "modbus") return loadModbusPointsUi();
       updateModelPointUi();
+      if (!code) $("mpPointSummary").textContent = "선택한 모델에 등록된 프로토콜이 없습니다.";
     }
 
     function fillDataPointTypeSelect(select, selectedId) {
@@ -4082,6 +4316,7 @@
     }
 
     function clearMpEdit() {
+      closeEntityDialog("mpEditDialog");
       state.mpEditPointId = null;
       $("mpEditBox").style.display = "none";
       $("mpEditId").textContent = "";
@@ -4106,10 +4341,11 @@
       $("mpEditScale").value = point.scale == null ? "" : String(point.scale);
       $("mpEditInst").value = point.requiresInstance ? "true" : "false";
       $("mpEditEnabled").value = point.enabled === false ? "false" : "true";
-      $("mpEditBox").scrollIntoView({ behavior: "smooth", block: "nearest" });
+      $("mpEditDialog").showModal();
+      $("mpEditName").focus();
     }
 
-    $("mpEditCancel").onclick = () => clearMpEdit();
+    $("mpEditCancel").onclick = () => { closeEntityDialog("mpEditDialog"); clearMpEdit(); };
 
     $("mpEditSave").onclick = async () => {
       const m = state.selectedModel;
@@ -4136,6 +4372,7 @@
           }),
         });
         toast("측정 항목을 저장했고 수집 spec을 재생성했습니다");
+        closeEntityDialog("mpEditDialog");
         clearMpEdit();
         await loadSnmpPointsUi();
       } catch (e) { toast(e.message, true); }
@@ -4187,6 +4424,7 @@
       fillUnitSelect($("mpRows").lastElementChild.querySelector(".mp-unit"));
       bindMpRowDelete($("mpRows").lastElementChild);
     };
+    $("mpCreateCancel").onclick = () => closeEntityDialog("mpCreateDialog");
 
     $("mpCreate").onclick = async () => {
       const m = state.selectedModel;
@@ -4216,11 +4454,13 @@
         });
         toast(`측정 항목 ${created?.length || points.length}개를 등록했습니다`);
         resetMpRows(3);
+        closeEntityDialog("mpCreateDialog");
         await loadSnmpPointsUi();
       } catch (e) { toast(e.message, true); }
     };
 
     function clearModbusPointForm() {
+      closeEntityDialog("mbPointDialog");
       state.modbusPointEditId = null;
       $("mbPointName").value = "";
       $("mbPointRegisterType").value = "HOLDING";
@@ -4282,7 +4522,9 @@
       if (!model || protocolCode(protocol) !== "modbus") return;
       try {
         const points = await api(`/api/manager/device-models/${model.id}/protocols/${protocol.id}/modbus-points`);
+        if (state.selectedModel?.id !== model.id || Number($("mpProtocol").value) !== Number(protocol.id)) return;
         state.modbusPoints = points || [];
+        $("mpPointSummary").textContent = `등록된 Modbus 측정항목 ${state.modbusPoints.length}개`;
         $("mbPointBody").innerHTML = state.modbusPoints.map((point) => `
           <tr><td><b>${esc(point.name)}</b>${point.enabled ? "" : ' <span class="chip warn">off</span>'}</td>
           <td>${esc(point.registerType)}</td>
@@ -4290,7 +4532,7 @@
           <td>${point.requiresInstance ? '<span class="chip">장비별 주소</span>' : `공통 ${esc(String(point.address))}`}</td>
           <td>${esc(point.unit || "–")}</td><td>${point.scale == null ? "–" : esc(String(point.scale))}</td>
           <td>${point.offset == null ? "–" : esc(String(point.offset))}</td>
-          <td class="actions"><div class="row"><button type="button" class="ghost" data-edit-mb-point="${point.id}">수정</button><button type="button" class="danger" data-delete-mb-point="${point.id}">삭제</button></div></td></tr>`
+          <td class="actions"><div class="row" data-role-gate="admin"><button type="button" class="ghost" data-edit-mb-point="${point.id}">수정</button><button type="button" class="danger" data-delete-mb-point="${point.id}">삭제</button></div></td></tr>`
         ).join("") || '<tr><td colspan="8"><div class="empty">등록된 Modbus 측정 항목이 없습니다</div></td></tr>';
         $("mbPointBody").querySelectorAll("[data-edit-mb-point]").forEach((button) => {
           button.onclick = () => {
@@ -4310,6 +4552,9 @@
             $("mbPointEnabled").value = String(point.enabled !== false);
             $("mbPointSave").textContent = `Modbus 항목 #${point.id} 저장`;
             $("mbPointCancel").style.display = "";
+            $("mbPointDialogTitle").textContent = `Modbus 측정항목 수정 #${point.id}`;
+            $("mbPointDialog").showModal();
+            $("mbPointName").focus();
           };
         });
         $("mbPointBody").querySelectorAll("[data-delete-mb-point]").forEach((button) => {
@@ -4322,7 +4567,12 @@
             } catch (error) { toast(error.message, true); }
           };
         });
-      } catch (error) { toast(error.message, true); }
+      } catch (error) {
+        if (state.selectedModel?.id === model.id && Number($("mpProtocol").value) === Number(protocol.id)) {
+          $("mpPointSummary").textContent = `조회 실패: ${error.message}`;
+          toast(error.message, true);
+        }
+      }
     }
 
     $("mbPointSave").onclick = async () => {
@@ -4342,44 +4592,60 @@
     };
     $("mbPointCancel").onclick = clearModbusPointForm;
     $("mpOpenLoraMapping").onclick = async () => {
-      if (!state.selectedModel || !isLoraSensorModel(state.selectedModel)) return;
-      state.selectedLoraModelId = state.selectedModel.id;
-      goTab("lora-model-mapping");
-      await loadLoraModels();
-      await selectLoraModel(state.selectedModel.id);
+      const model = state.selectedModel;
+      if (!model || !isLoraSensorModel(model)) return;
+      $("modelLoraPointsTitle").textContent = `${model.name} · LoRa 매핑 항목`;
+      $("modelLoraPointsDialog").dataset.modelId = String(model.id);
+      $("modelLoraPointsBody").innerHTML = '<tr><td colspan="7"><div class="empty">매핑을 불러오는 중…</div></td></tr>';
+      $("modelLoraPointsDialog").showModal();
+      try {
+        const points = await api(`/api/manager/device-models/${model.id}/lora-points`) || [];
+        if (!$("modelLoraPointsDialog").open || $("modelLoraPointsDialog").dataset.modelId !== String(model.id)) return;
+        $("modelLoraPointsBody").innerHTML = points.map((point) => `<tr>
+          <td class="mono">${esc(point.payloadField)}</td><td>${esc(point.pointName)}</td>
+          <td>${esc(point.dataPointTypeCode || "—")}</td><td>${esc(point.unit || "—")}</td>
+          <td>${point.scale ?? "—"}</td><td class="mono oid-cell">${esc(point.valueMap || "—")}</td>
+          <td>${point.enabled ? '<span class="chip ok">사용</span>' : '<span class="chip bad">중지</span>'}</td>
+        </tr>`).join("") || '<tr><td colspan="7"><div class="empty">등록된 LoRa 매핑 항목이 없습니다.</div></td></tr>';
+      } catch (error) {
+        if ($("modelLoraPointsDialog").open && $("modelLoraPointsDialog").dataset.modelId === String(model.id))
+          $("modelLoraPointsBody").innerHTML = `<tr><td colspan="7"><div class="empty">조회 실패: ${esc(error.message)}</div></td></tr>`;
+      }
     };
 
+    $("modelAddOpen").onclick = () => openModelDialog();
     $("modelCreate").onclick = async () => {
       const name = $("modelName").value.trim();
       const manufacturer = $("modelMfr").value.trim();
       const deviceTypeId = Number($("modelType").value);
-      const protocolTypeId = Number($("modelProtocol").value);
-      if (!name || !manufacturer || !deviceTypeId || !protocolTypeId) {
+      const protocols = [...$("modelProtocols").querySelectorAll("input:checked")]
+        .map((input) => ({ protocolTypeId: Number(input.value) }));
+      const editingId = state.editingModelId;
+      if (!name || !manufacturer || !deviceTypeId || (!editingId && !protocols.length)) {
         return toast("이름·제조사·유형·프로토콜을 입력하세요", true);
       }
       try {
-        const created = await api("/api/manager/device-models", {
-          method: "POST",
+        const saved = await api(editingId ? `/api/manager/device-models/${editingId}/details` : "/api/manager/device-models", {
+          method: editingId ? "PATCH" : "POST",
           body: JSON.stringify({
             name,
             manufacturer,
             deviceTypeId,
             description: $("modelDesc").value.trim() || null,
-            protocols: [{ protocolTypeId }],
+            ...(editingId ? {} : { protocols }),
           }),
         });
-        toast("모델 등록 #" + created.id);
-        $("modelName").value = "";
-        $("modelMfr").value = "";
-        $("modelDesc").value = "";
+        toast(editingId ? "모델을 수정했습니다" : "모델 등록 #" + saved.id);
+        closeEntityDialog("modelDialog");
+        state.editingModelId = null;
         await loadModels();
-        selectModel(created.id);
-        if (state.returnToLoraModelMapping) {
+        selectModel(saved.id || editingId);
+        if (!editingId && state.returnToLoraModelMapping) {
           state.returnToLoraModelMapping = false;
-          state.selectedLoraModelId = created.id;
+          state.selectedLoraModelId = saved.id;
           goTab("lora-model-mapping");
           await loadLoraModels();
-          await selectLoraModel(created.id);
+          await selectLoraModel(saved.id);
         }
       } catch (e) { toast(e.message, true); }
     };
@@ -7614,7 +7880,6 @@
           $("ccGroup").value = String(state.selectedCodeGroupId);
           document.querySelectorAll("#codeTreeBody tr[data-cg]").forEach((r) =>
             r.classList.toggle("selected", r.dataset.cg === tr.dataset.cg));
-          startCreateCode(groups.find((group) => group.id === state.selectedCodeGroupId));
         };
       });
       $("codeTreeBody").querySelectorAll("[data-add-cc]").forEach((button) => {
@@ -7629,7 +7894,8 @@
           $("cgName").value = group.groupName || "";
           $("cgFormTitle").textContent = `그룹 수정 #${group.id}`;
           $("cgSave").textContent = "저장";
-          $("cgCancelEdit").style.display = "";
+          $("cgDialog").showModal();
+          $("cgKey").focus();
         };
       });
       $("codeTreeBody").querySelectorAll("[data-delete-cg]").forEach((button) => {
@@ -7657,7 +7923,8 @@
           $("ccSort").value = code.sortOrder ?? 0;
           $("ccFormTitle").textContent = `코드 수정 — ${code.group.groupKey}`;
           $("ccSave").textContent = "저장";
-          $("ccCancelEdit").style.display = "";
+          $("ccDialog").showModal();
+          $("ccCode").focus();
         };
       });
       $("codeTreeBody").querySelectorAll("[data-delete-cc]").forEach((button) => {
@@ -7686,7 +7953,7 @@
       $("ccSort").value = "0";
       $("ccFormTitle").textContent = `코드 추가 — ${group.groupKey}`;
       $("ccSave").textContent = "등록";
-      $("ccCancelEdit").style.display = "none";
+      $("ccDialog").showModal();
       $("ccCode").focus();
     }
 
@@ -7698,7 +7965,6 @@
       state.editingCodeId = null;
       $("ccFormTitle").textContent = "코드 추가";
       $("ccSave").textContent = "등록";
-      $("ccCancelEdit").style.display = "none";
       $("ccCode").value = "";
       $("ccName").value = "";
       $("ccSort").value = "0";
@@ -7708,7 +7974,6 @@
       state.editingCodeGroupId = null;
       $("cgFormTitle").textContent = "그룹 추가";
       $("cgSave").textContent = "그룹 등록";
-      $("cgCancelEdit").style.display = "none";
       $("cgKey").value = "";
       $("cgName").value = "";
     }
@@ -8073,6 +8338,17 @@
       try { await loadCodes(); toast("코드 그룹을 새로고침했습니다"); }
       catch (e) { toast(e.message, true); }
     };
+    $("cgAddOpen").onclick = () => {
+      clearCodeGroupEdit();
+      $("cgDialog").showModal();
+      $("cgKey").focus();
+    };
+    $("ccAddOpen").onclick = () => {
+      const group = (state.codeGroups || []).find((item) => item.id === state.selectedCodeGroupId)
+        || state.codeGroups?.[0];
+      if (!group) return toast("먼저 코드 그룹을 생성하세요", true);
+      startCreateCode(group);
+    };
 
     $("cgSave").onclick = async () => {
       const groupKey = $("cgKey").value.trim();
@@ -8086,12 +8362,13 @@
           body: JSON.stringify({ groupKey, groupName }),
         });
         toast(state.editingCodeGroupId ? "코드 그룹을 수정했습니다" : "코드 그룹을 등록했습니다");
+        closeEntityDialog("cgDialog");
         clearCodeGroupEdit();
         await loadCodes();
       } catch (e) { toast(e.message, true); }
     };
 
-    $("cgCancelEdit").onclick = () => clearCodeGroupEdit();
+    $("cgCancelEdit").onclick = () => { closeEntityDialog("cgDialog"); clearCodeGroupEdit(); };
 
     $("ccSave").onclick = async () => {
       const groupId = Number($("ccGroup").value);
@@ -8113,12 +8390,13 @@
           });
           toast("코드를 등록했습니다");
         }
+        closeEntityDialog("ccDialog");
         clearCodeEdit();
         await loadCodes();
       } catch (e) { toast(e.message, true); }
     };
 
-    $("ccCancelEdit").onclick = () => clearCodeEdit();
+    $("ccCancelEdit").onclick = () => { closeEntityDialog("ccDialog"); clearCodeEdit(); };
     $("locExpandAll").onclick = () => {
       Object.keys(state.locByCode).forEach((c) => state.locExpanded.add(c));
       paintLocationTree();
@@ -8129,9 +8407,25 @@
     };
     $("locFilter").addEventListener("input", () => paintLocationTree());
     $("locSubtree").addEventListener("change", () => loadLocDevices());
-    $("locDevReload").onclick = () => loadLocDevices();
+    $("locDevReload").onclick = async () => {
+      await refreshDeviceCounts();
+      paintLocationTree();
+      await loadLocDevices();
+    };
     $("locParent").addEventListener("change", updateLocationAddParentHint);
     $("locType").addEventListener("change", syncLocationCreateTypeUi);
+    $("locAddOpen").onclick = () => {
+      $("locName").value = "";
+      $("locRackCapacity").value = "";
+      fillLocationAddParentSelect(state.selectedLocCode || "");
+      $("locCreateDialog").showModal();
+      $("locName").focus();
+    };
+    $("locEditOpen").onclick = () => {
+      if (!state.selectedLocCode) return toast("먼저 위치를 선택하세요", true);
+      $("locEditDialog").showModal();
+      $("locEditName").focus();
+    };
     $("locUseSelectedParent").onclick = () => {
       if (!state.selectedLocCode || !state.locByCode[state.selectedLocCode]) {
         return toast("왼쪽 트리에서 상위로 사용할 위치를 먼저 선택하세요", true);
@@ -8157,6 +8451,7 @@
           }),
         });
         toast("위치 정보를 저장했습니다");
+        closeEntityDialog("locEditDialog");
         await loadLocations();
         selectLocation(code);
       } catch (e) { toast(e.message, true); }
@@ -8212,15 +8507,14 @@
         });
         $("locOut").textContent = JSON.stringify(created, null, 2);
         toast("위치 추가: " + created.name);
+        closeEntityDialog("locCreateDialog");
         if (created.parentCode) state.locExpanded.add(created.parentCode);
         state.locExpanded.add(created.code);
         $("locName").value = "";
         $("locRackCapacity").value = "";
         await loadLocations();
         selectLocation(created.code);
-        // 연속으로 형제 위치를 추가할 수 있도록 상위 위치는 유지한다.
         fillLocationAddParentSelect(parentCode || "");
-        $("locName").focus();
       } catch (e) {
         $("locOut").textContent = e.message;
         toast(e.message, true);
@@ -10404,10 +10698,13 @@
       }
       state.returnToLoraModelMapping = true;
       goTab("models");
+      openModelDialog();
       $("modelType").value = String(loraType.id);
-      $("modelProtocol").value = String(mqttProtocol.id);
+      $("modelProtocols").querySelectorAll("input").forEach((input) => {
+        input.checked = Number(input.value) === Number(mqttProtocol.id);
+      });
       $("modelName").focus();
-      toast("LoRa 센서 · MQTT가 선택된 모델 등록 화면입니다");
+      toast("LoRa 센서 · MQTT가 선택된 모델 등록 창입니다");
     };
     $("loraMpCancelEdit").onclick = clearLoraMpForm;
     $("loraMpSave").onclick = async () => {
