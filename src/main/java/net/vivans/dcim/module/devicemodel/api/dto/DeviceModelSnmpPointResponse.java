@@ -8,11 +8,14 @@ public record DeviceModelSnmpPointResponse(
         Integer protocolId,
         Integer dataPointTypeId,
         String dataPointType,
+        Integer categoryCodeId,
+        String categoryCode,
+        String categoryName,
+        Integer unitCodeId,
+        String unit,
         String name,
         String oid,
         boolean requiresInstance,
-        Integer unitCodeId,
-        String unit,
         Double scale,
         boolean enabled
 ) {
@@ -24,11 +27,14 @@ public record DeviceModelSnmpPointResponse(
                 point.getModelProtocol().getId(),
                 point.getDataPointType() == null ? null : point.getDataPointType().getId(),
                 point.getDataPointType() == null ? null : point.getDataPointType().getCode(),
+                point.getCategoryCode() == null ? null : point.getCategoryCode().getId(),
+                point.getCategoryCode() == null ? null : point.getCategoryCode().getCode(),
+                point.getCategoryCode() == null ? null : point.getCategoryCode().getName(),
+                point.getUnitCode() == null ? null : point.getUnitCode().getId(),
+                point.getUnit(),
                 point.getName(),
                 point.getOid(),
                 point.isRequiresInstance(),
-                point.getUnitCode() == null ? null : point.getUnitCode().getId(),
-                point.getUnit(),
                 point.getScale(),
                 point.isEnabled()
         );

@@ -12,6 +12,7 @@ import net.vivans.dcim.module.query.domain.PointQuery;
 import net.vivans.dcim.module.query.domain.CalculatedMetricLastPoint;
 import net.vivans.dcim.module.query.domain.CalculatedMetricSeriesPoint;
 import net.vivans.dcim.module.query.domain.SeriesPoint;
+import net.vivans.dcim.module.query.domain.StatsSeriesPoint;
 import net.vivans.dcim.shared.exception.QueryException;
 
 import java.time.Duration;
@@ -73,6 +74,41 @@ public class InfluxPointQuery implements PointQuery {
             return mapSeries(query(flux));
         } catch (RuntimeException exception) {
             log.error("Query series failed: {}", exception.getMessage(), exception);
+            throw new QueryException("InfluxDB query failed");
+        }
+    }
+
+    @Override
+    public List<SeriesPoint> findRawSeries(
+            List<Integer> deviceIds,
+            List<String> pointNames,
+            Instant start,
+            Instant end
+    ) {
+        String flux = AnalysisFluxBuilder.buildRawQuery(
+                properties.getBucket(), properties.getMeasurement(), deviceIds, pointNames, start, end);
+        try {
+            return mapSeries(query(flux));
+        } catch (RuntimeException exception) {
+            log.error("Query raw analysis series failed: {}", exception.getMessage(), exception);
+            throw new QueryException("InfluxDB query failed");
+        }
+    }
+
+    @Override
+    public List<StatsSeriesPoint> findStatsSeries(
+            List<Integer> deviceIds,
+            List<String> pointNames,
+            Instant start,
+            Instant end,
+            String window
+    ) {
+        String flux = AnalysisFluxBuilder.buildStatsQuery(
+                properties.getBucket(), properties.getMeasurement(), deviceIds, pointNames, start, end, window);
+        try {
+            return mapStatsSeries(query(flux));
+        } catch (RuntimeException exception) {
+            log.error("Query aggregated analysis series failed: {}", exception.getMessage(), exception);
             throw new QueryException("InfluxDB query failed");
         }
     }
@@ -187,6 +223,25 @@ public class InfluxPointQuery implements PointQuery {
                 SeriesPoint point = toSeriesPoint(record);
                 if (point != null) {
                     points.add(point);
+                }
+            }
+        }
+        return points;
+    }
+
+    private static List<StatsSeriesPoint> mapStatsSeries(List<FluxTable> tables) {
+        List<StatsSeriesPoint> points = new ArrayList<>();
+        for (FluxTable table : tables) {
+            for (FluxRecord record : table.getRecords()) {
+                Integer deviceId = parseDeviceId(record.getValueByKey("device_id"));
+                String pointName = asText(record.getValueByKey("point_name"));
+                Double min = toDouble(record.getValueByKey("min"));
+                Double max = toDouble(record.getValueByKey("max"));
+                Double avg = toDouble(record.getValueByKey("mean"));
+                Instant time = record.getTime();
+                if (deviceId != null && pointName != null && min != null && max != null
+                        && avg != null && time != null) {
+                    points.add(new StatsSeriesPoint(deviceId, pointName, min, max, avg, time));
                 }
             }
         }

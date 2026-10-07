@@ -63,7 +63,13 @@ INSERT INTO `common_code` (`id`, `group_id`, `code`, `name`, `sort_order`) VALUE
 (60,10,'PA','Pa',8),
 (61,10,'L_PER_MIN','L/min',9),
 (62,10,'RPM','rpm',10),
-(63,10,'DBM','dBm',11);
+(63,10,'DBM','dBm',11),
+(64,10,'PPM','ppm',12),
+(65,10,'KVA','kVA',13),
+(66,10,'KPA','kPa',14),
+(67,10,'PSI','PSI',15),
+(68,10,'PUE','PUE',16),
+(69,10,'STATUS','status',17);
 
 INSERT INTO `device_model` (`id`, `name`, `manufacturer`, `device_type_id`, `description`) VALUES
 (1,CONVERT(0x5044552D337068617365 USING utf8mb4),CONVERT(0x5261726974616E USING utf8mb4),31,NULL),

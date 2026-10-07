@@ -7,6 +7,12 @@ public record DeviceModelSnmpPointCreateRequest(
         @Schema(description = "DATA_POINT_TYPE common_code.id", example = "101")
         Integer dataPointTypeId,
 
+        @Schema(description = "CATEGORY 그룹 common_code.id (분석 그래프 분류)", example = "13")
+        Integer categoryCodeId,
+
+        @Schema(description = "UNIT 그룹 common_code.id (단위가 없으면 null)", example = "53")
+        Integer unitCodeId,
+
         @Schema(description = "식별자·표시명", example = "PRI-FLOW")
         @NotBlank(message = "name must not be empty")
         String name,
@@ -17,9 +23,6 @@ public record DeviceModelSnmpPointCreateRequest(
 
         @Schema(description = "OID {instanceId} 치환 필요 여부 (기본 false)", example = "true")
         Boolean requiresInstance,
-
-        @Schema(description = "UNIT 그룹 common_code.id (단위가 없으면 null)", example = "53")
-        Integer unitCodeId,
 
         @Schema(description = "원시값 배율 (null이면 1). 예: raw/10 → 0.1", example = "0.1")
         Double scale,

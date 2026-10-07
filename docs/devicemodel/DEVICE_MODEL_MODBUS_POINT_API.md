@@ -22,7 +22,7 @@ SNMP와 동일하게 수집 정보는 두 층으로 나뉩니다.
 
 | 층 | 저장 위치 | 예시 |
 |----|-----------|------|
-| **모델 카탈로그** | `device_model_modbus_point` | point별 register/data/byte order, `TOTAL_WT`, `W` |
+| **모델 카탈로그** | `device_model_modbus_point` | point별 register/data/byte order, `TOTAL_WT`, `unit_code_id → UNIT` |
 | **장비 인스턴스** | `device_protocol_endpoint` + `device_endpoint_modbus` (향후) | `192.168.0.100`, `502`, `unit_id=3`, 인스턴스 주소 |
 
 모델에는 **name + 읽기 방법(register_type/data_type/byte_order)** 을 미리 정의하고,
@@ -34,7 +34,7 @@ Modbus point는 SNMP point와 **골격이 동일**하며 프로토콜 주소 체
 
 | SNMP point | Modbus point | 역할 |
 |------------|--------------|------|
-| `id`, `model_protocol_id`, `name`, `unit`, `enabled` | 동일 | 골격 |
+| `id`, `model_protocol_id`, `name`, `data_point_type_id`, `category_code_id`, `unit_code_id`, `enabled` | 동일 | 측정 유형·차트 분류·단위는 각각 `DATA_POINT_TYPE`, `CATEGORY`, `UNIT` 그룹 참조 |
 | `oid` | `register_type` + `address` | 무엇을 어디서 읽나 |
 | — | `data_type` + `byte_order` | raw 바이트를 어떻게 해석하나 (Modbus 특유) |
 | — | `scale` | 원시값 배율 |
@@ -106,6 +106,7 @@ SNMP와 동일하게 `name`은 식별자이자 표시명입니다.
 | `protocolId` | 해당 모델 소속 `device_model_protocol.id` |
 | 프로토콜 타입 | **Modbus만** 허용 (`protocolCode = modbus`) |
 | `name` | 필수. `(model_protocol_id, name)` UK |
+| `dataPointTypeId` | `DATA_POINT_TYPE` 그룹의 공통 코드 ID. 생략/null이면 `UNCLASSIFIED` 기본 적용 |
 | `registerType` / `dataType` | 필수 |
 | `byteOrder` | 멀티 레지스터면 필수, 단일이면 `NULL` |
 | `address` / `requiresInstance` | 상호 배타 (`requiresInstance=false` → address 필수 / `true` → address NULL) |
@@ -124,13 +125,15 @@ SNMP와 동일하게 `name`은 식별자이자 표시명입니다.
 | `id` | INT | N | PK | AUTO_INCREMENT | point ID |
 | `model_protocol_id` | INT | N | FK | | `device_model_protocol.id` |
 | `name` | VARCHAR(255) | N | UK* | | 식별자·표시명 (`TOTAL_WT`, `ONTO-TEMP`) |
+| `data_point_type_id` | INT | N | FK | | `common_code.id` (그룹 `DATA_POINT_TYPE`) |
+| `category_code_id` | INT | Y | FK | NULL | `common_code.id` (그룹 `CATEGORY`, 분석 그래프 분류) |
 | `register_type` | VARCHAR(30) | N | | | `COIL`/`DISCRETE`/`HOLDING`/`INPUT` |
 | `data_type` | VARCHAR(20) | N | | | `INT16`/`UINT16`/`INT32`/`UINT32`/`FLOAT32` |
 | `byte_order` | VARCHAR(10) | Y | | | `ABCD`/`CDAB`/`BADC`/`DCBA` (멀티만) |
 | `address` | INT | Y | | | 레지스터 주소 (고정 주소일 때) |
 | `requires_instance` | TINYINT(1) | N | | `0` | 주소를 인스턴스가 제공하는지 (boolean) |
 | `scale` | DOUBLE | Y | | | 원시값 배율 (NULL이면 1) |
-| `unit` | VARCHAR(50) | Y | | | 단위 (`W`, `A`, `°C`, `%`) |
+| `unit_code_id` | INT | Y | FK | | `common_code.id` (그룹 `UNIT`; 단위가 없으면 NULL) |
 | `enabled` | TINYINT(1) | N | | `1` | 사용 여부 (boolean) |
 | `created_dt` | TIMESTAMP(6) | Y | | `CURRENT_TIMESTAMP(6)` | 생성 시각 |
 | `updated_dt` | TIMESTAMP(6) | Y | | `... ON UPDATE ...` | 수정 시각 |
@@ -142,6 +145,9 @@ SNMP와 동일하게 `name`은 식별자이자 표시명입니다.
 | FK | 참조 | ON DELETE | ON UPDATE |
 |----|------|-----------|-----------|
 | `fk_device_model_modbus_point_model_protocol_id` | `device_model_protocol(id)` | CASCADE | CASCADE |
+| `fk_device_model_modbus_point_data_point_type_id` | `common_code(id)` (`code_group=DATA_POINT_TYPE`) | RESTRICT | CASCADE |
+| `fk_device_model_modbus_point_category_code_id` | `common_code(id)` (`code_group=CATEGORY`) | RESTRICT | CASCADE |
+| `fk_device_model_modbus_point_unit_code_id` | `common_code(id)` (`code_group=UNIT`) | RESTRICT | CASCADE |
 
 **CHECK 제약**
 
@@ -153,7 +159,7 @@ SNMP와 동일하게 `name`은 식별자이자 표시명입니다.
 
 ---
 
-## 3. API 요약 (예정)
+## 3. API 요약
 
 | 메서드 | 경로 | 기능 |
 |--------|------|------|
@@ -165,6 +171,41 @@ SNMP와 동일하게 `name`은 식별자이자 표시명입니다.
 
 SNMP point API([DEVICE_MODEL_SNMP_POINT_API.md](DEVICE_MODEL_SNMP_POINT_API.md) §3~6)와 동일한 sub-resource 구조·오류 규칙을 따릅니다.
 
+등록·수정 요청은 단위 문자열 대신 `UNIT` 그룹의 `common_code.id`를 전달합니다. 단위가 없는 포인트는 `unitCodeId: null`을 보냅니다.
+
+```json
+{
+  "name": "TOTAL_WT",
+  "dataPointTypeId": 1,
+  "categoryCodeId": 13,
+  "registerType": "HOLDING",
+  "dataType": "FLOAT32",
+  "byteOrder": "CDAB",
+  "address": null,
+  "requiresInstance": true,
+  "scale": 1000,
+  "offset": 0,
+  "unitCodeId": 53,
+  "enabled": true
+}
+```
+
+응답에는 참조 ID와 화면 표시용 단위를 함께 반환합니다.
+
+```json
+{
+  "dataPointTypeId": 1,
+  "dataPointType": "POWER",
+  "categoryCodeId": 13,
+  "categoryCode": "POWER",
+  "categoryName": "전력",
+  "unitCodeId": 53,
+  "unit": "W"
+}
+```
+
+`dataPointTypeId`, `categoryCodeId`, `unitCodeId`는 환경별 ID가 다를 수 있으므로 실제 요청 전에 각각 `DATA_POINT_TYPE`, `CATEGORY`, `UNIT` 그룹의 공통 코드 조회 API에서 확인해야 합니다. 카테고리 미지정은 `categoryCodeId: null`로 둘 수 있습니다.
+
 ---
 
 ## 4. 예시 — 실제 장비 매핑
@@ -173,28 +214,28 @@ SNMP point API([DEVICE_MODEL_SNMP_POINT_API.md](DEVICE_MODEL_SNMP_POINT_API.md) 
 
 `host` 1개 + `unit_id` 1개 + point 여러 개(각 고정 주소). 단일 레지스터라 `byte_order`는 NULL.
 
-| name | register_type | data_type | byte_order | address | requires_instance | scale | unit |
-|------|---------------|-----------|------------|---------|-------------------|-------|------|
-| ONTO-TEMP | INPUT | INT16 | NULL | 256 | 0 | 0.1 | °C |
-| OFF-TEMP | INPUT | INT16 | NULL | 257 | 0 | 0.1 | °C |
-| FAN_SPEED1 | INPUT | UINT16 | NULL | 4 | 0 | 0.1 | % |
+| name | data_point_type | register_type | data_type | byte_order | address | requires_instance | scale | unit_code_id → UNIT |
+|------|-----------------|---------------|-----------|------------|---------|-------------------|-------|----------------------|
+| ONTO-TEMP | TEMPERATURE | INPUT | INT16 | NULL | 256 | 0 | 0.1 | CELSIUS / °C |
+| OFF-TEMP | TEMPERATURE | INPUT | INT16 | NULL | 257 | 0 | 0.1 | CELSIUS / °C |
+| FAN_SPEED1 | UNCLASSIFIED | INPUT | UINT16 | NULL | 4 | 0 | 0.1 | PERCENT / % |
 
 > `signed:true` → `INT16`, `signed:false` → `UINT16`, `raw/10` → `scale=0.1`, `readInputRegisters` → `INPUT`.
 
 ### 4.2 쿨러 (IMCOOLER) — HOLDING 레지스터
 
-| name | register_type | data_type | byte_order | address | requires_instance | scale | unit |
-|------|---------------|-----------|------------|---------|-------------------|-------|------|
-| IN-TEMP | HOLDING | INT16 | NULL | 8963 | 0 | 0.1 | °C |
-| OUT-TEMP | HOLDING | INT16 | NULL | 8964 | 0 | 0.1 | °C |
+| name | data_point_type | register_type | data_type | byte_order | address | requires_instance | scale | unit_code_id → UNIT |
+|------|-----------------|---------------|-----------|------------|---------|-------------------|-------|----------------------|
+| IN-TEMP | TEMPERATURE | HOLDING | INT16 | NULL | 8963 | 0 | 0.1 | CELSIUS / °C |
+| OUT-TEMP | TEMPERATURE | HOLDING | INT16 | NULL | 8964 | 0 | 0.1 | CELSIUS / °C |
 
 ### 4.3 분전반 회로 — 인스턴스 주소, FLOAT32
 
 같은 측정(`TOTAL_WT`)을 회로(=별도 device)마다 다른 주소로 읽음 → 주소는 인스턴스가 제공.
 
-| name | register_type | data_type | byte_order | address | requires_instance | scale | unit |
-|------|---------------|-----------|------------|---------|-------------------|-------|------|
-| TOTAL_WT | HOLDING | FLOAT32 | CDAB | NULL | 1 | 1000 | W |
+| name | data_point_type | register_type | data_type | byte_order | address | requires_instance | scale | unit_code_id → UNIT |
+|------|-----------------|---------------|-----------|------------|---------|-------------------|-------|----------------------|
+| TOTAL_WT | POWER | HOLDING | FLOAT32 | CDAB | NULL | 1 | 1000 | W / W |
 
 > 실제 주소(11667 등)와 `unit_id`는 `device_endpoint_modbus`(향후)에 회로별로 저장. Influx는 회로마다 별도 `device_id` 태그.
 
@@ -243,11 +284,12 @@ readInputRegisters(host, port, unitId, address, quantity)   → Integer[]  (raw 
 
 | 항목 | 상태 |
 |------|------|
-| 엔티티 · enum | 구현 완료 |
-| V010 DDL | 구현 완료 |
-| Repository / Service / Controller / DTO | 미구현 |
-| device_endpoint_modbus | 미구현 |
-| 스크립트 생성 | 미구현 |
+| 모델 포인트 엔티티·Repository·Service·Controller·DTO | 구현 완료 |
+| Modbus 단위의 `UNIT` 공통 코드 참조 | `unit_code_id` 적용 |
+| Modbus 측정 유형의 `DATA_POINT_TYPE` 공통 코드 참조 | `data_point_type_id` 적용 |
+| 기존 DB 측정 유형 기본값 이관 | `55_device_model_modbus_point_data_point_type.sql` 적용 필요 |
+| device_endpoint_modbus | 구현 완료 |
+| 수집 스크립트 동기화 | 수집 task 동기화 흐름에서 관리 |
 
 ---
 

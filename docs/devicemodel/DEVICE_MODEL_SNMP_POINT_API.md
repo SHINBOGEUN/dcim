@@ -28,6 +28,8 @@ SNMP 수집에 필요한 정보는 두 층으로 나뉩니다.
 모델에는 **name + OID(또는 OID 템플릿)** 를 미리 정의해 두고,  
 장비 등록·스크립트 생성 시 `host`, `port`, `instanceId`를 합쳐 최종 OID를 만듭니다.
 
+포인트 메타데이터는 `DATA_POINT_TYPE`(기존 데이터 유형), `CATEGORY`(분석 그래프 분류), `UNIT`(단위) 공통 코드로 구분합니다. `categoryCodeId`는 선택 항목이며 생략/null이면 미분류 상태로 저장됩니다. 기존 `dataPointTypeId`와는 별도 역할입니다.
+
 ### 1.1 OID 패턴
 
 같은 모델이라도 장비 연결 순서(MIB instance index)에 따라 OID가 달라지는 경우가 있습니다.

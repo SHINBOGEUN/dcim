@@ -52,15 +52,19 @@ public class DeviceModelSnmpPoint extends BaseEntity {
     @JoinColumn(name = "data_point_type_id", nullable = false)
     private CommonCode dataPointType;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_code_id")
+    private CommonCode categoryCode;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "unit_code_id")
+    private CommonCode unitCode;
+
     @Column(nullable = false, length = 512)
     private String oid;
 
     @Column(name = "requires_instance", nullable = false)
     private boolean requiresInstance;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "unit_code_id")
-    private CommonCode unitCode;
 
     /** 원시값 배율. null이면 collector가 1.0으로 취급 */
     private Double scale;
@@ -75,12 +79,14 @@ public class DeviceModelSnmpPoint extends BaseEntity {
             boolean requiresInstance,
             CommonCode unitCode,
             Double scale,
-            boolean enabled
+            boolean enabled,
+            CommonCode categoryCode
     ) {
         validateModelProtocol(modelProtocol);
         validateName(name);
         validateOid(oid, requiresInstance);
         validateScale(scale);
+        validateCategoryCode(categoryCode);
         this.modelProtocol = modelProtocol;
         this.name = name;
         this.oid = oid;
@@ -88,6 +94,7 @@ public class DeviceModelSnmpPoint extends BaseEntity {
         this.unitCode = unitCode;
         this.scale = scale;
         this.enabled = enabled;
+        this.categoryCode = categoryCode;
     }
 
     public static DeviceModelSnmpPoint create(
@@ -99,14 +106,24 @@ public class DeviceModelSnmpPoint extends BaseEntity {
             Double scale,
             boolean enabled
     ) {
-        return new DeviceModelSnmpPoint(modelProtocol, name, oid, requiresInstance, unitCode, scale, enabled);
+        return new DeviceModelSnmpPoint(modelProtocol, name, oid, requiresInstance, unitCode, scale, enabled, null);
     }
 
     public static DeviceModelSnmpPoint create(
             DeviceModelProtocol modelProtocol, String name, String oid, boolean requiresInstance,
             CommonCode unitCode, Double scale, boolean enabled, CommonCode dataPointType) {
-        DeviceModelSnmpPoint point = new DeviceModelSnmpPoint(modelProtocol, name, oid, requiresInstance, unitCode, scale, enabled);
+        DeviceModelSnmpPoint point = create(modelProtocol, name, oid, requiresInstance, unitCode, scale, enabled);
         point.dataPointType = dataPointType;
+        return point;
+    }
+
+    public static DeviceModelSnmpPoint create(
+            DeviceModelProtocol modelProtocol, String name, String oid, boolean requiresInstance,
+            CommonCode unitCode, Double scale, boolean enabled, CommonCode dataPointType, CommonCode categoryCode) {
+        validateCategoryCode(categoryCode);
+        DeviceModelSnmpPoint point = create(modelProtocol, name, oid, requiresInstance, unitCode, scale, enabled);
+        point.dataPointType = dataPointType;
+        point.categoryCode = categoryCode;
         return point;
     }
 
@@ -127,16 +144,23 @@ public class DeviceModelSnmpPoint extends BaseEntity {
         this.unitCode = unitCode;
         this.scale = scale;
         this.enabled = enabled;
+        this.categoryCode = null;
     }
 
     public void update(String name, String oid, boolean requiresInstance, CommonCode unitCode, Double scale,
-                       boolean enabled, CommonCode dataPointType) {
+                       boolean enabled, CommonCode dataPointType, CommonCode categoryCode) {
+        validateCategoryCode(categoryCode);
         update(name, oid, requiresInstance, unitCode, scale, enabled);
         this.dataPointType = dataPointType;
+        this.categoryCode = categoryCode;
     }
 
     public String getUnit() {
         return unitCode == null ? null : unitCode.getName();
+    }
+
+    public String getCategory() {
+        return categoryCode == null ? null : categoryCode.getName();
     }
 
     public String resolveOid(Integer instanceId) {
@@ -201,6 +225,12 @@ public class DeviceModelSnmpPoint extends BaseEntity {
         }
         if (!Double.isFinite(scale)) {
             throw new IllegalArgumentException("scale must be a finite number");
+        }
+    }
+
+    private static void validateCategoryCode(CommonCode categoryCode) {
+        if (categoryCode != null && !"CATEGORY".equals(categoryCode.getCodeGroup().getGroupKey())) {
+            throw new IllegalArgumentException("categoryCode must belong to CATEGORY group");
         }
     }
 }

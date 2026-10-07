@@ -4,13 +4,18 @@ import net.vivans.dcim.module.devicemodel.domain.model.DeviceModelModbusPoint;
 import net.vivans.dcim.module.devicemodel.domain.model.ModbusByteOrder;
 import net.vivans.dcim.module.devicemodel.domain.model.ModbusDataType;
 import net.vivans.dcim.module.devicemodel.domain.model.ModbusRegisterType;
-import org.antlr.v4.runtime.misc.IntegerList;
-
 public record DeviceModelModbusPointResponse(
         Integer id,
         Integer modelId,
         Integer protocolId,
         String name,
+        Integer dataPointTypeId,
+        String dataPointType,
+        Integer categoryCodeId,
+        String categoryCode,
+        String categoryName,
+        Integer unitCodeId,
+        String unit,
         ModbusRegisterType registerType,
         ModbusDataType dataType,
         ModbusByteOrder byteOrder,
@@ -18,7 +23,6 @@ public record DeviceModelModbusPointResponse(
         boolean requiresInstance,
         Double scale,
         Double offset,
-        String unit,
         boolean enabled
 ) {
 
@@ -28,6 +32,13 @@ public record DeviceModelModbusPointResponse(
                 point.getModelProtocol().getId(),
                 point.getModelProtocol().getId(),
                 point.getName(),
+                point.getDataPointType().getId(),
+                point.getDataPointType().getCode(),
+                point.getCategoryCode() == null ? null : point.getCategoryCode().getId(),
+                point.getCategoryCode() == null ? null : point.getCategoryCode().getCode(),
+                point.getCategoryCode() == null ? null : point.getCategoryCode().getName(),
+                point.getUnitCode() == null ? null : point.getUnitCode().getId(),
+                point.getUnit(),
                 point.getRegisterType(),
                 point.getDataType(),
                 point.getByteOrder(),
@@ -35,7 +46,6 @@ public record DeviceModelModbusPointResponse(
                 point.isRequiresInstance(),
                 point.getScale(),
                 point.getOffset(),
-                point.getUnit(),
                 point.isEnabled()
         );
     }

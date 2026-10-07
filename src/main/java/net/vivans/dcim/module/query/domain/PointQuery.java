@@ -22,6 +22,21 @@ public interface PointQuery {
             String window
     );
 
+    List<SeriesPoint> findRawSeries(
+            List<Integer> deviceIds,
+            List<String> pointNames,
+            Instant start,
+            Instant end
+    );
+
+    List<StatsSeriesPoint> findStatsSeries(
+            List<Integer> deviceIds,
+            List<String> pointNames,
+            Instant start,
+            Instant end,
+            String window
+    );
+
     /** 구간 내 device+point별 첫 샘플 */
     List<LastPoint> findFirstInRange(
             List<Integer> deviceIds,

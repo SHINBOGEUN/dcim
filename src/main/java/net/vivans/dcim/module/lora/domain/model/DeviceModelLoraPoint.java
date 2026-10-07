@@ -57,6 +57,10 @@ public class DeviceModelLoraPoint extends BaseEntity {
     private CommonCode dataPointType;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_code_id")
+    private CommonCode categoryCode;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "unit_code_id")
     private CommonCode unitCode;
 
@@ -70,16 +74,18 @@ public class DeviceModelLoraPoint extends BaseEntity {
 
     private DeviceModelLoraPoint(
             DeviceModel deviceModel, String payloadField, String pointName, CommonCode dataPointType,
-            CommonCode unitCode, Double scale, String valueMap, boolean enabled
+            CommonCode unitCode, Double scale, String valueMap, boolean enabled, CommonCode categoryCode
     ) {
         validateDeviceModel(deviceModel);
         validatePayloadField(payloadField);
         validatePointName(pointName);
         validateDataPointType(dataPointType);
+        validateCategoryCode(categoryCode);
         this.deviceModel = deviceModel;
         this.payloadField = payloadField.trim();
         this.pointName = pointName.trim();
         this.dataPointType = dataPointType;
+        this.categoryCode = categoryCode;
         this.unitCode = unitCode;
         this.scale = scale;
         this.valueMap = valueMap;
@@ -88,29 +94,49 @@ public class DeviceModelLoraPoint extends BaseEntity {
 
     public static DeviceModelLoraPoint create(
             DeviceModel deviceModel, String payloadField, String pointName, CommonCode dataPointType,
+            CommonCode unitCode, Double scale, String valueMap, boolean enabled, CommonCode categoryCode
+    ) {
+        return new DeviceModelLoraPoint(deviceModel, payloadField, pointName, dataPointType, unitCode, scale, valueMap, enabled, categoryCode);
+    }
+
+    public static DeviceModelLoraPoint create(
+            DeviceModel deviceModel, String payloadField, String pointName, CommonCode dataPointType,
             CommonCode unitCode, Double scale, String valueMap, boolean enabled
     ) {
-        return new DeviceModelLoraPoint(deviceModel, payloadField, pointName, dataPointType, unitCode, scale, valueMap, enabled);
+        return create(deviceModel, payloadField, pointName, dataPointType, unitCode, scale, valueMap, enabled, null);
     }
 
     public void update(
             String payloadField, String pointName, CommonCode dataPointType,
-            CommonCode unitCode, Double scale, String valueMap, boolean enabled
+            CommonCode unitCode, Double scale, String valueMap, boolean enabled, CommonCode categoryCode
     ) {
         validatePayloadField(payloadField);
         validatePointName(pointName);
         validateDataPointType(dataPointType);
+        validateCategoryCode(categoryCode);
         this.payloadField = payloadField.trim();
         this.pointName = pointName.trim();
         this.dataPointType = dataPointType;
+        this.categoryCode = categoryCode;
         this.unitCode = unitCode;
         this.scale = scale;
         this.valueMap = valueMap;
         this.enabled = enabled;
     }
 
+    public void update(
+            String payloadField, String pointName, CommonCode dataPointType,
+            CommonCode unitCode, Double scale, String valueMap, boolean enabled
+    ) {
+        update(payloadField, pointName, dataPointType, unitCode, scale, valueMap, enabled, null);
+    }
+
     public String getUnit() {
         return unitCode == null ? null : unitCode.getName();
+    }
+
+    public String getCategory() {
+        return categoryCode == null ? null : categoryCode.getName();
     }
 
     private static void validateDeviceModel(DeviceModel deviceModel) {
@@ -134,6 +160,12 @@ public class DeviceModelLoraPoint extends BaseEntity {
     private static void validateDataPointType(CommonCode dataPointType) {
         if (dataPointType == null) {
             throw new IllegalArgumentException("dataPointType is required");
+        }
+    }
+
+    private static void validateCategoryCode(CommonCode categoryCode) {
+        if (categoryCode != null && !"CATEGORY".equals(categoryCode.getCodeGroup().getGroupKey())) {
+            throw new IllegalArgumentException("categoryCode must belong to CATEGORY group");
         }
     }
 }

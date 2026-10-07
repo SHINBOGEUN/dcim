@@ -71,17 +71,19 @@ public class DeviceModelQueryService {
             for (DeviceModelSnmpPoint point : snmpPointRepository.findAllByModelProtocolIdOrderByIdAsc(original.getId())) {
                 snmpPointRepository.save(DeviceModelSnmpPoint.create(target, point.getName(), point.getOid(),
                         point.isRequiresInstance(), point.getUnitCode(), point.getScale(), point.isEnabled(),
-                        point.getDataPointType()));
+                        point.getDataPointType(), point.getCategoryCode()));
             }
             for (DeviceModelModbusPoint point : modbusPointRepository.findAllByModelProtocolIdOrderByIdAsc(original.getId())) {
-                modbusPointRepository.save(DeviceModelModbusPoint.create(target, point.getName(), point.getRegisterType(),
-                        point.getDataType(), point.getByteOrder(), point.getAddress(), point.isRequiresInstance(),
-                        point.getScale(), point.getOffset(), point.getUnit(), point.isEnabled()));
+                modbusPointRepository.save(DeviceModelModbusPoint.create(target, point.getName(), point.getDataPointType(),
+                        point.getCategoryCode(), point.getRegisterType(), point.getDataType(), point.getByteOrder(),
+                        point.getAddress(), point.isRequiresInstance(), point.getScale(), point.getOffset(),
+                        point.getUnitCode(), point.isEnabled()));
             }
         }
         for (DeviceModelLoraPoint point : loraPointRepository.findAllByDeviceModelIdOrderByIdAsc(sourceId)) {
             loraPointRepository.save(DeviceModelLoraPoint.create(clone, point.getPayloadField(), point.getPointName(),
-                    point.getDataPointType(), point.getUnitCode(), point.getScale(), point.getValueMap(), point.isEnabled()));
+                    point.getDataPointType(), point.getUnitCode(), point.getScale(), point.getValueMap(),
+                    point.isEnabled(), point.getCategoryCode()));
         }
         return DeviceModelResponse.from(clone);
     }

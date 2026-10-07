@@ -14,6 +14,7 @@ import net.vivans.dcim.module.devicemodel.domain.repository.DeviceModelSnmpPoint
 import net.vivans.dcim.module.common.domain.model.CommonCode;
 import net.vivans.dcim.module.common.domain.repository.CommonCodeRepository;
 import net.vivans.dcim.module.common.application.UnitCodeResolver;
+import net.vivans.dcim.module.common.application.CategoryCodeResolver;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +33,7 @@ public class DeviceModelSnmpPointQueryService {
     private final CollectionScriptSyncService collectionScriptSyncService;
     private final CommonCodeRepository commonCodeRepository;
     private final UnitCodeResolver unitCodeResolver;
+    private final CategoryCodeResolver categoryCodeResolver;
 
     public List<DeviceModelSnmpPointResponse> getDeviceModelSnmpPoints(Integer modelId, Integer protocolId) {
         findSnmpProtocol(modelId, protocolId);
@@ -110,7 +112,7 @@ public class DeviceModelSnmpPointQueryService {
         boolean enabled = request.enabled() == null || request.enabled();
 
         point.update(request.name(), request.oid(), requiresInstance, unitCodeResolver.resolve(request.unitCodeId()), request.scale(), enabled,
-                resolveDataPointType(request.dataPointTypeId()));
+                resolveDataPointType(request.dataPointTypeId()), categoryCodeResolver.resolve(request.categoryCodeId()));
 
         DeviceModelSnmpPoint saved = deviceModelSnmpPointRepository.save(point);
         collectionScriptSyncService.regenerateByModelId(modelId);
@@ -177,7 +179,8 @@ public class DeviceModelSnmpPointQueryService {
                 unitCodeResolver.resolve(request.unitCodeId()),
                 request.scale(),
                 enabled,
-                resolveDataPointType(request.dataPointTypeId())
+                resolveDataPointType(request.dataPointTypeId()),
+                categoryCodeResolver.resolve(request.categoryCodeId())
         );
     }
 

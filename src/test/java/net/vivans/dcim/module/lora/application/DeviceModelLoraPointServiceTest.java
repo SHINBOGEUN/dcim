@@ -5,6 +5,7 @@ import net.vivans.dcim.module.common.domain.model.CodeGroup;
 import net.vivans.dcim.module.common.domain.model.CommonCode;
 import net.vivans.dcim.module.common.domain.repository.CommonCodeRepository;
 import net.vivans.dcim.module.common.application.UnitCodeResolver;
+import net.vivans.dcim.module.common.application.CategoryCodeResolver;
 import net.vivans.dcim.module.devicemodel.domain.model.DeviceModel;
 import net.vivans.dcim.module.devicemodel.domain.repository.DeviceModelRepository;
 import net.vivans.dcim.module.lora.api.dto.DeviceModelLoraPointRequest;
@@ -39,7 +40,7 @@ class DeviceModelLoraPointServiceTest {
     private final DeviceModelLoraPointService service = new DeviceModelLoraPointService(
             deviceModelLoraPointRepository, deviceModelRepository, new LoraDataPointTypeResolver(commonCodeRepository),
             new LoraValueMapValidator(new ObjectMapper()), new LoraModelTypeValidator(),
-            new UnitCodeResolver(commonCodeRepository), eventPublisher);
+            new UnitCodeResolver(commonCodeRepository), new CategoryCodeResolver(commonCodeRepository), eventPublisher);
 
     @Test
     void create_withLoraSensorModel_succeeds() {
@@ -52,7 +53,7 @@ class DeviceModelLoraPointServiceTest {
         when(deviceModelLoraPointRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         DeviceModelLoraPointResponse response = service.create(1,
-                new DeviceModelLoraPointRequest("object.TempC_SHT", "TEMPERATURE", null, null, 1.0, null, true));
+                new DeviceModelLoraPointRequest("object.TempC_SHT", "TEMPERATURE", null, null, null, 1.0, null, true));
 
         assertThat(response.payloadField()).isEqualTo("object.TempC_SHT");
         assertThat(response.pointName()).isEqualTo("TEMPERATURE");
@@ -64,7 +65,7 @@ class DeviceModelLoraPointServiceTest {
         when(deviceModelRepository.findById(1)).thenReturn(Optional.of(model));
 
         assertThatThrownBy(() -> service.create(1,
-                new DeviceModelLoraPointRequest("object.TempC_SHT", "TEMPERATURE", null, null, 1.0, null, true)))
+                new DeviceModelLoraPointRequest("object.TempC_SHT", "TEMPERATURE", null, null, null, 1.0, null, true)))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("LoRa 설정은 MODEL_TYPE=LORA_SENSOR 모델에만 등록할 수 있습니다.");
 
@@ -79,7 +80,7 @@ class DeviceModelLoraPointServiceTest {
         when(deviceModelLoraPointRepository.findById(9)).thenReturn(Optional.of(point));
 
         assertThatThrownBy(() -> service.update(1, 9,
-                new DeviceModelLoraPointRequest("object.TempC_SHT", "TEMPERATURE", null, null, 1.0, null, true)))
+                new DeviceModelLoraPointRequest("object.TempC_SHT", "TEMPERATURE", null, null, null, 1.0, null, true)))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("LoRa 설정은 MODEL_TYPE=LORA_SENSOR 모델에만 등록할 수 있습니다.");
 

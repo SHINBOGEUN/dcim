@@ -2,7 +2,11 @@ package net.vivans.dcim.module.devicemodel.application;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import net.vivans.dcim.module.common.application.UnitCodeResolver;
+import net.vivans.dcim.module.common.application.CategoryCodeResolver;
 import net.vivans.dcim.module.collectortask.application.CollectionScriptSyncService;
+import net.vivans.dcim.module.common.domain.model.CommonCode;
+import net.vivans.dcim.module.common.domain.repository.CommonCodeRepository;
 import net.vivans.dcim.module.devicemodel.api.dto.DeviceModelModbusPointCreateRequest;
 import net.vivans.dcim.module.devicemodel.api.dto.DeviceModelModbusPointResponse;
 import net.vivans.dcim.module.devicemodel.domain.model.DeviceModel;
@@ -24,6 +28,9 @@ public class DeviceModelModbusPointQueryService {
     private final DeviceModelRepository deviceModelRepository;
     private final DeviceModelModbusPointRepository deviceModelModbusPointRepository;
     private final CollectionScriptSyncService collectionScriptSyncService;
+    private final UnitCodeResolver unitCodeResolver;
+    private final CategoryCodeResolver categoryCodeResolver;
+    private final CommonCodeRepository commonCodeRepository;
 
     public List<DeviceModelModbusPointResponse> getDeviceModelModbusPoints(Integer modelId, Integer protocolId) {
         findModbusProtocol(modelId, protocolId);
@@ -65,6 +72,8 @@ public class DeviceModelModbusPointQueryService {
         DeviceModelModbusPoint point = DeviceModelModbusPoint.create(
                 protocol,
                 request.name(),
+                resolveDataPointType(request.dataPointTypeId()),
+                categoryCodeResolver.resolve(request.categoryCodeId()),
                 request.registerType(),
                 request.dataType(),
                 request.byteOrder(),
@@ -72,7 +81,7 @@ public class DeviceModelModbusPointQueryService {
                 requiresInstance,
                 request.scale(),
                 request.offset(),
-                request.unit(),
+                unitCodeResolver.resolve(request.unitCodeId()),
                 enabled
         );
 
@@ -101,6 +110,8 @@ public class DeviceModelModbusPointQueryService {
 
         point.update(
                 request.name(),
+                resolveDataPointType(request.dataPointTypeId()),
+                categoryCodeResolver.resolve(request.categoryCodeId()),
                 request.registerType(),
                 request.dataType(),
                 request.byteOrder(),
@@ -108,7 +119,7 @@ public class DeviceModelModbusPointQueryService {
                 requiresInstance,
                 request.scale(),
                 request.offset(),
-                request.unit(),
+                unitCodeResolver.resolve(request.unitCodeId()),
                 enabled
         );
 
@@ -141,5 +152,19 @@ public class DeviceModelModbusPointQueryService {
     private DeviceModelModbusPoint findModbusPoint(Integer pointId, Integer protocolId) {
         return deviceModelModbusPointRepository.findByIdAndModelProtocolId(pointId, protocolId)
                 .orElseThrow(() -> new EntityNotFoundException("DeviceModelModbusPoint not found: " + pointId));
+    }
+
+    private CommonCode resolveDataPointType(Integer id) {
+        if (id == null) {
+            return commonCodeRepository.findByCodeGroupGroupKeyAndCode("DATA_POINT_TYPE", "UNCLASSIFIED")
+                    .orElseThrow(() -> new EntityNotFoundException(
+                            "DATA_POINT_TYPE/UNCLASSIFIED is not configured"));
+        }
+        CommonCode code = commonCodeRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("CommonCode not found: " + id));
+        if (!"DATA_POINT_TYPE".equals(code.getCodeGroup().getGroupKey())) {
+            throw new IllegalArgumentException("dataPointTypeId must belong to DATA_POINT_TYPE");
+        }
+        return code;
     }
 }
