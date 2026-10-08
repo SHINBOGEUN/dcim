@@ -130,6 +130,9 @@
     @media (max-width:760px) { main { overflow:auto; } aside { overflow:auto; } .charts { overflow:visible; } }
     body.embedded .live-brand, body.embedded .live-context, body.embedded .live-nav a { display:none; }
     body.embedded .live-topbar { min-height:48px; padding:8px 16px; justify-content:flex-end; }
+    body.embedded #liveAuthGroup { display:none; }
+    body.embedded .live-config { grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); }
+    body.embedded .live-config-group:first-child { grid-column:auto; }
   </style>
 </head>
 <body>
@@ -137,7 +140,7 @@
     <div class="live-topbar"><div class="live-brand"><span class="live-mark">D</span><div><strong>DEFOG</strong><span>DATA CENTER INTELLIGENCE</span></div></div><div class="live-context"><small>REALTIME WORKSPACE</small><h1>실시간 텔레메트리</h1></div><div class="live-nav"><span id="authStatus" class="chip">미로그인</span><a href="/widget-dashboard.html">대시보드</a><a href="/ops-console.html">운영 콘솔 ↗</a></div></div>
     <section class="live-config">
       <div class="live-config-group"><p class="live-config-title">Connection</p><div class="row"><span class="live-field"><label>Manager 서버</label><input id="managerUrl" placeholder="http://localhost:8080" /></span><span class="live-field"><label>MQTT WebSocket</label><input id="mqttUrl" value="ws://localhost:9001/mqtt" /></span><span class="live-field"><label>구독 Topic</label><input id="topic" value="dcim/sensor/realtime" /></span></div></div>
-      <div class="live-config-group"><p class="live-config-title">Authentication</p><div class="row"><span class="live-field"><label>아이디</label><input id="username" placeholder="username" /></span><span class="live-field"><label>비밀번호</label><input id="password" type="password" placeholder="password" /></span><button id="loginBtn" type="button">로그인</button></div></div>
+      <div class="live-config-group" id="liveAuthGroup"><p class="live-config-title">Authentication</p><div class="row"><span class="live-field"><label>아이디</label><input id="username" placeholder="username" /></span><span class="live-field"><label>비밀번호</label><input id="password" type="password" placeholder="password" /></span><button id="loginBtn" type="button">로그인</button></div></div>
       <div class="live-config-group"><p class="live-config-title">Realtime session</p><div class="row"><div class="session-status"><span class="dot" id="mqttDot"></span><span id="mqttStatus">MQTT 미연결</span></div><button id="mqttBtn" class="ghost" type="button">연결</button><button id="applyBtn" type="button">수집 시작</button><button id="stopBtn" class="danger" type="button">중지</button></div></div>
   </header>
   <main>
@@ -213,12 +216,23 @@
       return saved;
     }
 
-    $("managerUrl").value = storedManagerUrl("liveManagerUrl");
+    const embeddedInConsole = new URLSearchParams(location.search).has("embedded");
+    $("managerUrl").value = embeddedInConsole ? location.origin : storedManagerUrl("liveManagerUrl");
+    if (embeddedInConsole) $("managerUrl").disabled = true;
     $("mqttUrl").value = storedMqttUrl();
     $("topic").value = localStorage.getItem("liveTopic") || "dcim/sensor/realtime";
 
     function managerBase() {
-      return $("managerUrl").value.replace(/\/$/, "");
+      return embeddedInConsole ? "" : $("managerUrl").value.replace(/\/$/, "");
+    }
+
+    function consoleAuth() {
+      if (!embeddedInConsole || window.parent === window) return null;
+      try {
+        return window.parent.location.origin === location.origin ? window.parent.opsConsoleAuth || null : null;
+      } catch (_) {
+        return null;
+      }
     }
 
     function log(line) {
@@ -232,8 +246,19 @@
       $("authStatus").textContent = state.token ? "로그인됨" : "미로그인";
     }
 
-    async function refreshAccessToken() {
+    async function refreshAccessToken(force = false) {
       try {
+        const parentAuth = consoleAuth();
+        if (parentAuth) {
+          if ((force || !parentAuth.getAccessToken()) && !await parentAuth.refreshAccessToken()) {
+            state.token = "";
+            setAuthStatus();
+            return false;
+          }
+          state.token = parentAuth.getAccessToken() || "";
+          setAuthStatus();
+          return !!state.token;
+        }
         const response = await fetch(managerBase() + "/api/manager/auth/refresh", {
           method: "POST", credentials: "same-origin",
         });
@@ -253,8 +278,9 @@
         return fetch(managerBase() + path, { ...options, headers, credentials: "same-origin" });
       };
       let res = await request();
-      if (res.status === 401 && !path.startsWith("/api/manager/auth/") && await refreshAccessToken()) {
-        res = await request();
+      if (res.status === 401 && !path.startsWith("/api/manager/auth/")) {
+        if (await refreshAccessToken(true)) res = await request();
+        else consoleAuth()?.expire();
       }
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -329,7 +355,7 @@
     }
 
     async function loadDevices() {
-      localStorage.setItem("liveManagerUrl", $("managerUrl").value);
+      if (!embeddedInConsole) localStorage.setItem("liveManagerUrl", $("managerUrl").value);
       state.devices = await api("/api/manager/live/devices") || [];
       renderDevices();
       log("장비 " + state.devices.length + "대 로드");

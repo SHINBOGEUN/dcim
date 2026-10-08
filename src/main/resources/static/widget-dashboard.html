@@ -406,6 +406,7 @@
     #analysisMain .analysis-canvas-wrap { height:260px;position:relative; }
     body.analysis-page-active #reloadBtn,body.analysis-page-active #editBtn,body.analysis-page-active #controlsBtn,body.analysis-page-active #logBtn,body.analysis-page-active #dashboardControls { display:none; }
     body.analysis-page-active .page-switcher { display:none; }
+    body.embedded-analysis .page-switcher { display:none; }
     body.analysis-page-active main { display:none; }
     @media(max-width:1050px) { #analysisMain .analysis-toolbar { grid-template-columns:1fr 1fr; } #analysisMain .analysis-layout { grid-template-columns:300px minmax(0,1fr); } }
     @media(max-width:760px) { #analysisMain { padding:14px 10px; } #analysisMain .analysis-heading { align-items:flex-start;flex-direction:column; } #analysisMain .analysis-toolbar,#analysisMain .analysis-layout { grid-template-columns:1fr; } #analysisMain .analysis-selection { position:static;max-height:none; } #analysisMain .analysis-chart-grid { grid-template-columns:1fr; } #analysisMain .analysis-dates input { flex:1;width:1px; } }
@@ -425,6 +426,7 @@
         <label class="page-switcher" for="pageCode"><span>페이지</span><select id="pageCode" disabled><option value="">페이지 불러오는 중...</option></select></label>
         <button id="reloadBtn" class="ghost" type="button">↻ 새로고침</button>
         <button id="editBtn" type="button" title="클릭 후 이동·리사이즈">배치 편집</button>
+        <button id="cancelEditBtn" class="ghost" type="button" style="display:none">편집 취소</button>
         <button id="controlsBtn" class="ghost" type="button">설정</button>
         <button id="logBtn" class="ghost" type="button">로그</button>
         <a href="/ops-console.html">운영 콘솔 ↗</a>
@@ -449,11 +451,11 @@
   <main>
     <aside>
       <div class="edit-drawer-head"><div><p class="panel-title">대시보드 편집</p><p class="hint">표시할 위젯과 배치를 관리합니다.</p></div><span class="chip">EDIT</span></div>
-      <p class="edit-help">카드 상단을 끌어 이동하고, 가장자리 또는 모서리를 끌어 크기를 조절하세요. 변경된 배치는 놓는 즉시 저장됩니다.</p>
+      <p class="edit-help">카드 상단을 끌어 이동하고, 가장자리 또는 모서리를 끌어 크기를 조절하세요. 배치는 변경 저장을 누를 때 저장되며, 편집 취소를 누르면 원래 배치로 돌아갑니다.</p>
       <div id="widgetList"><p class="empty">로그인 후 위젯 목록을 불러오세요.</p></div>
     </aside>
     <section class="board-wrap">
-      <div class="board-toolbar"><div class="board-title"><strong id="boardPageTitle">통합 운영 현황</strong><span>15초마다 최신 상태로 자동 갱신됩니다.</span></div><div class="board-status"><span class="live-indicator">LIVE</span><span id="boardWidgetCount" class="chip">0 widgets</span></div></div>
+      <div class="board-toolbar"><div class="board-title"><strong id="boardPageTitle">통합 운영 현황</strong><span>15초마다 최신 상태로 자동 갱신됩니다.</span></div><div class="board-status"><button id="analysisShowTrends" type="button" class="ghost" style="display:none">측정 추이 분석 보기</button><span class="live-indicator">LIVE</span><span id="boardWidgetCount" class="chip">0 widgets</span></div></div>
       <div id="board" class="board">
         <div class="placeholder">enabled 위젯만 표시됩니다.</div>
         <div id="snapGuide" class="snap-guide"></div>
@@ -463,7 +465,7 @@
     </section>
   </main>
   <main id="analysisMain" hidden>
-    <div class="analysis-heading"><div><h2>측정 추이 분석</h2><p>분석 페이지에 등록된 장비와 포인트를 선택해 과거 데이터를 비교합니다.</p></div><span class="chip">KST · 집계 간격 자동</span></div>
+    <div class="analysis-heading"><div><h2>측정 추이 분석</h2><p>분석 페이지에 등록된 장비와 포인트를 선택해 과거 데이터를 비교합니다.</p></div><div class="row"><button id="analysisShowWidgets" type="button" class="ghost">기존 분석 위젯 보기</button><span class="chip">KST · 집계 간격 자동</span></div></div>
     <section class="analysis-toolbar" aria-label="분석 조건">
       <div><label class="analysis-label" for="analysisStartDate">조회 기간</label><div class="analysis-dates"><input id="analysisStartDate" type="date"><span>–</span><input id="analysisEndDate" type="date"></div><div id="analysisRangeHint" class="analysis-range"></div></div>
       <div><span class="analysis-label">그래프 표시 방식</span><div class="analysis-mode"><button type="button" data-analysis-mode="device" aria-pressed="true">장비별 보기</button><button type="button" data-analysis-mode="metric" aria-pressed="false">같은 지표 비교</button></div></div>
@@ -553,9 +555,23 @@
       return saved;
     }
 
-    $("managerUrl").value = storedManagerUrl("widgetDashManagerUrl");
+    const embeddedInConsole = new URLSearchParams(location.search).has("embedded");
+    const requestedPageCode = new URLSearchParams(location.search).get("pageCode");
+    const fixedAnalysisPage = embeddedInConsole && requestedPageCode?.toUpperCase() === "ANALYSIS";
+    if (fixedAnalysisPage) document.body.classList.add("embedded-analysis");
+    $("managerUrl").value = embeddedInConsole ? location.origin : storedManagerUrl("widgetDashManagerUrl");
+    if (embeddedInConsole) $("managerUrl").disabled = true;
     function managerBase() {
-      return $("managerUrl").value.replace(/\/$/, "");
+      return embeddedInConsole ? "" : $("managerUrl").value.replace(/\/$/, "");
+    }
+
+    function consoleAuth() {
+      if (!embeddedInConsole || window.parent === window) return null;
+      try {
+        return window.parent.location.origin === location.origin ? window.parent.opsConsoleAuth || null : null;
+      } catch (_) {
+        return null;
+      }
     }
 
     function log(line) {
@@ -570,6 +586,11 @@
     }
 
     function showLoginModal(message = "") {
+      const parentAuth = consoleAuth();
+      if (parentAuth) {
+        parentAuth.expire();
+        return;
+      }
       $("loginError").textContent = message;
       $("loginError").style.display = message ? "block" : "none";
       $("loginModal").classList.add("open");
@@ -586,10 +607,17 @@
       setAuthStatus();
     }
 
-    async function refreshAccessToken() {
+    async function refreshAccessToken(force = false) {
       if (state.refreshPromise) return state.refreshPromise;
       state.refreshPromise = (async () => {
         try {
+          const parentAuth = consoleAuth();
+          if (parentAuth) {
+            if ((force || !parentAuth.getAccessToken()) && !await parentAuth.refreshAccessToken()) return false;
+            state.token = parentAuth.getAccessToken() || "";
+            setAuthStatus();
+            return !!state.token;
+          }
           const res = await fetch(managerBase() + "/api/manager/auth/refresh", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -618,7 +646,7 @@
       const json = await res.json().catch(() => ({}));
       const isAuthRequest = path.startsWith("/api/manager/auth/");
       if (res.status === 401 && retryOnUnauthorized && !isAuthRequest) {
-        if (await refreshAccessToken()) {
+        if (await refreshAccessToken(true)) {
           return api(path, { ...requestOptions, retryOnUnauthorized: false });
         }
         clearAuth();
@@ -630,7 +658,7 @@
       return json.data;
     }
 
-    const analysisState = { options: null, selectedDevices: new Set(), selectedPoints: new Map(), charts: [], response: null, mode: "device" };
+    const analysisState = { options: null, selectedDevices: new Set(), selectedPoints: new Map(), charts: [], response: null, mode: "device", viewMode: "trend" };
     const analysisPalette = ["#35bdf4", "#47d58c", "#ffbd54", "#ff7484", "#a78bfa", "#2dd4bf", "#fb923c", "#94a3b8"];
     function isAnalysisPage() { return String($("pageCode").value).toUpperCase() === "ANALYSIS"; }
     function destroyAnalysisCharts() { analysisState.charts.forEach(chart => chart.destroy()); analysisState.charts = []; }
@@ -730,16 +758,24 @@
       finally { $("analysisResultsContent").classList.remove("loading"); updateAnalysisCounts(); }
     }
     async function activateSelectedPage() {
-      const analysis = isAnalysisPage(); document.body.classList.toggle("analysis-page-active", analysis);
-      $("analysisMain").hidden = !analysis; $("dashboardPageTitle").textContent = analysis ? "분석" : ($("pageCode").selectedOptions[0]?.textContent.trim() + " 현황");
+      const analysis = isAnalysisPage();
+      const trendView = analysis && analysisState.viewMode === "trend";
+      document.body.classList.toggle("analysis-page-active", trendView);
+      $("analysisMain").hidden = !trendView;
+      $("analysisShowTrends").style.display = analysis && !trendView ? "" : "none";
+      $("dashboardPageTitle").textContent = analysis ? (trendView ? "분석" : "분석 위젯") : ($("pageCode").selectedOptions[0]?.textContent.trim() + " 현황");
       $("boardPageTitle").textContent = $("dashboardPageTitle").textContent;
-      if (analysis) { stopPolling(); await loadAnalysisOptions(); }
+      if (trendView) { stopPolling(); await loadAnalysisOptions(); }
       else await reload();
     }
 
     async function loadDashboardPages() {
       const pages = await api("/api/manager/widgets/pages");
-      const sortedPages = [...(pages || [])].sort((left, right) =>
+      const sortedPages = [...(pages || [])]
+        .filter((page) => !embeddedInConsole || (fixedAnalysisPage
+          ? String(page.code).toUpperCase() === "ANALYSIS"
+          : String(page.code).toUpperCase() !== "ANALYSIS"))
+        .sort((left, right) =>
         (left.sortOrder ?? 0) - (right.sortOrder ?? 0)
         || String(left.name || left.code).localeCompare(String(right.name || right.code), "ko")
       );
@@ -751,7 +787,6 @@
       ).join("");
 
       const defaultPage = sortedPages.find((page) => page.code === "dashboard") || sortedPages[0];
-      const requestedPageCode = new URLSearchParams(location.search).get("pageCode");
       const savedPageCode = localStorage.getItem("widgetDashPageCode");
       const initialPageCode = sortedPages.some((page) => page.code === requestedPageCode)
         ? requestedPageCode
@@ -759,7 +794,7 @@
       pageSelect.value = sortedPages.some((page) => page.code === initialPageCode)
         ? initialPageCode
         : defaultPage.code;
-      pageSelect.disabled = false;
+      pageSelect.disabled = fixedAnalysisPage;
       updateDashboardTitle();
     }
 
@@ -784,6 +819,7 @@
     }
 
     function widgetLayout(widget) {
+      if (widget._draftLayout) return widget._draftLayout;
       if (widget.layout) return toFineLayout(widget.layout);
       if (widget._tempLayout) return widget._tempLayout;
       return null;
@@ -838,7 +874,7 @@
     async function loadWidgets() {
       const pageCode = $("pageCode").value;
       if (!new URLSearchParams(location.search).has("pageCode")) localStorage.setItem("widgetDashPageCode", pageCode);
-      localStorage.setItem("widgetDashManagerUrl", $("managerUrl").value);
+      if (!embeddedInConsole) localStorage.setItem("widgetDashManagerUrl", $("managerUrl").value);
       const [widgets, devicePage, models] = await Promise.all([
         api(`/api/manager/widgets?pageCode=${encodeURIComponent(pageCode)}`),
         api("/api/manager/devices?page=1&size=500"),
@@ -880,14 +916,14 @@
           <h3>
             <span>${escapeHtml(w.name)}</span>
             <label class="switch" title="UI 표시">
-              <input type="checkbox" data-toggle="${w.id}" ${w.enabled ? "checked" : ""} />
+              <input type="checkbox" data-toggle="${w.id}" ${w.enabled ? "checked" : ""} ${state.editMode ? "disabled" : ""} />
               <span class="slider"></span>
             </label>
           </h3>
           <div class="meta">#${w.id} · ${escapeHtml(w.queryKind)}${countMeta}${chartMeta} · ${pos}</div>
           <div class="widget-actions">
             <button type="button" class="ghost" data-edit-scroll="${w.id}">선택</button>
-            <button type="button" class="danger" data-delete="${w.id}" data-name="${escapeHtml(w.name)}">삭제</button>
+            <button type="button" class="danger" data-delete="${w.id}" data-name="${escapeHtml(w.name)}" ${state.editMode ? "disabled" : ""}>삭제</button>
           </div>
         </article>`;
       }).join("");
@@ -1949,6 +1985,10 @@
       const next = snapFromInteraction(d, live);
       hideGhost();
       state.drag = null;
+      if (e.type === "pointercancel") {
+        await refreshBoard(false);
+        return;
+      }
 
       const widget = state.widgets.find((w) => w.id === d.id);
       const prev = widget && widgetLayout(widget);
@@ -1958,35 +1998,54 @@
         return;
       }
 
+      widget._draftLayout = next;
+      const verb = d.mode === "move" ? "이동" : "크기";
+      log(`${verb} 미리보기 #${d.id} → (${next.gridX},${next.gridY}) ${next.w}×${next.h}`);
+      renderWidgetList();
+      await refreshBoard(false);
+    }
+
+    async function saveLayoutEdits() {
+      if (state.saving) return;
+      const changed = state.widgets.filter((widget) => widget._draftLayout);
+      if (!changed.length) return setEditMode(false);
+      state.saving = true;
+      $("editBtn").disabled = true;
+      $("cancelEditBtn").disabled = true;
+      $("pageCode").disabled = true;
+      let savedCount = 0;
       try {
-        state.saving = true;
-        const updated = await api(`/api/manager/widgets/${d.id}/layout`, {
-          method: "PUT",
-          body: JSON.stringify({
-            gridX: next.gridX,
-            gridY: next.gridY,
-            w: next.w,
-            h: next.h,
-          }),
-        });
-        const idx = state.widgets.findIndex((w) => w.id === d.id);
-        if (idx >= 0) {
-          updated._tempLayout = undefined;
-          state.widgets[idx] = updated;
+        for (const widget of changed) {
+          const layout = widget._draftLayout;
+          const updated = await api(`/api/manager/widgets/${widget.id}/layout`, {
+            method: "PUT",
+            body: JSON.stringify({ gridX: layout.gridX, gridY: layout.gridY, w: layout.w, h: layout.h }),
+          });
+          const index = state.widgets.findIndex((item) => item.id === widget.id);
+          if (index >= 0) state.widgets[index] = updated;
+          savedCount++;
         }
-        const verb = d.mode === "move" ? "이동" : "크기";
-        log(`${verb} 저장 #${d.id} → (${next.gridX},${next.gridY}) ${next.w}×${next.h}`);
+        log(`배치 변경 ${savedCount}개 저장 완료`);
+        setEditMode(false);
+      } catch (error) {
         renderWidgetList();
         await refreshBoard(false);
-      } catch (err) {
-        log("배치 저장 실패: " + err.message);
-        await refreshBoard(false);
+        log(`배치 저장 실패: ${error.message}`);
+        alert(`배치 저장에 실패했습니다. ${savedCount}개는 저장됐고 나머지 변경은 편집 화면에 남아 있습니다.\n${error.message}`);
       } finally {
         state.saving = false;
+        $("editBtn").disabled = false;
+        $("cancelEditBtn").disabled = false;
+        $("pageCode").disabled = false;
       }
     }
 
     function setEditMode(on) {
+      if (!on) {
+        const discarded = state.widgets.filter((widget) => widget._draftLayout).length;
+        state.widgets.forEach((widget) => { delete widget._draftLayout; });
+        if (discarded) log(`저장하지 않은 배치 변경 ${discarded}개 취소`);
+      }
       state.editMode = on;
       if (on) {
         document.body.classList.remove("controls-open");
@@ -1994,17 +2053,20 @@
       }
       document.body.classList.toggle("edit-mode", on);
       $("editBtn").classList.toggle("active", on);
-      $("editBtn").textContent = on ? "편집 완료" : "배치 편집";
+      $("editBtn").textContent = on ? "변경 저장" : "배치 편집";
+      $("cancelEditBtn").style.display = on ? "" : "none";
+      $("reloadBtn").disabled = on;
       if (on) {
         stopPolling();
-        log("배치 편집 ON — 드래그 중 부드럽게, 놓으면 그리드 스냅");
+        log("배치 편집 ON — 변경 저장을 누르기 전까지 서버에 반영되지 않습니다");
       } else {
         hideGhost();
         state.drag = null;
         startPolling();
         log("배치 편집 OFF");
       }
-      refreshBoard(false);
+      renderWidgetList();
+      refreshBoard(false).catch((error) => log("배치 표시 실패: " + error.message));
     }
 
     function formatValue(v) {
@@ -2029,7 +2091,7 @@
 
     function startPolling() {
       stopPolling();
-      if (state.editMode || isAnalysisPage()) return;
+      if (state.editMode || (isAnalysisPage() && analysisState.viewMode === "trend")) return;
       state.pollTimer = setInterval(() => {
         if (state.drag || state.saving) return;
         refreshBoard(true).catch((e) => log("poll: " + e.message));
@@ -2037,7 +2099,7 @@
     }
 
     async function reload() {
-      if (isAnalysisPage()) return;
+      if (isAnalysisPage() && analysisState.viewMode === "trend") return;
       await loadWidgets();
       if (!state.editMode) startPolling();
     }
@@ -2065,9 +2127,19 @@
       if (event.key === "Escape") closeTrendModal();
     });
     $("pageCode").addEventListener("change", () => {
+      if (state.editMode) setEditMode(false);
       const pageCode = $("pageCode").value;
       localStorage.setItem("widgetDashPageCode", pageCode);
       activateSelectedPage().catch((e) => log("페이지 전환: " + e.message));
+    });
+    $("analysisShowWidgets").addEventListener("click", () => {
+      analysisState.viewMode = "widgets";
+      activateSelectedPage().catch((e) => log("분석 위젯 전환: " + e.message));
+    });
+    $("analysisShowTrends").addEventListener("click", () => {
+      if (state.editMode) setEditMode(false);
+      analysisState.viewMode = "trend";
+      activateSelectedPage().catch((e) => log("측정 추이 전환: " + e.message));
     });
     $("analysisDeviceSearch").addEventListener("input", renderAnalysisDeviceList);
     $("analysisDeviceList").addEventListener("change", event => {
@@ -2113,7 +2185,11 @@
       state.chartSeriesModeByWidget.clear();
       refreshBoard(true).catch((e) => log("chart series: " + e.message));
     });
-    $("editBtn").addEventListener("click", () => setEditMode(!state.editMode));
+    $("editBtn").addEventListener("click", () => {
+      if (state.editMode) saveLayoutEdits().catch((error) => log("배치 저장 실패: " + error.message));
+      else setEditMode(true);
+    });
+    $("cancelEditBtn").addEventListener("click", () => setEditMode(false));
     $("controlsBtn").addEventListener("click", () => {
       document.body.classList.toggle("controls-open");
       $("controlsBtn").classList.toggle("active", document.body.classList.contains("controls-open"));
