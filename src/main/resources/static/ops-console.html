@@ -2926,7 +2926,7 @@
     <section class="panel embedded-page" id="tab-widget-board">
       <h1 class="page-title">위젯 보드</h1>
       <p class="page-desc">등록된 위젯의 실제 값과 배치를 확인하고 조정합니다.</p>
-      <iframe id="widgetBoardFrame" title="위젯 보드" data-page-src="/widget-dashboard.html?embedded=1" loading="lazy"></iframe>
+      <iframe id="widgetBoardFrame" title="위젯 보드" data-page-src="/widget-dashboard.html?embedded=1&pageCode=dashboard" loading="lazy"></iframe>
     </section>
     <section class="panel embedded-page" id="tab-analysis">
       <h1 class="page-title">분석</h1>
@@ -3211,6 +3211,7 @@
         frame.dataset.loaded = "";
       });
       setAuth();
+      goTab("home");
     }
 
     async function refreshAccessToken() {
@@ -3243,6 +3244,13 @@
       })();
       return state.refreshPromise;
     }
+
+    // Same-origin monitoring iframes reuse this access token instead of rotating the refresh cookie independently.
+    window.opsConsoleAuth = Object.freeze({
+      getAccessToken: () => state.token,
+      refreshAccessToken: () => refreshAccessToken(),
+      expire: () => clearAuth(),
+    });
 
     async function api(path, options = {}) {
       const { retryOnUnauthorized = true, ...requestOptions } = options;
@@ -3314,6 +3322,9 @@
       if (name !== "devices") closeDeviceDetail(false);
       document.querySelectorAll("#tabs button").forEach((b) => b.classList.toggle("active", b.dataset.tab === name));
       document.querySelectorAll(".panel").forEach((p) => p.classList.toggle("active", p.id === "tab-" + name));
+      document.querySelectorAll(".embedded-page").forEach((panel) => {
+        panel.hidden = panel.id !== "tab-" + name;
+      });
       document.body.classList.toggle("external-view", embedded.has(name));
       if (embedded.has(name) && state.token) {
         const frame = document.querySelector(`#tab-${name} iframe[data-page-src]`);
@@ -7742,8 +7753,8 @@
       $("wzCollectionCard").style.display = mqtt ? "none" : "";
       if (modbus && !$("wzPort").dataset.userEdited) $("wzPort").value = "502";
       if (code === "snmp" && !$("wzPort").dataset.userEdited) $("wzPort").value = "161";
-      const option = state.wizardOptions?.modelId === model?.id
-        ? state.wizardOptions.protocols.find((item) => item.protocolTypeId === protocol?.protocolTypeId)
+      const option = state.wizardOptions && model && Number(state.wizardOptions.modelId) === Number(model.id)
+        ? state.wizardOptions.protocols?.find((item) => item.protocolTypeId === protocol?.protocolTypeId)
         : null;
       if (option) $("wzInstanceField").style.display = code === "snmp" && option.snmpInstanceRequired ? "" : "none";
       else await updateInstanceUiForModel(model?.id, code);
